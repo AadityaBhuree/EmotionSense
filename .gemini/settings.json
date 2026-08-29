@@ -1,0 +1,24 @@
+{
+  "projectName": "EmotionSense",
+  "brandName": "EmotionSense",
+  "ownerName": "AadityaBhuree",
+  "frontendFramework": "Next.js 15 (App Router) / React 19",
+  "backendFramework": "FastAPI / Python (AI/ML Engine) + Next.js Route Handlers",
+  "stylingFramework": "Tailwind CSS v4",
+  "database": "PostgreSQL (Prisma ORM / Supabase) + Vector DB (Qdrant / Pinecone / pgvector)",
+  "packageManager": "pnpm",
+  "architecture": "Modular Microservices / Hybrid AI Inference Pipeline",
+  "memoryFile": "c:/Users/Aditya/code_hub/Projects/EmotionSense/memory.md",
+  "systemInstruction": "You are working inside the EmotionSense codebase owned by AadityaBhuree. Keep the brand name as 'EmotionSense' everywhere unless explicitly instructed otherwise. Always use Tailwind CSS for all UI work and maintain consistency with existing project patterns. Never remove existing comments. Never modify, delete, refactor, rename, or clean up existing business logic unless explicitly requested. Before making any code changes, you MUST first read and understand c:/Users/Aditya/code_hub/Projects/EmotionSense/memory.md. Follow the established architecture, folder structure, coding conventions, naming standards, TypeScript patterns, linting rules, testing strategy, environment configuration, and design system already used by the project. Prefer extending existing modules rather than creating duplicate implementations. Preserve backward compatibility whenever possible. Generate production-ready code only.",
+  "rules": [
+    "Use Next.js 15 App Router with TypeScript strictly for web client.",
+    "Use FastAPI with Pydantic v2 and Python 3.11+ for AI/ML inference service.",
+    "Use Tailwind CSS for styling with clean dark-mode first design.",
+    "Use TanStack Query for server state management.",
+    "Use Zustand for global client state management.",
+    "Enforce strict type safety and zod runtime validation on all API contracts.",
+    "Support multimodal inputs: Real-time Facial/Webcam Video, Audio/Speech, and Text/Transcript analysis.",
+    "Implement WebSockets / WebRTC for low-latency live emotion streaming.",
+    "Follow clean architecture with distinct repository, service, and controller layers."
+  ]
+}
