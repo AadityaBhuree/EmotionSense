@@ -1,7 +1,5 @@
-"""Facial Action Unit (AU) extraction and Micro-Expression classification."""
-
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from src.core.types import FacialActionUnits, VisionEmotionResult
 from src.core.config import LANDMARK_INDICES, EMOTION_LABELS
 

@@ -1,6 +1,7 @@
-"""MediaPipe Face Mesh and Landmark geometry extraction engine."""
-
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 import numpy as np
 from typing import Optional, Tuple, List, Dict, Any
 from src.core.config import LANDMARK_INDICES
@@ -39,7 +40,7 @@ class FaceMeshDetector:
 
     def process_frame(self, frame: np.ndarray) -> Tuple[Optional[np.ndarray], Dict[str, float]]:
         """Processes an RGB frame and returns normalized landmarks (468, 3) and head pose."""
-        if frame is None or self._face_mesh is None:
+        if frame is None or self._face_mesh is None or cv2 is None:
             return None, {"yaw": 0.0, "pitch": 0.0, "roll": 0.0}
 
         h, w, _ = frame.shape
