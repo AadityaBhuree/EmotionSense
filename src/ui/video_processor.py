@@ -1,10 +1,12 @@
-"""WebRTC Video and Audio frame processor for live stream inference."""
+try:
+    import av
+except ImportError:
+    av = None
 
-import av
 import cv2
 import numpy as np
 import threading
-from typing import Optional
+from typing import Optional, Any
 
 from src.vision.face_mesh import FaceMeshDetector
 from src.vision.emotion_classifier import FacialEmotionClassifier
@@ -37,8 +39,11 @@ class MultimodalVideoProcessor(VideoTransformerBase):
         self.latest_vision: Optional[VisionEmotionResult] = None
         self.latest_voice: Optional[VoiceEmotionResult] = None
 
-    def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+    def recv(self, frame: Any) -> Any:
         """Processes incoming video frame and annotates facial mesh landmarks."""
+        if av is None or not hasattr(frame, "to_ndarray"):
+            return frame
+
         img = frame.to_ndarray(format="bgr24")
 
         # 1. Process facial mesh
