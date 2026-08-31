@@ -30,8 +30,9 @@ EMOTION_VAD_COORDINATES: Dict[str, List[float]] = {
 
 # Multimodal Fusion Modality Weights
 DEFAULT_MODALITY_WEIGHTS = {
-    "vision": 0.55,    # Visual facial expression weight
-    "audio": 0.35,     # Acoustic prosody & tone weight
+    "vision": 0.45,    # Visual facial expression weight
+    "audio": 0.30,     # Acoustic prosody & tone weight
+    "text": 0.35,      # NLP semantic affect weight
     "context": 0.10,   # Baseline / temporal prior weight
 }
 

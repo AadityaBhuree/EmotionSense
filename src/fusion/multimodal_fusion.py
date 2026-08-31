@@ -2,7 +2,7 @@
 
 import time
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from collections import deque
 
 from src.core.types import (
@@ -32,22 +32,26 @@ class MultimodalFusionEngine:
         self,
         vision: Optional[VisionEmotionResult],
         voice: Optional[VoiceEmotionResult] = None,
+        text: Optional[Any] = None,
     ) -> MultimodalEmotionState:
-        """Fuses vision and audio streams into a unified MultimodalEmotionState."""
+        """Fuses vision, audio, and text streams into a unified MultimodalEmotionState."""
         current_time = time.time()
 
         # 1. Determine modality presence & dynamic weighting
         has_vision = vision is not None and vision.face_detected
         has_voice = voice is not None and voice.acoustics.speech_active
+        has_text = text is not None and bool(getattr(text, "text", ""))
 
-        w_vis = self.weights["vision"] if has_vision else 0.0
-        w_aud = self.weights["audio"] if has_voice else 0.0
-        w_ctx = self.weights["context"]
+        w_vis = self.weights.get("vision", 0.45) if has_vision else 0.0
+        w_aud = self.weights.get("audio", 0.30) if has_voice else 0.0
+        w_txt = self.weights.get("text", 0.35) if has_text else 0.0
+        w_ctx = self.weights.get("context", 0.10)
 
-        total_weight = w_vis + w_aud + w_ctx
+        total_weight = w_vis + w_aud + w_txt + w_ctx
         if total_weight > 0:
             w_vis /= total_weight
             w_aud /= total_weight
+            w_txt /= total_weight
             w_ctx /= total_weight
         else:
             w_ctx = 1.0
@@ -57,15 +61,16 @@ class MultimodalFusionEngine:
         for emo in EMOTION_LABELS:
             p_vis = vision.probabilities.get(emo, 0.0) if has_vision else 0.0
             p_aud = voice.probabilities.get(emo, 0.0) if has_voice else 0.0
+            p_txt = text.probabilities.get(emo, 0.0) if has_text else 0.0
             
             # Prior temporal smoothing from history
             p_hist = 0.0
             if len(self.history) > 0:
-                p_hist = np.mean([h.probabilities.get(emo, 0.0) for h in self.history])
+                p_hist = float(np.mean([h.probabilities.get(emo, 0.0) for h in self.history]))
             else:
                 p_hist = 1.0 if emo == "neutral" else 0.0
 
-            fused_score = (p_vis * w_vis) + (p_aud * w_aud) + (p_hist * w_ctx)
+            fused_score = (p_vis * w_vis) + (p_aud * w_aud) + (p_txt * w_txt) + (p_hist * w_ctx)
             fused_probs[emo] = float(fused_score)
 
         # Normalize probabilities sum to 1.0
@@ -110,6 +115,7 @@ class MultimodalFusionEngine:
             attention_score=attention,
             vision=vision,
             voice=voice,
+            text=text,
         )
 
         self.history.append(state)
