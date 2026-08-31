@@ -63,6 +63,10 @@ else:
             st.markdown(f"**Dominant Emotion:** `{current_frame.get('dominant_emotion', 'neutral').upper()}`")
             st.markdown(f"**Confidence:** `{int(current_frame.get('confidence', 0)*100)}%`")
             st.markdown(f"**Affect Quadrant:** `{current_frame.get('quadrant', 'N/A')}`")
+            if current_frame.get("text"):
+                txt_obj = current_frame.get("text")
+                msg_str = txt_obj.get("text") if isinstance(txt_obj, dict) else str(txt_obj)
+                st.markdown(f"**Message:** *\"{msg_str}\"*")
         with sc2:
             st.plotly_chart(render_emotion_radar_chart(current_frame.get("probabilities", {})), use_container_width=True)
         with sc3:
