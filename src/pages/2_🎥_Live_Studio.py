@@ -44,17 +44,25 @@ with ctrl_col1:
 
 with ctrl_col2:
     if not st.session_state.session_manager.is_recording:
-        if st.button("🔴 Start Session Recording", use_container_width=True):
+        if st.button("🔴 Start Recording", use_container_width=True):
             st.session_state.session_manager.start_recording()
             st.rerun()
     else:
-        if st.button("⏹️ Stop & Save Session", use_container_width=True):
+        if st.button("⏹️ Stop & Save", use_container_width=True):
             summary = st.session_state.session_manager.stop_recording()
             file_path = st.session_state.session_manager.save_session()
             st.success(f"Session saved to {file_path.name}")
             st.rerun()
 
 with ctrl_col3:
+    if st.button("📸 Capture Snapshot", use_container_width=True):
+        cur = getattr(st.session_state, "latest_state", None)
+        if cur:
+            st.session_state.pinned_snapshot = cur.to_dict()
+            st.toast("📸 Affect Snapshot Captured!")
+        else:
+            st.warning("No active stream data to capture.")
+    
     recording_status = "RECORDING" if st.session_state.session_manager.is_recording else "IDLE"
     pill_class = "es-pill-active" if st.session_state.session_manager.is_recording else "es-pill-idle"
     st.markdown(f"""
@@ -203,3 +211,20 @@ with right_col:
             st.plotly_chart(render_emotion_timeline_chart(recent_history), use_container_width=True)
     else:
         st.info("Start video stream or simulator above to generate live multimodal telemetry.")
+
+if "pinned_snapshot" in st.session_state:
+    st.markdown("---")
+    st.markdown("### 📸 Pinned Affect Snapshot")
+    snap = st.session_state.pinned_snapshot
+    sn1, sn2, sn3, sn4 = st.columns(4)
+    with sn1:
+        render_metric_card("Snapshot Affect", str(snap.get("dominant_emotion", "neutral")).upper(), delta=f"{int(snap.get('confidence', 0)*100)}% Conf", color="#6366f1")
+    with sn2:
+        render_metric_card("Snapshot Valence", f"{snap.get('affect', {}).get('valence', 0):+.2f}", color="#10b981")
+    with sn3:
+        render_metric_card("Snapshot Arousal", f"{snap.get('affect', {}).get('arousal', 0):+.2f}", color="#f59e0b")
+    with sn4:
+        import json
+        snap_json = json.dumps(snap, indent=2)
+        st.download_button("📥 Download Snapshot JSON", data=snap_json, file_name="affect_snapshot.json", mime="application/json", use_container_width=True)
+
