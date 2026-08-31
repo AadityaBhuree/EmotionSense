@@ -123,8 +123,91 @@ class AffectVector:
         else:
             return "Low Positive (Relaxed / Content / Calm)"
 
-    def to_dict(self) -> Dict[str, float]:
-        return asdict(self)
+
+@dataclass
+class TokenSalience:
+    """Individual word or phrase salience contribution to affective prediction."""
+    token: str
+    score: float                      # Importance weight 0.0 to 1.0
+    emotion_influence: str            # Emotion triggered (e.g. joy, anger)
+    sentiment_polarity: float         # -1.0 to +1.0
+    is_negated: bool = False
+    is_intensified: bool = False
+
+
+@dataclass
+class TextEmotionResult:
+    """Affective and sentiment evaluation for a single text message."""
+    text: str = ""
+    dominant_emotion: str = "neutral"
+    confidence: float = 0.0
+    probabilities: Dict[str, float] = field(default_factory=lambda: {
+        "joy": 0.0,
+        "sadness": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.0,
+        "disgust": 0.0,
+        "neutral": 1.0,
+        "contempt": 0.0,
+    })
+    nuanced_emotions: Dict[str, float] = field(default_factory=dict)
+    affect: AffectVector = field(default_factory=AffectVector)
+    polarity: float = 0.0             # -1.0 (Very Negative) to +1.0 (Very Positive)
+    subjectivity: float = 0.0         # 0.0 (Objective) to 1.0 (Very Subjective)
+    salience_tokens: List[TokenSalience] = field(default_factory=list)
+    empathy_advice: str = ""
+    emojis_detected: List[str] = field(default_factory=list)
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        res["affect"] = self.affect.to_dict()
+        res["salience_tokens"] = [asdict(t) for t in self.salience_tokens]
+        return res
+
+
+@dataclass
+class DialogueTurnResult:
+    """Single turn / message within a multi-turn conversation."""
+    turn_index: int
+    speaker: str
+    text: str
+    timestamp_str: Optional[str] = None
+    emotion_result: TextEmotionResult = field(default_factory=TextEmotionResult)
+    escalation_score: float = 0.0     # 0.0 (Calm) to 1.0 (High Conflict/Frustration)
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        res["emotion_result"] = self.emotion_result.to_dict()
+        return res
+
+
+@dataclass
+class DialogueEmotionSummary:
+    """Aggregated affective analysis across a multi-turn conversation transcript."""
+    total_turns: int = 0
+    speakers: List[str] = field(default_factory=list)
+    turns: List[DialogueTurnResult] = field(default_factory=list)
+    speaker_emotion_distribution: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    emotional_trajectory: List[Dict[str, Any]] = field(default_factory=list)
+    average_affect: AffectVector = field(default_factory=AffectVector)
+    rapport_empathy_score: float = 0.0 # 0.0 to 1.0 (speaker emotional synchronization)
+    escalation_risk: str = "Low"       # "Low", "Moderate", "High", "Critical"
+    turning_points: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "total_turns": self.total_turns,
+            "speakers": self.speakers,
+            "turns": [t.to_dict() for t in self.turns],
+            "speaker_emotion_distribution": self.speaker_emotion_distribution,
+            "emotional_trajectory": self.emotional_trajectory,
+            "average_affect": self.average_affect.to_dict(),
+            "rapport_empathy_score": self.rapport_empathy_score,
+            "escalation_risk": self.escalation_risk,
+            "turning_points": self.turning_points,
+        }
 
 
 @dataclass
@@ -149,6 +232,7 @@ class MultimodalEmotionState:
     attention_score: float = 0.0    # 0.0 (Distracted) to 1.0 (Direct eye contact)
     vision: Optional[VisionEmotionResult] = None
     voice: Optional[VoiceEmotionResult] = None
+    text: Optional[TextEmotionResult] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -161,6 +245,7 @@ class MultimodalEmotionState:
             "fatigue_level": self.fatigue_level,
             "attention_score": self.attention_score,
             "quadrant": self.affect.quadrant(),
+            "text": self.text.to_dict() if self.text else None,
         }
 
 
@@ -181,3 +266,4 @@ class SessionRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
