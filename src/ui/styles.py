@@ -152,6 +152,47 @@ def inject_glassmorphic_styles():
             transform: translateY(-1px) !important;
         }}
 
+        /* Streamlit Text Inputs & Text Areas */
+        .stTextArea textarea, .stTextInput input {{
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 12px !important;
+            color: #f8fafc !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 1rem !important;
+            padding: 0.85rem !important;
+            transition: all 0.2s ease !important;
+        }}
+
+        .stTextArea textarea:focus, .stTextInput input:focus {{
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.25) !important;
+        }}
+
+        /* Streamlit Tabs Customization */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 8px;
+            background-color: rgba(15, 23, 42, 0.5);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }}
+
+        .stTabs [data-baseweb="tab"] {{
+            border-radius: 8px;
+            color: #94a3b8 !important;
+            font-weight: 600;
+            padding: 8px 16px;
+            background-color: transparent;
+            transition: all 0.2s ease;
+        }}
+
+        .stTabs [aria-selected="true"] {{
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.4) 100%) !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(99, 102, 241, 0.5) !important;
+        }}
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar {{
             width: 6px;
@@ -169,3 +210,4 @@ def inject_glassmorphic_styles():
         }}
     </style>
     """, unsafe_allow_html=True)
+
