@@ -172,3 +172,24 @@ if uploaded_file is not None:
                 with dist_cols[i]:
                     st.metric(emo.capitalize(), f"{int(pct * 100)}%")
 
+            # Executive Report Download
+            st.markdown("---")
+            st.markdown("### 📑 Executive Diagnostic Report")
+            report_md = f"""# EmotionSense Media Diagnostic Report
+- **File Name:** {uploaded_file.name}
+- **Samples Processed:** {summary.samples_count}
+- **Average Engagement:** {int(summary.average_engagement * 100)}%
+- **Average Valence (Mood):** {summary.average_affect['valence']:+.2f}
+- **Average Arousal (Energy):** {summary.average_affect['arousal']:+.2f}
+- **Dominant Emotion Distribution:**
+{chr(10).join([f'  - **{k.capitalize()}:** {int(v*100)}%' for k, v in summary.dominant_emotion_distribution.items()])}
+"""
+            st.download_button(
+                "📥 Download Diagnostic Summary Report (Markdown)",
+                data=report_md,
+                file_name=f"{Path(uploaded_file.name).stem}_diagnostic_report.md",
+                mime="text/markdown",
+                use_container_width=True
+            )
+
+
