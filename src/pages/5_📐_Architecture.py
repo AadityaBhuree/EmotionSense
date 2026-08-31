@@ -13,11 +13,12 @@ inject_glassmorphic_styles()
 
 render_header("System Architecture & Theory", "Mathematical Models, Temporal Late Fusion & FACS Specifications")
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
-    "🧬 FACS Action Units & Prosody"
+    "🧬 FACS Action Units & Prosody",
+    "🔌 API & Integration Schemas"
 ])
 
 with tab1:
@@ -86,4 +87,27 @@ with tab4:
         {"AU": "AU26", "Name": "Jaw Drop", "Muscles": "Masseter, Temporalis relaxed", "Key Indications": "Surprise, Shock"},
     ]
     st.dataframe(pd.DataFrame(facs_data), use_container_width=True)
+
+with tab5:
+    st.markdown("### 🔌 REST & Python Programmatic Integration")
+    st.markdown("Quick integration snippet for integrating `EmotionSense` into backend pipelines:")
+    st.code("""from src.text import TextEmotionClassifier, ConversationAffectAnalyzer
+
+# 1. Single Text Message Affect Analysis
+clf = TextEmotionClassifier()
+res = clf.analyze_text("I am so thrilled and excited for our product release! 🎉")
+print(res.dominant_emotion)  # 'joy'
+print(res.affect.valence)    # +0.68
+print(res.affect.arousal)    # +0.55
+
+# 2. Conversational Transcript Trajectory
+analyzer = ConversationAffectAnalyzer()
+summary = analyzer.parse_and_analyze_transcript(\"\"\"
+[10:00] User: I have an urgent issue!
+[10:01] Agent: I am sorry to hear that, fixing it right now.
+\"\"\")
+print("Escalation Risk:", summary.escalation_risk)
+print("Empathy Score:", summary.rapport_empathy_score)
+""", language="python")
+
 
