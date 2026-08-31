@@ -3,15 +3,15 @@
 <div align="center">
 
 [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.32%2B-FF4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.35%2B-FF4B4B.svg?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Face%20Mesh-00C7B7.svg?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
 [![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8.svg?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org/)
-[![Librosa](https://img.shields.io/badge/Librosa-Audio%20Prosody-FFA000.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://librosa.org/)
+[![Plotly](https://img.shields.io/badge/Plotly-Affective%20Telemetry-3F4F75.svg?style=for-the-badge&logo=plotly&logoColor=white)](https://plotly.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-**Enterprise-Grade Real-Time Multimodal Emotion Recognition & Affective Telemetry Intelligence Platform**
+**Enterprise Real-Time Multimodal Emotion Recognition, Conversational Dialogue Trajectory & Affective Telemetry Intelligence Platform**
 
-[Features](#-key-features) • [Architecture](#-architecture--data-flow) • [Tech Stack](#-technology-stack) • [Quickstart](#-quickstart--installation) • [Project Structure](#-project-structure) • [Testing](#-running-tests)
+[Features](#-key-features) • [Text Studio](#-text--conversational-affect-studio) • [Architecture](#-architecture--data-flow) • [Quickstart](#-quickstart--installation) • [Testing](#-running-tests)
 
 </div>
 
@@ -19,44 +19,39 @@
 
 ## 📌 Overview
 
-Human communication is inherently multimodal: over 80% of emotional context is conveyed through non-verbal cues (facial micro-expressions, gaze) and vocal prosody (pitch, jitter, shimmer, acoustic energy). Traditional text-only sentiment tools miss this vital spectrum.
+**EmotionSense** is an enterprise-grade affective artificial intelligence platform designed to decode human emotion across all primary communication modalities: **Text & Conversational Dialogue**, **Visual Micro-Expressions (3D Face Mesh)**, and **Acoustic Voice Prosody (Pitch & Tone)**.
 
-**EmotionSense** is a high-performance, **Pure Python Full-Stack** affective intelligence platform. It captures live webcam video and microphone audio streams, extracts granular computer vision and acoustic features in real time, and fuses them into a unified **Valence-Arousal-Dominance (VAD)** emotional coordinate space alongside real-time behavioral indices (Attention, Engagement, and Fatigue).
+Whether analyzing single text messages, multi-turn chat transcripts, customer support tickets, live camera feeds, or uploaded media files, EmotionSense maps emotional states into continuous **3D Valence-Arousal-Dominance (VAD)** spaces with token-level explainability, conversational trajectory tracking, and empathy response recommendations.
 
 ---
 
 ## 🚀 Key Features
 
-### 👁️ Computer Vision & Facial Micro-Expression Tracking
+### 💬 Text & Conversational Affect Intelligence (Single, Dialogue & Batch)
+- **Instant Single Message Emotion Decoder**: Immediate classification across 8 Ekman emotions (*Joy, Sadness, Anger, Fear, Surprise, Disgust, Neutral, Contempt*) + extended nuances (*Love, Excitement, Optimism, Anxiety, Frustration, Gratitude, Confusion, Empathy*).
+- **100+ Emoji & Emoticon Affect Mapping**: Decodes emotional intensity, sentiment valence, and arousal boosts from modern emojis.
+- **Negation & Modifier Engine**: Context-aware sentiment inversion (*"not happy" ➔ Sadness/Neutral*) and intensifier scaling (*"extremely", "super", "barely"*).
+- **Token-Level Salience & Explainability**: Interactive visual highlight badges showing exactly which words triggered each emotion.
+- **Multi-Turn Chat Transcript Parser**: Ingests WhatsApp, iMessage, Slack, and Zendesk chat transcripts with automatic speaker segmentation.
+- **Conversational Trajectory & Escalation Watchdog**: Turn-by-turn line charts tracking mood shifts, emotional conflict escalation risk (*Low, Moderate, High, Critical*), and turning points.
+- **Empathy & Rapport Synchrony**: Quantifies affective alignment and emotional mirroring between participants.
+- **AI Empathy Auto-Reply Templates**: Recommends context-aware communication responses (De-escalation, Supportive Validation, Celebratory Affirmation).
+- **Batch Dataset & CSV Stream**: Ingests bulk text datasets with instant Donut distributions, tabular inspection, and 1-click CSV/JSON exports.
+
+### 👁️ Computer Vision & 3D Facial Micro-Expressions
 - **468-Point 3D Face Mesh**: Sub-millimeter landmark tracking via Google MediaPipe.
-- **Facial Action Unit (AU) Decoding**: Computes dynamic Action Units (AU1 Inner Brow Raiser, AU4 Brow Lowerer, AU12 Lip Corner Puller, AU15 Lip Corner Depressor, AU25/26 Jaw Drop, AU45 Blink).
-- **Head Pose & Eye Aspect Ratio (EAR)**: Real-time pitch, yaw, roll estimation and blink/fatigue rate analysis.
-- **8-Class Micro-Expression Classifier**: Continuous probabilistic estimation across *Joy, Sadness, Anger, Fear, Surprise, Disgust, Contempt, and Neutral*.
+- **Facial Action Unit (AU) Decoding**: Computes dynamic Action Units (AU1 Inner Brow, AU4 Brow Lowerer, AU12 Lip Smile, AU15 Lip Depressor, AU26 Jaw Drop).
+- **Head Pose & Fatigue Rate**: Real-time pitch, yaw, roll estimation and blink/fatigue analysis.
 
 ### 🎙️ Acoustic Prosody & Vocal Tone Analysis
-- **Fundamental Frequency (F0 / Pitch)**: Tracks pitch contour, mean pitch, standard deviation, and dynamic range in Hertz.
-- **Energy & Dynamics (RMS)**: Root-mean-square acoustic energy and vocal intensity tracking.
-- **Voice Quality Biomarkers**: Cycle-to-cycle frequency variation (Jitter), amplitude perturbation (Shimmer), and Harmonic-to-Noise Ratio (HNR).
-- **Vocal Emotion Classifier**: Detects acoustic arousal, excitement, distress, calm, and hesitancy.
+- **Fundamental Frequency (F0 / Pitch)**: Tracks pitch contour, mean pitch, and dynamic range.
+- **Energy & Quality Biomarkers**: RMS intensity, frequency perturbation (Jitter), and amplitude micro-variability (Shimmer).
 
-### ⚡ Multimodal Fusion Engine
-- **Temporal Alignment**: Synchronizes asynchronous video frames (30 FPS) and audio buffers (16 kHz PCM) with sliding temporal windows.
-- **Dynamic Late Fusion**: Confidence-weighted fusion combining visual and acoustic signals with fallbacks for unimodal inputs.
-- **Affective State Modeling**: Maps fused emotions into continuous 2D/3D **Circumplex Affect Space** (Valence & Arousal).
-- **Behavioral Telemetry**:
-  - 🎯 **Attention Score (0–100%)**: Head alignment, eye contact stability, and blink consistency.
-  - ⚡ **Engagement Index (0–100%)**: Emotional dynamic range, expressiveness, and vocal vitality.
-  - 🔋 **Fatigue Level (0–100%)**: Eye closure duration (PERCLOS), head droop, and prosodic monotony.
+### ⚡ Tri-Modal Fusion Engine
+- **Confidence-Weighted Late Fusion**: Dynamically synchronizes Vision, Audio, and Text signals with adaptive modality weights ($w_v, w_a, w_t$).
+- **Russell's 2D/3D VAD Circumplex**: Continuous projection into Valence, Arousal, and Dominance coordinates.
+- **Behavioral Telemetry**: Computes Attention Score (0–100%), Engagement Index (0–100%), and Fatigue Level (0–100%).
 
-### 📊 Real-Time Interactive Telemetry & Studio
-- **Live Stream Studio (`streamlit-webrtc`)**: Low-latency bi-directional browser media streaming with 3D mesh overlays.
-- **Interactive Plotly Visualizations**:
-  - Dynamic 8-Emotion Spider/Radar chart.
-  - 2D Circumplex Valence-Arousal quadrant with live trace history.
-  - Multi-stream real-time temporal timelines for emotion drift.
-  - Circular gauge dials for Attention, Engagement, and Fatigue.
-- **Offline File Analysis**: Ingest MP4, AVI, MOV videos or WAV, MP3 audio files with frame-by-frame affective diagnostics.
-- **Session Intelligence & Export**: Full timeline scrubbing, affective summaries, dominant emotion logs, and instantaneous CSV/JSON report downloads.
 
 ---
 
