@@ -109,3 +109,20 @@ else:
                 mime="text/csv",
                 use_container_width=True
             )
+
+    # Multi-Session Comparative Benchmarking
+    if len(saved_files) > 1:
+        st.markdown("---")
+        st.markdown("### 📈 Multi-Session Comparative Benchmarking")
+        benchmarks = []
+        for sf_path in saved_files:
+            s_data = SessionManager.load_session(sf_path)
+            benchmarks.append({
+                "Session": sf_path.stem,
+                "Samples": s_data.get("samples_count", 0),
+                "Avg Valence": round(s_data.get("average_affect", {}).get("valence", 0.0), 2),
+                "Avg Arousal": round(s_data.get("average_affect", {}).get("arousal", 0.0), 2),
+                "Avg Engagement": f"{int(s_data.get('average_engagement', 0) * 100)}%",
+            })
+        st.dataframe(pd.DataFrame(benchmarks), use_container_width=True)
+
