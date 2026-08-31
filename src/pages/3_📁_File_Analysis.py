@@ -26,89 +26,149 @@ render_header("File Multimodal Analysis", "Analyze Pre-Recorded Video, Audio & S
 st.markdown("""
 <div class="es-card">
     <p style="color: #94a3b8; margin-bottom: 0;">
-        Upload an MP4, AVI, WAV, or MP3 file to run comprehensive multimodal affect extraction, generate timeline timelines, and export detailed affective diagnostic reports.
+        Upload a Video (MP4, AVI, MOV), Audio (WAV, MP3), or Conversational Text Dataset (CSV, JSON, TXT) to run comprehensive affective intelligence extraction and export detailed diagnostic reports.
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Choose a Video or Audio File", type=["mp4", "avi", "mov", "wav", "mp3"])
+uploaded_file = st.file_uploader("Choose a File (Video, Audio, or Text / Chat Transcript)", type=["mp4", "avi", "mov", "wav", "mp3", "csv", "json", "txt"])
 
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
     file_ext = Path(uploaded_file.name).suffix.lower()
     
-    st.success(f"Loaded `{uploaded_file.name}` ({len(file_bytes) / 1024 / 1024:.2f} MB)")
+    st.success(f"Loaded `{uploaded_file.name}` ({len(file_bytes) / 1024:.1f} KB)")
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if file_ext in [".mp4", ".avi", ".mov"]:
-            st.video(file_bytes)
-        elif file_ext in [".wav", ".mp3"]:
-            st.audio(file_bytes)
+    # 1. TEXT / CHAT TRANSCRIPT FILE ANALYSIS
+    if file_ext in [".csv", ".json", ".txt"]:
+        from src.text import ConversationAffectAnalyzer, TextEmotionClassifier
+        from src.ui.charts import render_conversation_flow_chart, render_emotion_distribution_pie
+        from src.ui.components import render_chat_bubble
 
-    with col2:
-        if st.button("🚀 Run Full Multimodal Analysis", use_container_width=True):
-            with st.spinner("Processing media frames & extracting acoustic features..."):
-                face_mesh = FaceMeshDetector()
-                emotion_classifier = FacialEmotionClassifier()
-                prosody_extractor = AcousticProsodyExtractor()
-                voice_classifier = VoiceSentimentClassifier()
-                fusion_engine = MultimodalFusionEngine(window_size=20)
-                session_mgr = SessionManager(session_id=f"file_{Path(uploaded_file.name).stem}")
-                session_mgr.start_recording()
+        analyzer = ConversationAffectAnalyzer()
+        raw_content = file_bytes.decode("utf-8", errors="ignore")
 
-                # Process with temp file
-                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
-                    tmp.write(file_bytes)
-                    tmp_path = tmp.name
+        if file_ext == ".csv":
+            import pandas as pd
+            import io
+            df_in = pd.read_csv(io.StringIO(raw_content))
+            str_cols = [c for c in df_in.columns if df_in[c].dtype == "object"]
+            if str_cols:
+                lines = df_in[str_cols[0]].dropna().astype(str).tolist()
+            else:
+                lines = df_in.iloc[:, 0].dropna().astype(str).tolist()
+            summary = analyzer.parse_and_analyze_transcript("\n".join(lines))
+        else:
+            summary = analyzer.parse_and_analyze_transcript(raw_content)
 
-                if file_ext in [".mp4", ".avi", ".mov"]:
-                    cap = cv2.VideoCapture(tmp_path)
-                    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    fps = max(int(cap.get(cv2.CAP_PROP_FPS)), 1)
-                    sample_stride = max(fps // 5, 1)  # 5 samples per sec
+        st.markdown("### 📊 Conversational Telemetry Summary")
+        tk1, tk2, tk3, tk4 = st.columns(4)
+        with tk1:
+            render_metric_card("Total Turns", str(summary.total_turns), delta=f"{len(summary.speakers)} Participants", color="#6366f1")
+        with tk2:
+            esc_col = "#10b981" if summary.escalation_risk == "Low" else ("#f59e0b" if summary.escalation_risk == "Moderate" else "#ef4444")
+            render_metric_card("Escalation Risk", summary.escalation_risk, delta="Conflict Watchdog", color=esc_col)
+        with tk3:
+            render_metric_card("Empathy / Rapport", f"{int(summary.rapport_empathy_score * 100)}%", delta="Affective Synchrony", color="#06b6d4")
+        with tk4:
+            render_metric_card("Turning Points", str(len(summary.turning_points)), delta="Inflection Shifts", color="#f59e0b")
 
-                    idx = 0
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
-                        if idx % sample_stride == 0:
-                            landmarks, head_pose = face_mesh.process_frame(frame)
-                            vis_res = emotion_classifier.classify_emotion(landmarks, head_pose)
-                            fused = fusion_engine.fuse(vis_res, None)
-                            session_mgr.add_sample(fused)
-                        idx += 1
-                    cap.release()
+        st.markdown("<br>", unsafe_allow_html=True)
+        t_col1, t_col2 = st.columns([5, 6])
+        with t_col1:
+            st.markdown("#### 💬 Message Stream Breakdown")
+            for turn in summary.turns[:25]:
+                is_r = (turn.speaker == summary.speakers[-1]) if len(summary.speakers) > 1 else False
+                render_chat_bubble(turn, is_right=is_r)
+            if len(summary.turns) > 25:
+                st.caption(f"... and {len(summary.turns) - 25} more messages")
 
-                summary = session_mgr.stop_recording()
-                st.session_state.file_summary = summary
-                st.session_state.file_samples = session_mgr.samples
-                st.success("Analysis Complete!")
+        with t_col2:
+            st.markdown("#### 📈 Affective Trajectory Timeline")
+            st.plotly_chart(render_conversation_flow_chart(summary.emotional_trajectory), use_container_width=True)
 
-    # Display Analysis Results
-    if "file_summary" in st.session_state:
-        summary = st.session_state.file_summary
-        samples = st.session_state.file_samples
+            if summary.turning_points:
+                st.markdown("##### ⚡ Key Emotional Turning Points")
+                for tp in summary.turning_points:
+                    st.markdown(f"""
+                    <div style="background: rgba(30, 41, 59, 0.45); border-left: 3px solid #f59e0b; padding: 6px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem;">
+                        <b>Turn #{tp['turn_index']} ({tp['speaker']})</b>: <code>{tp['from_emotion']}</code> ➔ <code style="color: #f59e0b;">{tp['to_emotion']}</code> (ΔValence: {tp['valence_delta']:+.2f})
+                    </div>
+                    """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown("### 📊 Diagnostic Results Summary")
+    # 2. VIDEO / AUDIO MEDIA FILE ANALYSIS
+    else:
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if file_ext in [".mp4", ".avi", ".mov"]:
+                st.video(file_bytes)
+            elif file_ext in [".wav", ".mp3"]:
+                st.audio(file_bytes)
 
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            render_metric_card("Total Samples", f"{summary.samples_count}", color="#6366f1")
-        with m2:
-            render_metric_card("Avg Engagement", f"{int(summary.average_engagement * 100)}%", color="#06b6d4")
-        with m3:
-            render_metric_card("Avg Valence", f"{summary.average_affect['valence']:+.2f}", color="#10b981")
-        with m4:
-            render_metric_card("Avg Arousal", f"{summary.average_affect['arousal']:+.2f}", color="#f59e0b")
+        with col2:
+            if st.button("🚀 Run Full Multimodal Analysis", use_container_width=True):
+                with st.spinner("Processing media frames & extracting acoustic features..."):
+                    face_mesh = FaceMeshDetector()
+                    emotion_classifier = FacialEmotionClassifier()
+                    prosody_extractor = AcousticProsodyExtractor()
+                    voice_classifier = VoiceSentimentClassifier()
+                    fusion_engine = MultimodalFusionEngine(window_size=20)
+                    session_mgr = SessionManager(session_id=f"file_{Path(uploaded_file.name).stem}")
+                    session_mgr.start_recording()
 
-        st.markdown("#### 📈 Multi-Dimensional Timeline Stream")
-        st.plotly_chart(render_emotion_timeline_chart(samples), use_container_width=True)
+                    # Process with temp file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                        tmp.write(file_bytes)
+                        tmp_path = tmp.name
 
-        st.markdown("#### 🥧 Dominant Emotion Distribution")
-        dist_cols = st.columns(len(summary.dominant_emotion_distribution))
-        for i, (emo, pct) in enumerate(summary.dominant_emotion_distribution.items()):
-            with dist_cols[i]:
-                st.metric(emo.capitalize(), f"{int(pct * 100)}%")
+                    if file_ext in [".mp4", ".avi", ".mov"]:
+                        cap = cv2.VideoCapture(tmp_path)
+                        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                        fps = max(int(cap.get(cv2.CAP_PROP_FPS)), 1)
+                        sample_stride = max(fps // 5, 1)  # 5 samples per sec
+
+                        idx = 0
+                        while cap.isOpened():
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
+                            if idx % sample_stride == 0:
+                                landmarks, head_pose = face_mesh.process_frame(frame)
+                                vis_res = emotion_classifier.classify_emotion(landmarks, head_pose)
+                                fused = fusion_engine.fuse(vis_res, None)
+                                session_mgr.add_sample(fused)
+                            idx += 1
+                        cap.release()
+
+                    summary = session_mgr.stop_recording()
+                    st.session_state.file_summary = summary
+                    st.session_state.file_samples = session_mgr.samples
+                    st.success("Analysis Complete!")
+
+        # Display Analysis Results
+        if "file_summary" in st.session_state:
+            summary = st.session_state.file_summary
+            samples = st.session_state.file_samples
+
+            st.markdown("---")
+            st.markdown("### 📊 Diagnostic Results Summary")
+
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                render_metric_card("Total Samples", f"{summary.samples_count}", color="#6366f1")
+            with m2:
+                render_metric_card("Avg Engagement", f"{int(summary.average_engagement * 100)}%", color="#06b6d4")
+            with m3:
+                render_metric_card("Avg Valence", f"{summary.average_affect['valence']:+.2f}", color="#10b981")
+            with m4:
+                render_metric_card("Avg Arousal", f"{summary.average_affect['arousal']:+.2f}", color="#f59e0b")
+
+            st.markdown("#### 📈 Multi-Dimensional Timeline Stream")
+            st.plotly_chart(render_emotion_timeline_chart(samples), use_container_width=True)
+
+            st.markdown("#### 🥧 Dominant Emotion Distribution")
+            dist_cols = st.columns(max(1, len(summary.dominant_emotion_distribution)))
+            for i, (emo, pct) in enumerate(summary.dominant_emotion_distribution.items()):
+                with dist_cols[i]:
+                    st.metric(emo.capitalize(), f"{int(pct * 100)}%")
+

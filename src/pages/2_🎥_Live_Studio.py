@@ -127,7 +127,7 @@ with left_col:
             action_units=synthetic_aus,
             head_pose={"yaw": np.random.uniform(-5, 5), "pitch": np.random.uniform(-3, 3), "roll": 0.0}
         )
-        synthetic_state = st.session_state.fusion_engine.fuse(synthetic_vision, None)
+        synthetic_state = st.session_state.fusion_engine.fuse(synthetic_vision, None, text=live_text_res)
         st.session_state.latest_state = synthetic_state
         st.session_state.session_manager.add_sample(synthetic_state)
 
@@ -152,6 +152,25 @@ with left_col:
 
         st.image(canvas, channels="BGR", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # Live Text & Spoken Prompt Input for True Tri-Modal Fusion
+    st.markdown("#### 💬 Live Text & Spoken Prompt (Tri-Modal Fusion)")
+    live_prompt = st.text_input(
+        "Spoken / Typed Phrase Context",
+        placeholder="Type or paste what the person is saying (e.g., 'I am so excited for this!' or 'I'm furious')...",
+        key="live_stream_text_prompt"
+    )
+    live_text_res = None
+    if live_prompt.strip():
+        if "text_classifier" not in st.session_state:
+            from src.text import TextEmotionClassifier
+            st.session_state.text_classifier = TextEmotionClassifier()
+        live_text_res = st.session_state.text_classifier.analyze_text(live_prompt)
+        st.markdown(f"""
+        <div style="font-size: 0.8rem; background: rgba(30, 41, 59, 0.4); padding: 4px 10px; border-radius: 6px; margin-bottom: 8px;">
+            <b>NLP Modality Detected:</b> <span style="color: #818cf8;">{live_text_res.dominant_emotion.upper()}</span> ({int(live_text_res.confidence*100)}%)
+        </div>
+        """, unsafe_allow_html=True)
 
     # Action Units Section
     current_state = getattr(st.session_state, "latest_state", None)
