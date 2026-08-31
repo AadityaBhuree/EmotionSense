@@ -110,6 +110,43 @@ if mode == "📝 Single Message & Live Salience":
             render_token_explainability_box(res.salience_tokens)
         with e2:
             render_empathy_advice_card(res.empathy_advice, dom)
+            
+            # AI Empathy Auto-Reply Assistant
+            st.markdown("""
+            <div style="margin-top: 0.75rem; padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.55); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="font-size: 0.75rem; color: #818cf8; text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">
+                    ✨ Recommended Empathetic Reply Templates
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if dom == "joy":
+                replies = [
+                    "That is fantastic news! Huge congratulations to you and the team! 🎉",
+                    "I am so thrilled for you! Well deserved milestone! 🚀",
+                    "Love seeing this win! Let's keep this amazing momentum going!"
+                ]
+            elif dom in ("anger", "disgust", "contempt"):
+                replies = [
+                    "I completely understand why you're frustrated. I am taking full ownership to resolve this right away.",
+                    "I hear your concern loud and clear. Let's get on a call to fix this step-by-step.",
+                    "Thank you for bringing this to my attention. I sincerely apologize for the inconvenience and will expedite a solution."
+                ]
+            elif dom in ("sadness", "fear"):
+                replies = [
+                    "I am really sorry you're going through this. Please know I am here if you need anything at all.",
+                    "Take all the time you need. We have your back and will support you through this.",
+                    "Sending you warm thoughts and strength. Don't hesitate to reach out whenever you're ready."
+                ]
+            else:
+                replies = [
+                    "Got it, thanks for the update! I will proceed accordingly.",
+                    "Thank you for sharing this information. Let me know if you need any further details.",
+                    "Understood. I will keep you posted on our progress."
+                ]
+
+            for r in replies:
+                st.markdown(f'<div style="background: rgba(30, 41, 59, 0.45); padding: 6px 10px; border-radius: 6px; margin-bottom: 5px; font-size: 0.85rem; color: #e2e8f0; border-left: 2px solid #6366f1;">💬 {r}</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 elif mode == "🗨️ Multi-turn Dialogue Transcript":
