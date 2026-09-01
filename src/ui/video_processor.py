@@ -25,7 +25,7 @@ except ImportError:
 
 
 class MultimodalVideoProcessor(VideoTransformerBase):
-    """Processes real-time video frames, overlays 468-point 3D face mesh, and updates shared state."""
+    """Processes real-time video frames, overlays 468-point 3D face mesh, and renders live affective HUD."""
 
     def __init__(self):
         self.face_mesh = FaceMeshDetector()
@@ -38,13 +38,20 @@ class MultimodalVideoProcessor(VideoTransformerBase):
         self.latest_state: Optional[MultimodalEmotionState] = None
         self.latest_vision: Optional[VisionEmotionResult] = None
         self.latest_voice: Optional[VoiceEmotionResult] = None
+        self.live_text_prompt: Optional[str] = None
+
+    def set_live_text(self, text: Optional[str]):
+        """Sets active text/spoken prompt to fuse with real-time video stream."""
+        with self.lock:
+            self.live_text_prompt = text
 
     def recv(self, frame: Any) -> Any:
-        """Processes incoming video frame and annotates facial mesh landmarks."""
+        """Processes incoming video frame and annotates facial mesh landmarks and affective HUD."""
         if av is None or not hasattr(frame, "to_ndarray"):
             return frame
 
         img = frame.to_ndarray(format="bgr24")
+        h, w, _ = img.shape
 
         # 1. Process facial mesh
         landmarks, head_pose = self.face_mesh.process_frame(img)
@@ -54,14 +61,38 @@ class MultimodalVideoProcessor(VideoTransformerBase):
         if landmarks is not None:
             img = self.face_mesh.draw_mesh_overlay(img, landmarks)
 
-            # Draw dominant emotion tag on canvas
-            emo_text = f"{vision_res.dominant_emotion.upper()} ({int(vision_res.confidence * 100)}%)"
+            # Draw Dominant Emotion HUD Card on top-left
+            emo = vision_res.dominant_emotion.upper()
+            conf_pct = int(vision_res.confidence * 100)
+            
+            # Background header pill
+            cv2.rectangle(img, (15, 15), (280, 75), (15, 23, 42), -1)
+            cv2.rectangle(img, (15, 15), (280, 75), (99, 102, 241), 1)
+
             cv2.putText(
-                img, emo_text, (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (99, 102, 241), 2, cv2.LINE_AA
+                img, f"AFFECT: {emo}", (25, 42),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (248, 250, 252), 2, cv2.LINE_AA
+            )
+            cv2.putText(
+                img, f"CONF: {conf_pct}%  POSE: Y:{int(head_pose['yaw'])} P:{int(head_pose['pitch'])}", (25, 63),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1, cv2.LINE_AA
             )
 
-        # 3. Fuse modalities and store latest state
+        # 3. Render Live Subtitle Bar if live text is active
+        with self.lock:
+            prompt = self.live_text_prompt
+
+        if prompt:
+            # Subtitle background bar at bottom
+            cv2.rectangle(img, (20, h - 50), (w - 20, h - 15), (15, 23, 42), -1)
+            cv2.rectangle(img, (20, h - 50), (w - 20, h - 15), (6, 182, 212), 1)
+            sub_text = prompt[:50] + ("..." if len(prompt) > 50 else "")
+            cv2.putText(
+                img, f"SPEECH: {sub_text}", (30, h - 26),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (248, 250, 252), 1, cv2.LINE_AA
+            )
+
+        # 4. Fuse modalities and store latest state
         fused_state = self.fusion_engine.fuse(vision_res, self.latest_voice)
         with self.lock:
             self.latest_vision = vision_res
@@ -72,3 +103,4 @@ class MultimodalVideoProcessor(VideoTransformerBase):
     def get_latest_state(self) -> Optional[MultimodalEmotionState]:
         with self.lock:
             return self.latest_state
+
