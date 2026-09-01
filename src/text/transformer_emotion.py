@@ -85,19 +85,19 @@ class TransformerEmotionClassifier:
             )
             self._is_loaded = True
             return True
-        except Exception as e:
+        except (Exception, OSError, BaseException) as e:
             self._load_error = str(e)
             self._is_loaded = False
             return False
 
     @property
     def is_available(self) -> bool:
-        """Returns True if PyTorch and Transformers can be imported."""
+        """Returns True if PyTorch and Transformers can be safely imported."""
         try:
             import torch
             import transformers
             return True
-        except ImportError:
+        except (ImportError, OSError, Exception):
             return False
 
     def predict(self, text: str) -> TextEmotionResult:
