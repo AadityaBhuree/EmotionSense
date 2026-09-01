@@ -123,6 +123,9 @@ class AffectVector:
         else:
             return "Low Positive (Relaxed / Content / Calm)"
 
+    def to_dict(self) -> Dict[str, float]:
+        return asdict(self)
+
 
 @dataclass
 class TokenSalience:
@@ -161,10 +164,8 @@ class TextEmotionResult:
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict[str, Any]:
-        res = asdict(self)
-        res["affect"] = self.affect.to_dict()
-        res["salience_tokens"] = [asdict(t) for t in self.salience_tokens]
-        return res
+        return asdict(self)
+
 
 
 @dataclass
