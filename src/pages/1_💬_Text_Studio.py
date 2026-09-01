@@ -21,7 +21,7 @@ from src.ui.charts import (
     render_emotion_distribution_pie,
     render_emotion_horizontal_bars,
 )
-from src.text import TextEmotionClassifier, ConversationAffectAnalyzer
+from src.text import TextEmotionClassifier, ConversationAffectAnalyzer, HybridEmotionClassifier
 from src.utils.session_manager import SessionManager
 
 # Page Configuration
@@ -31,22 +31,37 @@ inject_glassmorphic_styles()
 render_header("Text Emotion & Dialogue Studio", "Deep Affective NLP, Conversational Trajectory & Token Salience")
 
 # Initialize Session State
-if "text_classifier" not in st.session_state:
-    st.session_state.text_classifier = TextEmotionClassifier()
+if "hybrid_classifier" not in st.session_state:
+    st.session_state.hybrid_classifier = HybridEmotionClassifier(mode="hybrid")
 if "conversation_analyzer" not in st.session_state:
-    st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.text_classifier)
+    st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.hybrid_classifier)
 if "session_manager" not in st.session_state:
     st.session_state.session_manager = SessionManager()
 
-clf = st.session_state.text_classifier
+clf = st.session_state.hybrid_classifier
 conv = st.session_state.conversation_analyzer
 
-# Studio Mode Radio
-mode = st.radio(
-    "Select Studio Analysis Mode",
-    ["📝 Single Message & Live Salience", "🗨️ Multi-turn Dialogue Transcript", "📊 Batch File / Multi-Line Stream"],
-    horizontal=True
-)
+# Controls Bar: Studio Mode & NLP Engine Selector
+ctl1, ctl2 = st.columns([6, 4])
+with ctl1:
+    mode = st.radio(
+        "Select Studio Analysis Mode",
+        ["📝 Single Message & Live Salience", "🗨️ Multi-turn Dialogue Transcript", "📊 Batch File / Multi-Line Stream"],
+        horizontal=True
+    )
+with ctl2:
+    backend_sel = st.selectbox(
+        "NLP Neural Engine Mode",
+        ["🔀 Hybrid Ensembled Mode", "⚡ Ultra-Fast Lexical (<5ms)", "🧠 Deep RoBERTa Neural (PyTorch)"],
+        index=0
+    )
+    if "Ultra-Fast" in backend_sel:
+        clf.set_mode("lexical")
+    elif "Deep RoBERTa" in backend_sel:
+        clf.set_mode("transformer")
+    else:
+        clf.set_mode("hybrid")
+
 
 st.markdown("---")
 

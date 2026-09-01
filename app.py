@@ -29,18 +29,18 @@ from src.ui.charts import (
     render_emotion_distribution_pie,
     render_emotion_horizontal_bars,
 )
-from src.text import TextEmotionClassifier, ConversationAffectAnalyzer
+from src.text import TextEmotionClassifier, ConversationAffectAnalyzer, HybridEmotionClassifier
 
 # Apply custom dark glassmorphic styling
 inject_glassmorphic_styles()
 
 # Initialize text classifiers in session state
-if "text_classifier" not in st.session_state:
-    st.session_state.text_classifier = TextEmotionClassifier()
+if "hybrid_classifier" not in st.session_state:
+    st.session_state.hybrid_classifier = HybridEmotionClassifier(mode="hybrid")
 if "conversation_analyzer" not in st.session_state:
-    st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.text_classifier)
+    st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.hybrid_classifier)
 
-clf: TextEmotionClassifier = st.session_state.text_classifier
+clf = st.session_state.hybrid_classifier
 conv_analyzer: ConversationAffectAnalyzer = st.session_state.conversation_analyzer
 
 # Sidebar Navigation & Telemetry
@@ -56,14 +56,26 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown("---")
+    st.markdown("### 🧠 NLP Backend Engine")
+    selected_backend = st.selectbox(
+        "Active NLP Engine",
+        ["⚡ Ultra-Fast Lexical (<5ms)", "🧠 Deep RoBERTa Neural (PyTorch)", "🔀 Hybrid Ensembled Mode"],
+        index=2
+    )
+    if "Ultra-Fast" in selected_backend:
+        clf.set_mode("lexical")
+    elif "Deep RoBERTa" in selected_backend:
+        clf.set_mode("transformer")
+    else:
+        clf.set_mode("hybrid")
+
+    st.markdown("---")
     st.markdown("### ⚡ Multimodal Engine Status")
-    st.markdown("""
-    - **Text / NLP Engine**: `Active (VAD + 8-Ekman + Salience)` ✅
+    st.markdown(f"""
+    - **NLP Engine Mode**: `{clf.mode.upper()}` ✅
     - **Dialogue Flow Engine**: `Active (Trajectory + Escalation)` ✅
     - **Vision Engine**: `MediaPipe 468 FaceMesh` ✅
     - **Audio Engine**: `Acoustic Prosody (F0/Jitter)` ✅
-    """)
-
     st.markdown("---")
     st.markdown("### 💡 Quick Tip")
     st.caption("Paste any single text message, customer chat log, or multiple message lines to immediately trigger real-time affective predictions.")
