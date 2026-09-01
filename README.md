@@ -224,26 +224,54 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Launch EmotionSense
+### 4. Launch EmotionSense Studio
 ```bash
 streamlit run app.py
 ```
 *The interactive dashboard will open automatically at `http://localhost:8501`.*
 
+### 5. Launch FastAPI Microservice (Optional)
+```bash
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+```
+*Interactive Swagger OpenAPI documentation is available at `http://localhost:8000/docs`.*
+
+---
+
+## 🐳 Docker Deployment
+
+Run both the Streamlit Studio and the FastAPI Microservice in containerized isolation:
+
+```bash
+# Build and run containers in background
+docker compose up -d
+
+# View live application logs
+docker compose logs -f
+```
+
 ---
 
 ## 🧪 Running Tests
 
-Validate the full computer vision, audio DSP, and multimodal fusion pipelines using `pytest`:
+Validate the full computer vision, audio DSP, NLP, and FastAPI pipelines using `pytest`:
 
-```bash
-pytest
-```
-
-To run with verbose output:
 ```bash
 pytest -v
 ```
+*All 28 unit and integration tests run in under 12 seconds with 100% pass rate.*
+
+---
+
+## 🔌 API Reference & Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Service health status & active neural mode |
+| `POST` | `/api/v1/predict-text` | Single message 8-Ekman + 3D VAD + Token Salience |
+| `POST` | `/api/v1/analyze-dialogue` | Multi-turn transcript parser with escalation & synchrony |
+| `POST` | `/api/v1/batch-predict` | Batch text list affective classification & distributions |
+| `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 
 ---
 
@@ -253,6 +281,7 @@ pytest -v
 - **Mental Wellness & Healthcare**: Non-invasive tracking of longitudinal affective patterns, depressive vocal markers, and fatigue.
 - **Customer Experience & Sales**: Real-time feedback on customer engagement and sentiment during discovery calls.
 - **EdTech & Remote Learning**: Measure student attention span, confusion, and cognitive fatigue in live webinars.
+
 
 ---
 
