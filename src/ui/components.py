@@ -1,8 +1,10 @@
 """Reusable UI components, status cards, and layout blocks."""
 
 import streamlit as st
+from typing import Any, List, Dict, Optional
 from config import APP_NAME, APP_TAGLINE, APP_ICON, THEME_COLORS, EMOTION_COLORS
 from src.core.types import MultimodalEmotionState, AffectVector
+
 
 
 def render_header(title: str = APP_NAME, subtitle: str = APP_TAGLINE):
