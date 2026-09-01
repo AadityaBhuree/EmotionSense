@@ -67,3 +67,13 @@ def test_batch_predict_endpoint(client):
     assert data["total_messages"] == 3
     assert "distribution" in data
     assert len(data["results"]) == 3
+
+
+def test_websocket_affect_stream(client):
+    with client.websocket_connect("/ws/stream-affect") as websocket:
+        websocket.send_text("I am so happy to see you! 🎉")
+        data = websocket.receive_json()
+        assert data["dominant_emotion"] == "joy"
+        assert data["valence"] > 0.0
+        assert "empathy_advice" in data
+
