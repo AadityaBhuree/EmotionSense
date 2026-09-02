@@ -129,7 +129,8 @@ EmotionSense/
 │   ├── fusion/
 │   │   ├── __init__.py
 │   │   ├── multimodal_fusion.py  # Temporal multimodal late fusion engine
-│   │   └── metrics.py            # Attention, Engagement, and Fatigue indices
+│   │   ├── metrics.py            # Attention, Engagement, and Fatigue indices
+│   │   └── anomaly_detector.py   # Affective anomaly & emotional distress sentinel
 │   ├── ui/
 │   │   ├── __init__.py
 │   │   ├── styles.py             # Sleek dark glassmorphism CSS injection
@@ -139,15 +140,22 @@ EmotionSense/
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── logger.py             # Structured logging
-│   │   └── session_manager.py    # Session recording, persistence & export
+│   │   ├── session_manager.py    # Session recording, persistence & export
+│   │   └── report_generator.py   # Diagnostic HTML/Markdown clinical report generator
 │   └── pages/
-│       ├── 1_Live_Studio.py      # Real-time multimodal streaming studio
-│       ├── 2_File_Analysis.py    # Offline video & audio file analysis
-│       ├── 3_Session_History.py  # Timeline scrubbing & export reports
-│       └── 4_Architecture.py     # System architecture & multimodal docs
+│       ├── 1_💬_Text_Studio.py     # Single message, multi-turn chat & batch analysis
+│       ├── 2_🎥_Live_Studio.py     # Real-time multimodal streaming studio
+│       ├── 3_📁_File_Analysis.py   # Offline video & audio file analysis
+│       ├── 4_📑_Session_History.py # Timeline scrubbing, anomaly log & reports
+│       └── 5_📐_Architecture.py    # System architecture & multimodal docs
 └── tests/
     ├── __init__.py
     ├── test_vision.py
     ├── test_audio.py
-    └── test_fusion.py
+    ├── test_fusion.py
+    ├── test_anomaly_detector.py
+    ├── test_report_generator.py
+    ├── test_text_emotion.py
+    ├── test_api_server.py
+    └── test_transformer_hybrid.py
 ```

@@ -52,6 +52,12 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Russell's 2D/3D VAD Circumplex**: Continuous projection into Valence, Arousal, and Dominance coordinates.
 - **Behavioral Telemetry**: Computes Attention Score (0–100%), Engagement Index (0–100%), and Fatigue Level (0–100%).
 
+### 🛡️ Affective Anomaly Sentinel & Clinical Diagnostic Exporter
+- **Real-Time Distress Sentinel**: Evaluates sudden emotional valence crashes ($\Delta V \le -0.45$), hyper-arousal stress spikes, sustained distress, and cognitive fatigue overload.
+- **Severity-Graded Alerting**: Automatically classifies anomalies into `INFO`, `WARNING`, and `CRITICAL` tiers with context-aware mitigation recommendations.
+- **Standalone Diagnostic HTML & Markdown Reports**: 1-click export of executive telemetry summaries, emotion distributions, anomaly event logs, and pivot moments.
+
+
 
 ---
 
@@ -166,7 +172,8 @@ EmotionSense/
 │   ├── fusion/
 │   │   ├── __init__.py
 │   │   ├── multimodal_fusion.py  # Temporal sliding window late fusion engine
-│   │   └── metrics.py            # Attention, Engagement, and Fatigue metrics
+│   │   ├── metrics.py            # Attention, Engagement, and Fatigue metrics
+│   │   └── anomaly_detector.py   # Affective anomaly & distress sentinel engine
 │   │
 │   ├── ui/
 │   │   ├── __init__.py
@@ -178,19 +185,26 @@ EmotionSense/
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── logger.py             # Structured application logging
-│   │   └── session_manager.py    # Session state recording, analytics & export
+│   │   ├── session_manager.py    # Session state recording, analytics & export
+│   │   └── report_generator.py   # Diagnostic HTML/Markdown clinical report generator
 │   │
 │   └── pages/
-│       ├── 1_Live_Studio.py      # Real-time multimodal streaming studio
-│       ├── 2_File_Analysis.py    # Pre-recorded video/audio file diagnostics
-│       ├── 3_Session_History.py  # History viewer, timeline scrubbing & reports
-│       └── 4_Architecture.py     # System architecture & documentation viewer
+│       ├── 1_💬_Text_Studio.py     # Single message, multi-turn chat & batch analysis
+│       ├── 2_🎥_Live_Studio.py     # Real-time multimodal streaming studio
+│       ├── 3_📁_File_Analysis.py   # Pre-recorded video/audio file diagnostics
+│       ├── 4_📑_Session_History.py # History viewer, timeline scrubbing & reports
+│       └── 5_📐_Architecture.py    # System architecture & documentation viewer
 │
 └── tests/
     ├── __init__.py
     ├── test_vision.py            # Vision pipeline & geometric unit tests
     ├── test_audio.py             # Acoustic DSP & prosody extractor unit tests
-    └── test_fusion.py            # Multimodal fusion & metric calculation tests
+    ├── test_fusion.py            # Multimodal fusion & metric calculation tests
+    ├── test_anomaly_detector.py  # Affective anomaly & sentinel unit tests
+    ├── test_report_generator.py  # Clinical diagnostic report generator tests
+    ├── test_text_emotion.py      # Text emotion & salience NLP tests
+    ├── test_api_server.py        # FastAPI endpoints & WebSocket stream tests
+    └── test_transformer_hybrid.py# Transformer fallback & hybrid classifier tests
 ```
 
 ---
