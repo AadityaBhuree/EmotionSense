@@ -9,7 +9,9 @@ from src.ui.styles import inject_glassmorphic_styles
 from src.ui.components import render_header, render_metric_card, render_affect_summary_badge
 from src.ui.charts import render_emotion_radar_chart, render_affect_quadrant_chart, render_emotion_timeline_chart
 from src.utils.session_manager import SessionManager
-from src.core.types import MultimodalEmotionState, AffectVector
+from src.utils.report_generator import DiagnosticReportGenerator
+from src.fusion.anomaly_detector import AffectiveAnomalyDetector
+from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_glassmorphic_styles()
@@ -85,25 +87,86 @@ else:
         st.markdown("### ⚡ Key Affective Pivot Moments (High Intensity Shifts)")
         st.dataframe(pd.DataFrame(key_moments), use_container_width=True)
 
+    # Affective Anomaly Sentinel Analysis
+    detector = AffectiveAnomalyDetector()
+    for frame in timeline_points:
+        aff = frame.get("affect", {})
+        st_obj = MultimodalEmotionState(
+            timestamp=frame.get("timestamp", 0.0),
+            dominant_emotion=frame.get("dominant_emotion", "neutral"),
+            confidence=frame.get("confidence", 0.0),
+            affect=AffectVector(
+                valence=aff.get("valence", 0.0),
+                arousal=aff.get("arousal", 0.0),
+                dominance=aff.get("dominance", 0.0)
+            ),
+            engagement_index=frame.get("engagement_index", 0.0),
+            fatigue_level=frame.get("fatigue_level", 0.0),
+            attention_score=frame.get("attention_score", 0.0),
+        )
+        detector.process_state(st_obj)
+
+    anom_summary = detector.get_anomaly_summary()
+    detected_events = anom_summary.get("events", [])
+
+    if detected_events:
+        st.markdown("---")
+        st.markdown(f"### 🛡️ Affective Anomaly & Escalation Sentinel ({len(detected_events)} Detected)")
+        st.dataframe(pd.DataFrame(detected_events), use_container_width=True)
+
     # Export Section
     st.markdown("---")
-    st.markdown("### 💾 Export Telemetry Dataset")
-    exp1, exp2 = st.columns(2)
+    st.markdown("### 💾 Export Telemetry Dataset & Clinical Reports")
+
+    session_rec = SessionRecord(
+        session_id=session_data.get("session_id", selected_file.stem),
+        start_time=session_data.get("start_time", 0.0),
+        end_time=session_data.get("end_time", 0.0),
+        samples_count=session_data.get("samples_count", len(timeline_points)),
+        timeline=timeline_points,
+        average_affect=session_data.get("average_affect", {}),
+        dominant_emotion_distribution=session_data.get("dominant_emotion_distribution", {}),
+        average_engagement=session_data.get("average_engagement", 0.0),
+        average_fatigue=session_data.get("average_fatigue", 0.0),
+        average_attention=session_data.get("average_attention", 0.0),
+        key_moments=key_moments,
+    )
+
+    html_report_str = DiagnosticReportGenerator.generate_html_report(session_rec, detected_events)
+    md_report_str = DiagnosticReportGenerator.generate_markdown_report(session_rec, detected_events)
+
+    exp1, exp2, exp3, exp4 = st.columns(4)
     with exp1:
+        st.download_button(
+            "📄 Diagnostic Report (HTML)",
+            data=html_report_str,
+            file_name=f"{selected_file.stem}_diagnostic_report.html",
+            mime="text/html",
+            use_container_width=True
+        )
+    with exp2:
+        st.download_button(
+            "📝 Clinical Summary (MD)",
+            data=md_report_str,
+            file_name=f"{selected_file.stem}_clinical_summary.md",
+            mime="text/markdown",
+            use_container_width=True
+        )
+    with exp3:
         json_str = json.dumps(session_data, indent=2)
         st.download_button(
-            "📥 Download Raw Session (JSON)",
+            "📥 Raw Session (JSON)",
             data=json_str,
             file_name=f"{selected_file.stem}.json",
             mime="application/json",
             use_container_width=True
         )
-    with exp2:
+    with exp4:
         if timeline_points:
             df = pd.DataFrame(timeline_points)
             csv_str = df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                "📥 Download Telemetry Timeline (CSV)",
+                "📥 Timeline (CSV)",
                 data=csv_str,
                 file_name=f"{selected_file.stem}_timeline.csv",
                 mime="text/csv",
