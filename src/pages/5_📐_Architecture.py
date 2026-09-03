@@ -1,15 +1,15 @@
-"""Page 4: Multimodal Architecture, Affect Theory & FACS Specifications."""
+"""Page 5: Multimodal Architecture, Affect Theory & FACS Specifications."""
 
 import streamlit as st
 import pandas as pd
 
 from config import THEME_COLORS, EMOTION_COLORS
-from src.ui.styles import inject_glassmorphic_styles
+from src.ui.styles import inject_modern_styles
 from src.ui.components import render_header, render_metric_card
 from src.core.config import EMOTION_VAD_COORDINATES
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
-inject_glassmorphic_styles()
+inject_modern_styles()
 
 render_header("System Architecture & Theory", "Mathematical Models, Temporal Late Fusion & FACS Specifications")
 
@@ -23,10 +23,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.markdown("""
-    <div class="es-card">
-        <h3 style="color: #f8fafc; margin-bottom: 0.5rem;">Tri-Modal Temporal Late Fusion Framework</h3>
-        <p style="color: #94a3b8;">
-            EmotionSense dynamically synchronizes visual micro-expressions (MediaPipe 468), acoustic prosody (F0/Jitter/Shimmer), and lexical semantic NLP across a sliding temporal window (\(W = 15..30\) frames).
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">Tri-Modal Temporal Late Fusion Framework</div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            EmotionSense dynamically synchronizes visual micro-expressions (MediaPipe 468), acoustic prosody (F0/Jitter/Shimmer), and lexical semantic NLP across a sliding temporal window (W = 15..30 frames).
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -77,11 +77,11 @@ with tab4:
     st.markdown("Geometric displacement vectors via MediaPipe 468 3D landmark mesh:")
 
     facs_data = [
-        {"AU": "AU1", "Name": "Inner Brow Raiser", "Muscles": "Frontalis, pars medialis", "Key Indications": "Surprise, Fear, Sadness"},
-        {"AU": "AU2", "Name": "Outer Brow Raiser", "Muscles": "Frontalis, pars lateralis", "Key Indications": "Surprise"},
-        {"AU": "AU4", "Name": "Brow Lowerer", "Muscles": "Corrugator supercilii", "Key Indications": "Anger, Deep Concentration"},
-        {"AU": "AU5", "Name": "Upper Lid Raiser", "Muscles": "Levator palpebrae superioris", "Key Indications": "Fear, Surprise, Excitement"},
-        {"AU": "AU6", "Name": "Cheek Raiser", "Muscles": "Orbicularis oculi, pars orbitalis", "Key Indications": "Genuine Duchenne Smile / Joy"},
+        {"AU": "AU01", "Name": "Inner Brow Raiser", "Muscles": "Frontalis, pars medialis", "Key Indications": "Surprise, Fear, Sadness"},
+        {"AU": "AU02", "Name": "Outer Brow Raiser", "Muscles": "Frontalis, pars lateralis", "Key Indications": "Surprise"},
+        {"AU": "AU04", "Name": "Brow Lowerer", "Muscles": "Corrugator supercilii", "Key Indications": "Anger, Deep Concentration"},
+        {"AU": "AU05", "Name": "Upper Lid Raiser", "Muscles": "Levator palpebrae superioris", "Key Indications": "Fear, Surprise, Excitement"},
+        {"AU": "AU06", "Name": "Cheek Raiser", "Muscles": "Orbicularis oculi, pars orbitalis", "Key Indications": "Genuine Duchenne Smile / Joy"},
         {"AU": "AU12", "Name": "Lip Corner Puller", "Muscles": "Zygomaticus major", "Key Indications": "Joy, Happiness, Smiling"},
         {"AU": "AU15", "Name": "Lip Corner Depressor", "Muscles": "Depressor anguli oris", "Key Indications": "Sadness, Melancholy"},
         {"AU": "AU26", "Name": "Jaw Drop", "Muscles": "Masseter, Temporalis relaxed", "Key Indications": "Surprise, Shock"},
@@ -98,16 +98,11 @@ clf = TextEmotionClassifier()
 res = clf.analyze_text("I am so thrilled and excited for our product release! 🎉")
 print(res.dominant_emotion)  # 'joy'
 print(res.affect.valence)    # +0.68
-print(res.affect.arousal)    # +0.55
+print(res.affect.arousal)    # +0.72
 
-# 2. Conversational Transcript Trajectory
-analyzer = ConversationAffectAnalyzer()
-summary = analyzer.parse_and_analyze_transcript(\"\"\"
-[10:00] User: I have an urgent issue!
-[10:01] Agent: I am sorry to hear that, fixing it right now.
-\"\"\")
+# 2. Multi-turn Dialogue Transcript Analysis
+conv = ConversationAffectAnalyzer()
+summary = conv.parse_and_analyze_transcript(chat_transcript)
 print("Escalation Risk:", summary.escalation_risk)
-print("Empathy Score:", summary.rapport_empathy_score)
+print("Rapport Score:", summary.rapport_empathy_score)
 """, language="python")
-
-

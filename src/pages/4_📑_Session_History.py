@@ -1,11 +1,11 @@
-"""Page 3: Session History, Timeline Scrubbing & Diagnostic Report Exporter."""
+"""Page 4: Session History, Timeline Scrubbing & Diagnostic Report Exporter."""
 
 import streamlit as st
 import pandas as pd
 import json
 
 from config import THEME_COLORS
-from src.ui.styles import inject_glassmorphic_styles
+from src.ui.styles import inject_modern_styles
 from src.ui.components import render_header, render_metric_card, render_affect_summary_badge
 from src.ui.charts import render_emotion_radar_chart, render_affect_quadrant_chart, render_emotion_timeline_chart
 from src.utils.session_manager import SessionManager
@@ -14,7 +14,7 @@ from src.fusion.anomaly_detector import AffectiveAnomalyDetector
 from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
-inject_glassmorphic_styles()
+inject_modern_styles()
 
 render_header("Session Intelligence & History", "Review Historical Affective Logs, Scrub Timelines & Export Data")
 
@@ -38,14 +38,13 @@ else:
 
     session_data = SessionManager.load_session(selected_file)
 
-    st.markdown("---")
-    st.markdown("### 📊 Session Aggregate Summary")
+    st.markdown("<div class='es-section-title'>📊 Session Aggregate Telemetry</div>", unsafe_allow_html=True)
 
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        render_metric_card("Total Samples", f"{session_data.get('samples_count', 0)}", color="#6366f1")
+        render_metric_card("Total Samples", f"{session_data.get('samples_count', 0)}", color="#3b82f6")
     with m2:
-        render_metric_card("Avg Engagement", f"{int(session_data.get('average_engagement', 0) * 100)}%", color="#06b6d4")
+        render_metric_card("Avg Engagement", f"{int(session_data.get('average_engagement', 0) * 100)}%", color="#0ea5e9")
     with m3:
         render_metric_card("Avg Valence", f"{session_data.get('average_affect', {}).get('valence', 0):+.2f}", color="#10b981")
     with m4:
@@ -54,21 +53,28 @@ else:
     timeline_points = session_data.get("timeline", [])
 
     if timeline_points:
-        st.markdown("---")
-        st.markdown("### ⏱️ Interactive Timeline Scrubber")
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>⏱️ Interactive Timeline Scrubber</div>", unsafe_allow_html=True)
         
         frame_idx = st.slider("Scrub Timeline Frame", 0, len(timeline_points) - 1, 0)
         current_frame = timeline_points[frame_idx]
 
         sc1, sc2, sc3 = st.columns([1, 1, 1])
         with sc1:
-            st.markdown(f"**Dominant Emotion:** `{current_frame.get('dominant_emotion', 'neutral').upper()}`")
-            st.markdown(f"**Confidence:** `{int(current_frame.get('confidence', 0)*100)}%`")
-            st.markdown(f"**Affect Quadrant:** `{current_frame.get('quadrant', 'N/A')}`")
+            st.markdown(f"""
+            <div class="es-panel">
+                <div class="es-section-title">Frame #{frame_idx} Telemetry</div>
+                <div style="font-size: 0.85rem; line-height: 1.6; font-family: 'JetBrains Mono', monospace;">
+                    <div>Dominant: <b style="color: #3b82f6;">{current_frame.get('dominant_emotion', 'neutral').upper()}</b></div>
+                    <div>Confidence: <b>{int(current_frame.get('confidence', 0)*100)}%</b></div>
+                    <div>Quadrant: <b>{current_frame.get('quadrant', 'N/A')}</b></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             if current_frame.get("text"):
                 txt_obj = current_frame.get("text")
                 msg_str = txt_obj.get("text") if isinstance(txt_obj, dict) else str(txt_obj)
-                st.markdown(f"**Message:** *\"{msg_str}\"*")
+                st.caption(f"Spoken text: \"{msg_str}\"")
         with sc2:
             st.plotly_chart(render_emotion_radar_chart(current_frame.get("probabilities", {})), use_container_width=True)
         with sc3:
@@ -83,8 +89,7 @@ else:
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
     if key_moments:
-        st.markdown("---")
-        st.markdown("### ⚡ Key Affective Pivot Moments (High Intensity Shifts)")
+        st.markdown("<div class='es-section-title'>⚡ Key Affective Pivot Moments (High Intensity Shifts)</div>", unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(key_moments), use_container_width=True)
 
     # Affective Anomaly Sentinel Analysis
@@ -110,13 +115,11 @@ else:
     detected_events = anom_summary.get("events", [])
 
     if detected_events:
-        st.markdown("---")
-        st.markdown(f"### 🛡️ Affective Anomaly & Escalation Sentinel ({len(detected_events)} Detected)")
+        st.markdown(f"<div class='es-section-title'>🛡️ Affective Anomaly & Escalation Sentinel ({len(detected_events)} Events)</div>", unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(detected_events), use_container_width=True)
 
     # Export Section
-    st.markdown("---")
-    st.markdown("### 💾 Export Telemetry Dataset & Clinical Reports")
+    st.markdown("<div class='es-section-title'>💾 Export Telemetry Dataset & Clinical Reports</div>", unsafe_allow_html=True)
 
     session_rec = SessionRecord(
         session_id=session_data.get("session_id", selected_file.stem),
@@ -175,8 +178,7 @@ else:
 
     # Multi-Session Comparative Benchmarking
     if len(saved_files) > 1:
-        st.markdown("---")
-        st.markdown("### 📈 Multi-Session Comparative Benchmarking")
+        st.markdown("<div class='es-section-title'>📈 Multi-Session Comparative Benchmarking</div>", unsafe_allow_html=True)
         benchmarks = []
         for sf_path in saved_files:
             s_data = SessionManager.load_session(sf_path)
@@ -188,4 +190,3 @@ else:
                 "Avg Engagement": f"{int(s_data.get('average_engagement', 0) * 100)}%",
             })
         st.dataframe(pd.DataFrame(benchmarks), use_container_width=True)
-
