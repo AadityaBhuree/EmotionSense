@@ -77,3 +77,71 @@ def test_websocket_affect_stream(client):
         assert data["valence"] > 0.0
         assert "empathy_advice" in data
 
+
+def test_detect_anomalies_endpoint(client):
+    payload = {
+        "frames": [
+            {
+                "timestamp": 10.0,
+                "dominant_emotion": "joy",
+                "confidence": 0.88,
+                "affect": {"valence": 0.7, "arousal": 0.6, "dominance": 0.5},
+                "engagement_index": 0.8,
+                "fatigue_level": 0.2,
+                "attention_score": 0.85
+            },
+            {
+                "timestamp": 11.0,
+                "dominant_emotion": "anger",
+                "confidence": 0.95,
+                "affect": {"valence": -0.85, "arousal": 0.9, "dominance": 0.8},
+                "engagement_index": 0.4,
+                "fatigue_level": 0.75,
+                "attention_score": 0.4
+            }
+        ]
+    }
+    response = client.post("/api/v1/detect-anomalies", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "total_anomalies" in data["data"]
+    assert "events" in data["data"]
+    assert len(data["data"]["events"]) > 0
+
+
+def test_generate_diagnostic_report_endpoint(client):
+    payload = {
+        "session_id": "test_api_session",
+        "frames": [
+            {
+                "timestamp": 1.0,
+                "dominant_emotion": "neutral",
+                "confidence": 0.7,
+                "affect": {"valence": 0.0, "arousal": 0.0, "dominance": 0.0},
+                "engagement_index": 0.6,
+                "fatigue_level": 0.3,
+                "attention_score": 0.7
+            },
+            {
+                "timestamp": 2.0,
+                "dominant_emotion": "joy",
+                "confidence": 0.9,
+                "affect": {"valence": 0.8, "arousal": 0.7, "dominance": 0.6},
+                "engagement_index": 0.85,
+                "fatigue_level": 0.2,
+                "attention_score": 0.9
+            }
+        ]
+    }
+    response = client.post("/api/v1/generate-diagnostic-report", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["session_id"] == "test_api_session"
+    assert "html_report" in data
+    assert "markdown_report" in data
+    assert "<!DOCTYPE html>" in data["html_report"]
+    assert "Session Diagnostic Report" in data["markdown_report"]
+
+
