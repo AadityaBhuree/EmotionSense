@@ -18,6 +18,7 @@ from src.core.types import TextEmotionResult, DialogueEmotionSummary, Multimodal
 from src.text import HybridEmotionClassifier, ConversationAffectAnalyzer
 from src.fusion.anomaly_detector import AffectiveAnomalyDetector
 from src.utils.report_generator import DiagnosticReportGenerator
+from src.audio.speech_transcriber import LiveSpeechTranscriber
 
 
 # Initialize FastAPI App
@@ -38,9 +39,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Classifiers
+# Global Classifiers & Engines
 classifier = HybridEmotionClassifier(mode="hybrid")
 conversation_analyzer = ConversationAffectAnalyzer(classifier)
+speech_transcriber = LiveSpeechTranscriber(classifier.lexical_clf)
 
 
 # Request & Response Schemas
@@ -280,6 +282,36 @@ async def websocket_affect_stream(websocket: WebSocket):
                     "polarity": result.polarity,
                     "empathy_advice": result.empathy_advice,
                     "timestamp": time.time(),
+                })
+    except WebSocketDisconnect:
+        pass
+
+
+@app.websocket("/ws/stream-speech")
+async def websocket_speech_stream(websocket: WebSocket):
+    """Bidirectional WebSocket stream for live speech transcription and phonetic affect alignment."""
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data:
+                res = speech_transcriber.transcribe_text_stream(data)
+                await websocket.send_json({
+                    "transcript": res.full_transcript,
+                    "dominant_emotion": res.text_emotion.dominant_emotion if res.text_emotion else "neutral",
+                    "confidence": res.text_emotion.confidence if res.text_emotion else 0.0,
+                    "valence": res.text_emotion.affect.valence if res.text_emotion else 0.0,
+                    "arousal": res.text_emotion.affect.arousal if res.text_emotion else 0.0,
+                    "tokens": [
+                        {
+                            "word": t.word,
+                            "emotion_cue": t.emotion_cue,
+                            "confidence": t.confidence,
+                            "pitch_hz": t.pitch_hz,
+                        }
+                        for t in res.tokens
+                    ],
+                    "timestamp": res.timestamp,
                 })
     except WebSocketDisconnect:
         pass
