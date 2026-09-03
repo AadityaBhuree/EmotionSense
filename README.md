@@ -280,7 +280,7 @@ Validate the full computer vision, audio DSP, NLP, and FastAPI pipelines using `
 ```bash
 pytest -v
 ```
-*All 28 unit and integration tests run in under 12 seconds with 100% pass rate.*
+*All 45 unit and integration tests run in under 8 seconds with 100% pass rate.*
 
 ---
 
@@ -292,7 +292,10 @@ pytest -v
 | `POST` | `/api/v1/predict-text` | Single message 8-Ekman + 3D VAD + Token Salience |
 | `POST` | `/api/v1/analyze-dialogue` | Multi-turn transcript parser with escalation & synchrony |
 | `POST` | `/api/v1/batch-predict` | Batch text list affective classification & distributions |
+| `POST` | `/api/v1/detect-anomalies` | Evaluates timeline frames for sudden valence crashes & fatigue overload |
+| `POST` | `/api/v1/generate-diagnostic-report` | Generates standalone clinical diagnostic reports (HTML & Markdown) |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
+| `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 
 ---
 
