@@ -57,6 +57,13 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Severity-Graded Alerting**: Automatically classifies anomalies into `INFO`, `WARNING`, and `CRITICAL` tiers with context-aware mitigation recommendations.
 - **Standalone Diagnostic HTML & Markdown Reports**: 1-click export of executive telemetry summaries, emotion distributions, anomaly event logs, and pivot moments.
 
+### 🎛️ Precision Neuro-Affective Instrument UI & Design System
+- **Authentic Domain Aesthetic**: Replaces generic AI tropes (purple gradients, bloated glassmorphism blur) with a high-precision laboratory instrument interface.
+- **Technical Canvas & Contrast**: Deep obsidian charcoal base (`#0b0e14`) with a calibrated structural grid (`28px`), tactile console cards, and WCAG AAA contrast ratios.
+- **Dual-Font Typography Hierarchy**: `Plus Jakarta Sans` for authoritative display typography paired with `JetBrains Mono` for tabular telemetry figures, timestamps, and FACS codes.
+- **Calibrated Emotion Palette**: Emotion categories are semantically mapped to affective psychological models (Plutchik / Russell) for immediate, unambiguous diagnostic clarity.
+- **Dynamic Circumplex Vector Trails**: Real-time 2D Russell Circumplex with historical trajectory fading trails tracking emotional momentum.
+
 
 
 ---

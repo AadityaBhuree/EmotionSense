@@ -30,7 +30,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 
 | Domain | Technology / Library | Role & Rationale |
 | :--- | :--- | :--- |
-| **Framework & UI** | **Streamlit + Custom Dark Glassmorphism CSS** | High-performance Python-native reactive dashboard with custom sleek UI |
+| **Framework & UI** | **Streamlit + Precision Neuro-Instrument CSS** | High-performance Python-native reactive workstation with calibrated technical grid and tactile telemetry consoles |
 | **Real-Time Video/Audio Stream** | **streamlit-webrtc + AV + WebRTC** | Low-latency bi-directional video and audio stream processing |
 | **Computer Vision** | **MediaPipe + OpenCV + NumPy** | 468-point 3D Face Mesh, Facial Action Units (AU), and Micro-expression Classifier |
 | **Audio & Acoustics** | **Librosa + SoundFile + SciPy** | Acoustic prosody, fundamental frequency (F0 pitch), RMS energy, jitter & shimmer |
