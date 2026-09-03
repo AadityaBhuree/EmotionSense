@@ -19,38 +19,50 @@ APP_TAGLINE = "Enterprise Multimodal Affective Intelligence"
 APP_ICON = "🎭"
 VERSION = "1.0.0"
 
-# Color Palette (Dark Cyber Affective Theme)
+# Color Palette (Precision Neuro-Affective Instrument Palette)
 THEME_COLORS = {
-    "background": "#080c14",
-    "surface": "#0f172a",
-    "surface_glass": "rgba(15, 23, 42, 0.75)",
-    "border": "#1e293b",
-    "border_glow": "rgba(99, 102, 241, 0.35)",
-    "primary": "#6366f1",        # Indigo
-    "primary_glow": "#818cf8",
-    "secondary": "#06b6d4",      # Cyan
-    "accent_joy": "#10b981",     # Emerald / Joy
-    "accent_sad": "#3b82f6",     # Blue / Sadness
-    "accent_anger": "#ef4444",   # Red / Anger
-    "accent_fear": "#a855f7",    # Purple / Fear
-    "accent_surprise": "#f59e0b",# Amber / Surprise
-    "accent_disgust": "#14b8a6", # Teal / Disgust
-    "accent_neutral": "#64748b", # Slate / Neutral
-    "text_primary": "#f8fafc",
-    "text_secondary": "#94a3b8",
-    "text_muted": "#64748b",
+    # Structural Canvas & Console Surfaces
+    "background": "#0b0e14",         # Deep Obsidian Charcoal
+    "surface": "#121622",            # Matte Instrument Panel
+    "surface_raised": "#171d2b",     # Elevated Control Tile
+    "surface_subtle": "#1c2334",     # Micro-interactive Hover
+    "border": "#212a3d",             # Crisp 1px Precision Hairline
+    "border_active": "#3b82f6",      # Active Focus Rail
+    "border_subtle": "rgba(255, 255, 255, 0.07)",
+    
+    # Primary & Telemetry Signals
+    "primary": "#3b82f6",            # Precision Cobalt Blue
+    "primary_glow": "rgba(59, 130, 246, 0.25)",
+    "secondary": "#0ea5e9",          # Cyan Telemetry Vector
+    "accent_telemetry": "#10b981",   # Status Nominal Green
+    "accent_warning": "#f59e0b",     # Caution Amber
+    "accent_critical": "#ef4444",    # Anomaly / Escalation Vermilion
+    
+    # Typography & Hierarchy
+    "text_primary": "#f1f5f9",       # High-Contrast Technical White
+    "text_secondary": "#94a3b8",     # Slate Telemetry Secondary
+    "text_muted": "#526079",         # Monospace Grid Inactive
+    
+    # Affect Spectrum Accents
+    "accent_joy": "#10b981",
+    "accent_sad": "#3b82f6",
+    "accent_anger": "#ef4444",
+    "accent_fear": "#a855f7",
+    "accent_surprise": "#f59e0b",
+    "accent_disgust": "#0d9488",
+    "accent_neutral": "#64748b",
 }
 
-# Emotion Mappings & Hex Colors
+# Calibrated 8-Emotion Spectrum (Russell Circumplex & Plutchik Grounded)
 EMOTION_COLORS = {
-    "joy": "#10b981",
-    "sadness": "#3b82f6",
-    "anger": "#ef4444",
-    "fear": "#a855f7",
-    "surprise": "#f59e0b",
-    "disgust": "#14b8a6",
-    "neutral": "#64748b",
-    "contempt": "#e11d48",
+    "joy": "#10b981",       # High Valence, Mid-High Arousal (Vivid Emerald)
+    "sadness": "#3b82f6",   # Low Valence, Low Arousal (Cobalt Slate)
+    "anger": "#ef4444",     # Low Valence, High Arousal (Vermilion Red)
+    "fear": "#a855f7",      # Low Valence, High Arousal (Amethyst Purple)
+    "surprise": "#f59e0b",  # Mid-High Valence, High Arousal (Amber Gold)
+    "disgust": "#0d9488",   # Low Valence, Low-Mid Arousal (Mineral Jade)
+    "neutral": "#64748b",   # Baseline Equilibrium (Balanced Cool Slate)
+    "contempt": "#e11d48",  # Asymmetric Negative (Crimson Rose)
 }
 
 # Real-time Stream Parameters
