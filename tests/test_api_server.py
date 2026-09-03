@@ -145,3 +145,15 @@ def test_generate_diagnostic_report_endpoint(client):
     assert "Session Diagnostic Report" in data["markdown_report"]
 
 
+def test_websocket_speech_stream(client):
+    with client.websocket_connect("/ws/stream-speech") as websocket:
+        websocket.send_text("I am so excited and overjoyed with this release! 🎉")
+        data = websocket.receive_json()
+        assert "transcript" in data
+        assert data["dominant_emotion"] == "joy"
+        assert data["valence"] > 0.0
+        assert "tokens" in data
+        assert len(data["tokens"]) > 0
+
+
+
