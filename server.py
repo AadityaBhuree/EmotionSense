@@ -43,7 +43,7 @@ conversation_analyzer = ConversationAffectAnalyzer(classifier)
 
 # Request & Response Schemas
 class SingleTextRequest(BaseModel):
-    text: str = Field(..., description="Message text to analyze", example="I am so happy and excited for our product launch! 🎉")
+    text: str = Field(..., description="Message text to analyze", json_schema_extra={"example": "I am so happy and excited for our product launch! 🎉"})
     mode: Optional[str] = Field("hybrid", description="Inference mode: lexical, transformer, or hybrid")
 
 
@@ -51,7 +51,7 @@ class DialogueTranscriptRequest(BaseModel):
     transcript: str = Field(
         ...,
         description="Multi-turn conversation transcript",
-        example="[10:00] User: I have an urgent issue!\n[10:01] Agent: Fixing it right now!"
+        json_schema_extra={"example": "[10:00] User: I have an urgent issue!\n[10:01] Agent: Fixing it right now!"}
     )
 
 
