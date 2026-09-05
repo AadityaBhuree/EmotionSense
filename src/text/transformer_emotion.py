@@ -12,6 +12,39 @@ import numpy as np
 from src.core.types import TextEmotionResult, AffectVector, TokenSalience, EmotionCategory
 
 
+_TORCH_AVAILABLE: Optional[bool] = None
+
+
+def _probe_torch_availability() -> bool:
+    """Safely checks if PyTorch and Transformers can be imported without Windows SEH faults."""
+    global _TORCH_AVAILABLE
+    if _TORCH_AVAILABLE is not None:
+        return _TORCH_AVAILABLE
+
+    import faulthandler
+    was_enabled = faulthandler.is_enabled()
+    if was_enabled:
+        try:
+            faulthandler.disable()
+        except Exception:
+            pass
+
+    try:
+        import torch
+        import transformers
+        _TORCH_AVAILABLE = True
+    except (ImportError, OSError, Exception):
+        _TORCH_AVAILABLE = False
+    finally:
+        if was_enabled:
+            try:
+                faulthandler.enable()
+            except Exception:
+                pass
+
+    return _TORCH_AVAILABLE
+
+
 class TransformerEmotionClassifier:
     """Deep learning neural text emotion classifier using HuggingFace / PyTorch."""
 
@@ -72,6 +105,19 @@ class TransformerEmotionClassifier:
         if self._is_loaded and self.pipeline is not None:
             return True
 
+        if not self.is_available:
+            self._load_error = "PyTorch or Transformers is not available."
+            self._is_loaded = False
+            return False
+
+        import faulthandler
+        was_enabled = faulthandler.is_enabled()
+        if was_enabled:
+            try:
+                faulthandler.disable()
+            except Exception:
+                pass
+
         try:
             import torch
             from transformers import pipeline
@@ -89,16 +135,17 @@ class TransformerEmotionClassifier:
             self._load_error = str(e)
             self._is_loaded = False
             return False
+        finally:
+            if was_enabled:
+                try:
+                    faulthandler.enable()
+                except Exception:
+                    pass
 
     @property
     def is_available(self) -> bool:
         """Returns True if PyTorch and Transformers can be safely imported."""
-        try:
-            import torch
-            import transformers
-            return True
-        except (ImportError, OSError, Exception):
-            return False
+        return _probe_torch_availability()
 
     def predict(self, text: str) -> TextEmotionResult:
         """Runs neural transformer inference on input text."""
