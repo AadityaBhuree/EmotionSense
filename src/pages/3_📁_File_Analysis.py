@@ -2,21 +2,31 @@
 
 import streamlit as st
 import tempfile
+import time
+import json
 import cv2
 import soundfile as sf
 import numpy as np
 from pathlib import Path
 
-from config import THEME_COLORS
+from config import THEME_COLORS, SESSIONS_DIR
+from src.core.config import EMOTION_LABELS
+from src.core.types import AffectVector
 from src.ui.styles import inject_modern_styles
 from src.ui.components import render_header, render_metric_card, render_affect_summary_badge
-from src.ui.charts import render_emotion_radar_chart, render_affect_quadrant_chart, render_emotion_timeline_chart
+from src.ui.charts import (
+    render_emotion_radar_chart,
+    render_affect_quadrant_chart,
+    render_emotion_timeline_chart,
+    render_dual_track_multimodal_timeline,
+)
 from src.vision.face_mesh import FaceMeshDetector
 from src.vision.emotion_classifier import FacialEmotionClassifier
 from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
 from src.fusion.multimodal_fusion import MultimodalFusionEngine
 from src.utils.session_manager import SessionManager
+from src.utils.demuxer import AudiovisualDemuxer
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -106,69 +116,193 @@ if uploaded_file is not None:
 
         if file_ext in [".mp4", ".avi", ".mov"]:
             st.video(tmp_path)
-            
-            if st.button("🚀 Run Frame-by-Frame Video Affect Extraction", use_container_width=True):
-                with st.spinner("Processing video frames via MediaPipe FaceMesh..."):
+
+            demuxer = AudiovisualDemuxer(target_sample_rate=16000)
+            demux_info = demuxer.demux(tmp_path)
+
+            # Container Status Banner
+            if demux_info.has_audio:
+                st.markdown(f"""
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem;">
+                    <span style="color: #10b981; font-weight: 600;">🔊 Synchronized Audio Stream Detected:</span> 
+                    <code>{demux_info.duration_seconds:.1f}s duration</code> | <code>16,000 Hz Mono Float32</code> | Codec: <code>{demux_info.metadata.get('audio_codec', 'AAC')}</code>
+                    <br><span style="color: #94a3b8; font-size: 0.8rem;">Dual-track facial micro-expression + acoustic prosody late multimodal fusion enabled.</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.85rem;">
+                    <span style="color: #f59e0b; font-weight: 600;">🔇 Silent Video Detected:</span> 
+                    No embedded audio stream found in container. Processing will run in visual-only mode.
+                </div>
+                """, unsafe_allow_html=True)
+
+            btn_label = "🚀 Run Synchronized Audiovisual Multimodal Analysis" if demux_info.has_audio else "🚀 Run Frame-by-Frame Video Affect Extraction"
+            if st.button(btn_label, use_container_width=True):
+                with st.spinner("Demuxing container and executing synchronized multimodal fusion..."):
                     cap = cv2.VideoCapture(tmp_path)
                     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
                     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    
+
                     detector = FaceMeshDetector()
                     classifier = FacialEmotionClassifier()
+                    prosody_extractor = AcousticProsodyExtractor(sample_rate=16000)
+                    voice_classifier = VoiceSentimentClassifier()
                     fusion = MultimodalFusionEngine()
-                    
+                    session_mgr = SessionManager(session_id=f"file_video_{Path(uploaded_file.name).stem}_{int(time.time())}")
+                    session_mgr.start_recording()
+
                     samples = []
                     step = max(1, int(fps / 5))  # 5 samples per sec
                     idx = 0
-                    
+
                     prog = st.progress(0)
+                    status_placeholder = st.empty()
+
                     while cap.isOpened():
                         ret, frame = cap.read()
                         if not ret:
                             break
                         if idx % step == 0:
-                            v_res = classifier.classify(frame)
-                            f_state = fusion.fuse(v_res, None)
+                            t_sec = float(idx / fps)
+                            # 1. Vision modality
+                            v_res = classifier.classify_frame(frame, detector=detector)
+
+                            # 2. Synchronized audio modality
+                            voice_res = None
+                            if demux_info.has_audio:
+                                audio_window = demuxer.get_audio_window(
+                                    demux_info.audio_array, timestamp_sec=t_sec, window_sec=1.0, centered=True
+                                )
+                                acoustics = prosody_extractor.extract_features(audio_window)
+                                voice_res = voice_classifier.classify_voice_emotion(acoustics)
+
+                            # 3. Synchronized late multimodal fusion
+                            f_state = fusion.fuse(vision=v_res, voice=voice_res)
                             samples.append(f_state)
+                            session_mgr.add_sample(f_state)
+
+                            status_placeholder.caption(f"Analyzing timestamp {t_sec:.1f}s / {demux_info.video_duration_seconds:.1f}s | Dominant: {f_state.dominant_emotion.upper()} ({int(f_state.confidence*100)}%)")
                             prog.progress(min(1.0, idx / max(1, frame_count)))
                         idx += 1
                     cap.release()
                     prog.progress(1.0)
+                    status_placeholder.empty()
 
-                    st.success(f"Completed analysis of {len(samples)} temporal checkpoints.")
                     st.session_state.file_samples = samples
+                    st.session_state.file_session_record = session_mgr.generate_summary()
+                    st.session_state.has_audio_track = demux_info.has_audio
+                    st.success(f"Successfully processed {len(samples)} synchronized multimodal checkpoints!")
 
             if "file_samples" in st.session_state and st.session_state.file_samples:
                 samples = st.session_state.file_samples
-                st.markdown("<div class='es-section-title'>Extracted Video Affect Telemetry</div>", unsafe_allow_html=True)
-                st.plotly_chart(render_emotion_timeline_chart(samples), use_container_width=True)
+                has_audio_track = st.session_state.get("has_audio_track", False)
+
+                st.markdown("### ⌖ Multimodal Affect Telemetry Breakdown")
+
+                # Metrics header
+                dominant_counts = {}
+                for s in samples:
+                    dominant_counts[s.dominant_emotion] = dominant_counts.get(s.dominant_emotion, 0) + 1
+                overall_dom = max(dominant_counts, key=dominant_counts.get) if dominant_counts else "neutral"
+                avg_conf = float(np.mean([s.confidence for s in samples])) if samples else 0.0
+                avg_val = float(np.mean([s.affect.valence for s in samples])) if samples else 0.0
+                avg_aro = float(np.mean([s.affect.arousal for s in samples])) if samples else 0.0
+
+                vk1, vk2, vk3, vk4 = st.columns(4)
+                with vk1:
+                    render_metric_card("Dominant Affect", overall_dom.upper(), delta=f"{len(samples)} Samples", color="#3b82f6")
+                with vk2:
+                    render_metric_card("Mean Confidence", f"{int(avg_conf * 100)}%", delta="Fused Multimodal", color="#10b981")
+                with vk3:
+                    v_col = "#10b981" if avg_val >= 0 else "#ef4444"
+                    render_metric_card("Average Valence", f"{avg_val:+.2f}", delta="Emotional Polarity", color=v_col)
+                with vk4:
+                    render_metric_card("Average Arousal", f"{avg_aro:+.2f}", delta="Activation / Energy", color="#f59e0b")
+
+                st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+
+                # Visual Timeline chart
+                if has_audio_track:
+                    st.markdown("<div class='es-section-title'>Synchronized Dual-Track Affect & Acoustic Dynamics</div>", unsafe_allow_html=True)
+                    st.plotly_chart(render_dual_track_multimodal_timeline(samples), use_container_width=True)
+                else:
+                    st.markdown("<div class='es-section-title'>Extracted Video Affect Telemetry</div>", unsafe_allow_html=True)
+                    st.plotly_chart(render_emotion_timeline_chart(samples), use_container_width=True)
+
+                # Emotion Radar + Quadrant Chart
+                d1, d2 = st.columns(2)
+                with d1:
+                    st.markdown("<div class='es-section-title'>Fused Emotion Polar Profile</div>", unsafe_allow_html=True)
+                    avg_probs = {}
+                    for emo in EMOTION_LABELS:
+                        avg_probs[emo] = float(np.mean([s.probabilities.get(emo, 0.0) for s in samples]))
+                    st.plotly_chart(render_emotion_radar_chart(avg_probs), use_container_width=True)
+                with d2:
+                    st.markdown("<div class='es-section-title'>Affect Circumplex Distribution</div>", unsafe_allow_html=True)
+                    last_affect = samples[-1].affect if samples else AffectVector()
+                    history_affects = [s.affect for s in samples]
+                    st.plotly_chart(render_affect_quadrant_chart(last_affect, history_affects=history_affects), use_container_width=True)
+
+                # Save session option
+                if "file_session_record" in st.session_state:
+                    rec = st.session_state.file_session_record
+                    col_save, _ = st.columns([2, 5])
+                    with col_save:
+                        if st.button("💾 Save Telemetry to Session History", use_container_width=True):
+                            file_path = SESSIONS_DIR / f"{rec.session_id}.json"
+                            with open(file_path, "w", encoding="utf-8") as f:
+                                json.dump(rec.to_dict(), f, indent=2)
+                            st.success(f"Session saved to history: `{rec.session_id}.json`")
 
         elif file_ext in [".wav", ".mp3"]:
             st.audio(tmp_path)
             if st.button("🚀 Run Acoustic Prosody & Vocal Emotion Extraction", use_container_width=True):
-                with st.spinner("Extracting F0, jitter, shimmer and RMS energy..."):
-                    extractor = AcousticProsodyExtractor()
+                with st.spinner("Extracting F0 pitch, jitter, shimmer and vocal affect..."):
+                    extractor = AcousticProsodyExtractor(sample_rate=16000)
                     voice_clf = VoiceSentimentClassifier()
-                    
-                    prosody = extractor.extract(tmp_path)
-                    v_res = voice_clf.classify_prosody(prosody)
-                    
+                    fusion = MultimodalFusionEngine()
+                    session_mgr = SessionManager(session_id=f"file_audio_{Path(uploaded_file.name).stem}_{int(time.time())}")
+                    session_mgr.start_recording()
+
+                    prosody = extractor.extract_from_file(tmp_path)
+                    v_res = voice_clf.classify_voice_emotion(prosody)
+                    f_state = fusion.fuse(vision=None, voice=v_res)
+                    session_mgr.add_sample(f_state)
+
+                    st.session_state.audio_v_res = v_res
+                    st.session_state.audio_prosody = prosody
+                    st.session_state.audio_session_record = session_mgr.generate_summary()
                     st.success("Acoustic analysis complete.")
-                    
-                    pk1, pk2, pk3, pk4 = st.columns(4)
-                    with pk1:
-                        render_metric_card("Vocal Emotion", v_res.dominant_emotion.upper(), delta=f"{int(v_res.confidence*100)}% Conf", color="#3b82f6")
-                    with pk2:
-                        render_metric_card("Mean F0 Pitch", f"{prosody.mean_f0:.1f} Hz", color="#0ea5e9")
-                    with pk3:
-                        render_metric_card("Pitch Jitter", f"{prosody.jitter:.4f}", color="#f59e0b")
-                    with pk4:
-                        render_metric_card("Amplitude Shimmer", f"{prosody.shimmer:.4f}", color="#10b981")
-                    
-                    a1, a2 = st.columns(2)
-                    with a1:
-                        st.markdown("<div class='es-section-title'>Vocal Emotion Polar Radar</div>", unsafe_allow_html=True)
-                        st.plotly_chart(render_emotion_radar_chart(v_res.probabilities), use_container_width=True)
-                    with a2:
-                        st.markdown("<div class='es-section-title'>Acoustic Affect Coordinates</div>", unsafe_allow_html=True)
-                        st.plotly_chart(render_affect_quadrant_chart(v_res.affect), use_container_width=True)
+
+            if "audio_v_res" in st.session_state:
+                v_res = st.session_state.audio_v_res
+                prosody = st.session_state.audio_prosody
+
+                pk1, pk2, pk3, pk4 = st.columns(4)
+                with pk1:
+                    render_metric_card("Vocal Emotion", v_res.dominant_emotion.upper(), delta=f"{int(v_res.confidence*100)}% Conf", color="#3b82f6")
+                with pk2:
+                    render_metric_card("Mean F0 Pitch", f"{prosody.pitch_hz:.1f} Hz", color="#0ea5e9")
+                with pk3:
+                    render_metric_card("Pitch Jitter", f"{prosody.jitter_percent*100:.2f}%", color="#f59e0b")
+                with pk4:
+                    render_metric_card("Vocal Stress", f"{int(v_res.vocal_stress_level*100)}%", color="#ef4444" if v_res.vocal_stress_level > 0.5 else "#10b981")
+
+                a1, a2 = st.columns(2)
+                with a1:
+                    st.markdown("<div class='es-section-title'>Vocal Emotion Polar Radar</div>", unsafe_allow_html=True)
+                    st.plotly_chart(render_emotion_radar_chart(v_res.probabilities), use_container_width=True)
+                with a2:
+                    st.markdown("<div class='es-section-title'>Acoustic Affect Coordinates</div>", unsafe_allow_html=True)
+                    st.plotly_chart(render_affect_quadrant_chart(v_res.affect), use_container_width=True)
+
+                if "audio_session_record" in st.session_state:
+                    rec = st.session_state.audio_session_record
+                    col_save, _ = st.columns([2, 5])
+                    with col_save:
+                        if st.button("💾 Save Audio Telemetry to Session History", use_container_width=True):
+                            file_path = SESSIONS_DIR / f"{rec.session_id}.json"
+                            with open(file_path, "w", encoding="utf-8") as f:
+                                json.dump(rec.to_dict(), f, indent=2)
+                            st.success(f"Audio session saved: `{rec.session_id}.json`")

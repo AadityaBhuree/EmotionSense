@@ -396,3 +396,85 @@ def render_emotion_horizontal_bars(probabilities: Dict[str, float], top_n: int =
         height=230,
     )
     return fig
+
+
+def render_dual_track_multimodal_timeline(history: List[MultimodalEmotionState]) -> go.Figure:
+    """Renders synchronized dual-track timeline: Visual/Fused Affect vs Acoustic Dynamics."""
+    from plotly.subplots import make_subplots
+
+    if not history:
+        fig = go.Figure()
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor=CHART_BG,
+            height=340,
+            annotations=[dict(text="AWAITING AUDIOVISUAL STREAM...", showarrow=False, font=dict(color="#526079", size=12, family=FONT_MONO))]
+        )
+        return fig
+
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.12,
+        subplot_titles=("Fused Affect Dynamics (Valence & Arousal)", "Acoustic Telemetry (Pitch & Energy)"),
+    )
+
+    timestamps = [f"{i * 0.2:.1f}s" for i in range(len(history))]
+    x_vals = list(range(len(history)))
+
+    # Track 1: Valence, Arousal, Confidence
+    valences = [h.affect.valence for h in history]
+    arousals = [h.affect.arousal for h in history]
+    confidences = [h.confidence for h in history]
+
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=valences, mode='lines+markers', name='Valence', line=dict(color='#10b981', width=1.75), marker=dict(size=4)),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=arousals, mode='lines+markers', name='Arousal', line=dict(color='#f59e0b', width=1.75), marker=dict(size=4)),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=confidences, mode='lines', name='Confidence', line=dict(color='#3b82f6', width=1.2, dash='dot')),
+        row=1, col=1
+    )
+
+    # Track 2: Acoustic features (F0 pitch, RMS energy, vocal stress)
+    pitches = [h.voice.acoustics.pitch_hz if h.voice and h.voice.acoustics else 0.0 for h in history]
+    stresses = [h.voice.vocal_stress_level if h.voice else 0.0 for h in history]
+    rms_vals = [h.voice.acoustics.rms_energy * 20.0 if h.voice and h.voice.acoustics else 0.0 for h in history]
+
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=pitches, mode='lines', name='Pitch F0 (Hz)', line=dict(color='#06b6d4', width=1.5)),
+        row=2, col=1
+    )
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=stresses, mode='lines', name='Vocal Stress', line=dict(color='#ef4444', width=1.5, dash='dash')),
+        row=2, col=1
+    )
+    fig.add_trace(
+        go.Scatter(x=x_vals, y=rms_vals, mode='lines', name='Volume (RMSx20)', line=dict(color='#a855f7', width=1.2)),
+        row=2, col=1
+    )
+
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor=CHART_BG,
+        margin=dict(l=25, r=25, t=35, b=25),
+        height=360,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.05,
+            xanchor="right",
+            x=1,
+            font=dict(color=AXIS_COLOR, size=8, family=FONT_MONO)
+        ),
+    )
+
+    fig.update_xaxes(gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=8, family=FONT_MONO))
+    fig.update_yaxes(gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=8, family=FONT_MONO))
+
+    return fig

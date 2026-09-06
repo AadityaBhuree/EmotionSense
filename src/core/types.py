@@ -38,6 +38,27 @@ class FacialActionUnits:
 
 
 @dataclass
+class AffectVector:
+    """Continuous 3D emotional dimensional space."""
+    valence: float = 0.0    # -1.0 (Negative/Unpleasant) to +1.0 (Positive/Pleasant)
+    arousal: float = 0.0    # -1.0 (Calm/Deactivated) to +1.0 (Excited/Activated)
+    dominance: float = 0.0  # -1.0 (Submissive/Vulnerable) to +1.0 (In Control/Empowered)
+
+    def quadrant(self) -> str:
+        if self.valence >= 0 and self.arousal >= 0:
+            return "High Positive (Excited / Happy / Enthusiastic)"
+        elif self.valence < 0 and self.arousal >= 0:
+            return "High Negative (Angry / Stressed / Frustrated)"
+        elif self.valence < 0 and self.arousal < 0:
+            return "Low Negative (Depressed / Sad / Fatigued)"
+        else:
+            return "Low Positive (Relaxed / Content / Calm)"
+
+    def to_dict(self) -> Dict[str, float]:
+        return asdict(self)
+
+
+@dataclass
 class VisionEmotionResult:
     """Output from real-time facial mesh and micro-expression classification."""
     face_detected: bool = False
@@ -54,6 +75,7 @@ class VisionEmotionResult:
         "contempt": 0.0,
     })
     action_units: FacialActionUnits = field(default_factory=FacialActionUnits)
+    affect: AffectVector = field(default_factory=AffectVector)
     head_pose: Dict[str, float] = field(default_factory=lambda: {"yaw": 0.0, "pitch": 0.0, "roll": 0.0})
     landmarks_count: int = 0
     timestamp: float = field(default_factory=time.time)
@@ -61,6 +83,7 @@ class VisionEmotionResult:
     def to_dict(self) -> Dict[str, Any]:
         res = asdict(self)
         res["action_units"] = self.action_units.to_dict()
+        res["affect"] = self.affect.to_dict()
         return res
 
 
@@ -97,34 +120,15 @@ class VoiceEmotionResult:
         "contempt": 0.0,
     })
     acoustics: AcousticFeatures = field(default_factory=AcousticFeatures)
+    affect: AffectVector = field(default_factory=AffectVector)
     vocal_stress_level: float = 0.0  # 0.0 to 1.0
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict[str, Any]:
         res = asdict(self)
         res["acoustics"] = self.acoustics.to_dict()
+        res["affect"] = self.affect.to_dict()
         return res
-
-
-@dataclass
-class AffectVector:
-    """Continuous 3D emotional dimensional space."""
-    valence: float = 0.0    # -1.0 (Negative/Unpleasant) to +1.0 (Positive/Pleasant)
-    arousal: float = 0.0    # -1.0 (Calm/Deactivated) to +1.0 (Excited/Activated)
-    dominance: float = 0.0  # -1.0 (Submissive/Vulnerable) to +1.0 (In Control/Empowered)
-
-    def quadrant(self) -> str:
-        if self.valence >= 0 and self.arousal >= 0:
-            return "High Positive (Excited / Happy / Enthusiastic)"
-        elif self.valence < 0 and self.arousal >= 0:
-            return "High Negative (Angry / Stressed / Frustrated)"
-        elif self.valence < 0 and self.arousal < 0:
-            return "Low Negative (Depressed / Sad / Fatigued)"
-        else:
-            return "Low Positive (Relaxed / Content / Calm)"
-
-    def to_dict(self) -> Dict[str, float]:
-        return asdict(self)
 
 
 @dataclass

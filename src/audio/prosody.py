@@ -1,7 +1,6 @@
-"""Acoustic feature and prosodic prosody extraction from raw audio arrays."""
-
+from typing import Optional, Dict, Any, Union
+from pathlib import Path
 import numpy as np
-from typing import Optional, Dict, Any
 from src.core.types import AcousticFeatures
 from src.core.config import AUDIO_THRESHOLDS
 
@@ -11,6 +10,40 @@ class AcousticProsodyExtractor:
 
     def __init__(self, sample_rate: int = 16000):
         self.sample_rate = sample_rate
+
+    def extract_from_file(self, file_source: Any) -> AcousticFeatures:
+        """Loads an audio file or buffer, resamples to target sample rate, and extracts prosodic features."""
+        try:
+            import soundfile as sf
+            import io
+            if isinstance(file_source, (str, Path)):
+                audio_data, sr = sf.read(str(file_source))
+            elif isinstance(file_source, bytes):
+                audio_data, sr = sf.read(io.BytesIO(file_source))
+            elif hasattr(file_source, "read"):
+                audio_data, sr = sf.read(file_source)
+            else:
+                return AcousticFeatures()
+
+            if audio_data.ndim > 1:
+                audio_data = audio_data.mean(axis=1)
+
+            if sr != self.sample_rate:
+                try:
+                    import librosa
+                    audio_data = librosa.resample(audio_data.astype(np.float32), orig_sr=sr, target_sr=self.sample_rate)
+                except Exception:
+                    pass
+
+            return self.extract_features(audio_data)
+        except Exception:
+            return AcousticFeatures()
+
+    def extract(self, source: Any) -> AcousticFeatures:
+        """Polymorphic extraction method accepting either raw numpy array or file/path."""
+        if isinstance(source, np.ndarray):
+            return self.extract_features(source)
+        return self.extract_from_file(source)
 
     def extract_features(self, audio_data: np.ndarray) -> AcousticFeatures:
         """Processes 1D float32 audio array and extracts acoustic telemetry."""

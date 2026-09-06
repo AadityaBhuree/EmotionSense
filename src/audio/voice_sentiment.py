@@ -2,8 +2,8 @@
 
 import numpy as np
 from typing import Dict, Any
-from src.core.types import VoiceEmotionResult, AcousticFeatures
-from src.core.config import EMOTION_LABELS, AUDIO_THRESHOLDS
+from src.core.types import VoiceEmotionResult, AcousticFeatures, AffectVector
+from src.core.config import EMOTION_LABELS, AUDIO_THRESHOLDS, EMOTION_VAD_COORDINATES
 
 
 class VoiceSentimentClassifier:
@@ -12,14 +12,31 @@ class VoiceSentimentClassifier:
     def __init__(self):
         self.labels = EMOTION_LABELS
 
+    def _compute_affect_vector(self, probabilities: Dict[str, float]) -> AffectVector:
+        valence = 0.0
+        arousal = 0.0
+        dominance = 0.0
+        for emo, p in probabilities.items():
+            vad = EMOTION_VAD_COORDINATES.get(emo, [0.0, 0.0, 0.0])
+            valence += p * vad[0]
+            arousal += p * vad[1]
+            dominance += p * vad[2]
+        return AffectVector(
+            valence=float(np.clip(valence, -1.0, 1.0)),
+            arousal=float(np.clip(arousal, -1.0, 1.0)),
+            dominance=float(np.clip(dominance, -1.0, 1.0)),
+        )
+
     def classify_voice_emotion(self, acoustics: AcousticFeatures) -> VoiceEmotionResult:
         """Translates acoustic metrics into emotion probabilities and vocal stress level."""
         if not acoustics.speech_active:
+            neutral_probs = {"neutral": 1.0, "joy": 0.0, "sadness": 0.0, "anger": 0.0, "fear": 0.0, "surprise": 0.0, "disgust": 0.0, "contempt": 0.0}
             return VoiceEmotionResult(
                 dominant_emotion="neutral",
                 confidence=0.85,
-                probabilities={"neutral": 1.0, "joy": 0.0, "sadness": 0.0, "anger": 0.0, "fear": 0.0, "surprise": 0.0, "disgust": 0.0, "contempt": 0.0},
+                probabilities=neutral_probs,
                 acoustics=acoustics,
+                affect=self._compute_affect_vector(neutral_probs),
                 vocal_stress_level=0.0,
             )
 
@@ -61,10 +78,21 @@ class VoiceSentimentClassifier:
             0.0, 1.0
         ))
 
+        affect = self._compute_affect_vector(probabilities)
+
         return VoiceEmotionResult(
             dominant_emotion=dominant_emotion,
             confidence=confidence,
             probabilities=probabilities,
             acoustics=acoustics,
+            affect=affect,
             vocal_stress_level=vocal_stress,
         )
+
+    def classify_prosody(self, acoustics: AcousticFeatures) -> VoiceEmotionResult:
+        """Alias for classify_voice_emotion."""
+        return self.classify_voice_emotion(acoustics)
+
+    def classify(self, acoustics: AcousticFeatures) -> VoiceEmotionResult:
+        """Alias for classify_voice_emotion."""
+        return self.classify_voice_emotion(acoustics)
