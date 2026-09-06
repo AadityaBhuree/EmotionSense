@@ -182,12 +182,17 @@ EmotionSense/
 │   │   ├── metrics.py            # Attention, Engagement, and Fatigue metrics
 │   │   └── anomaly_detector.py   # Affective anomaly & distress sentinel engine
 │   │
+│   ├── media/
+│   │   ├── __init__.py
+│   │   ├── demuxer.py            # Audiovisual PyAV container demuxer & sync timeline
+│   │   └── speech_transcriber.py # Live microphone speech-to-text & phonetic affect engine
+│   │
 │   ├── ui/
 │   │   ├── __init__.py
 │   │   ├── styles.py             # Dark glassmorphism CSS injection
-│   │   ├── charts.py             # Plotly radar, quadrant, and timeline figures
+│   │   ├── charts.py             # Plotly radar, quadrant, dual-track, and timeline figures
 │   │   ├── components.py         # Metric badges, score gauges, and HUD cards
-│   │   └── video_processor.py    # WebRTC VideoTransformer callback
+│   │   └── video_processor.py    # WebRTC Video & Audio Stream Transformer callbacks
 │   │
 │   ├── utils/
 │   │   ├── __init__.py
@@ -198,7 +203,7 @@ EmotionSense/
 │   └── pages/
 │       ├── 1_💬_Text_Studio.py     # Single message, multi-turn chat & batch analysis
 │       ├── 2_🎥_Live_Studio.py     # Real-time multimodal streaming studio
-│       ├── 3_📁_File_Analysis.py   # Pre-recorded video/audio file diagnostics
+│       ├── 3_📁_File_Analysis.py   # Pre-recorded video/audio file diagnostics & demuxer
 │       ├── 4_📑_Session_History.py # History viewer, timeline scrubbing & reports
 │       └── 5_📐_Architecture.py    # System architecture & documentation viewer
 │
@@ -211,7 +216,10 @@ EmotionSense/
     ├── test_report_generator.py  # Clinical diagnostic report generator tests
     ├── test_text_emotion.py      # Text emotion & salience NLP tests
     ├── test_api_server.py        # FastAPI endpoints & WebSocket stream tests
-    └── test_transformer_hybrid.py# Transformer fallback & hybrid classifier tests
+    ├── test_transformer_hybrid.py# Transformer fallback & hybrid classifier tests
+    ├── test_demuxer.py           # Audiovisual container demuxer & synchronization tests
+    ├── test_speech_transcriber.py# Speech transcription & phonetic buffer tests
+    └── test_webrtc_stream.py     # Concurrent WebRTC audio/video processor stream tests
 ```
 
 ---
@@ -280,7 +288,7 @@ Validate the full computer vision, audio DSP, NLP, and FastAPI pipelines using `
 ```bash
 pytest -v
 ```
-*All 45 unit and integration tests run in under 8 seconds with 100% pass rate.*
+*All 57 unit and integration tests run in under 9 seconds with 100% pass rate.*
 
 ---
 

@@ -1,4 +1,4 @@
-"""Page 5: Multimodal Architecture, Affect Theory & FACS Specifications."""
+"""Page 5: Multimodal Architecture, Affect Theory & System Documentation."""
 
 import streamlit as st
 import pandas as pd
@@ -11,14 +11,16 @@ from src.core.config import EMOTION_VAD_COORDINATES
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
-render_header("System Architecture & Theory", "Mathematical Models, Temporal Late Fusion & FACS Specifications")
+render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
     "🧬 FACS Action Units & Prosody",
-    "🔌 API & Integration Schemas"
+    "🔌 REST & WebSocket API Specs",
+    "🎞️ Audiovisual Demuxer & Sync",
+    "🛡️ Anomaly Sentinel & Reports"
 ])
 
 with tab1:
@@ -89,20 +91,65 @@ with tab4:
     st.dataframe(pd.DataFrame(facs_data), use_container_width=True)
 
 with tab5:
-    st.markdown("### 🔌 REST & Python Programmatic Integration")
-    st.markdown("Quick integration snippet for integrating `EmotionSense` into backend pipelines:")
-    st.code("""from src.text import TextEmotionClassifier, ConversationAffectAnalyzer
+    st.markdown("### 🔌 FastAPI Production Microservice Endpoints")
+    st.markdown("EmotionSense provides high-throughput REST and real-time WebSocket endpoints configured in `src/api/server.py`:")
 
-# 1. Single Text Message Affect Analysis
-clf = TextEmotionClassifier()
-res = clf.analyze_text("I am so thrilled and excited for our product release! 🎉")
-print(res.dominant_emotion)  # 'joy'
-print(res.affect.valence)    # +0.68
-print(res.affect.arousal)    # +0.72
+    st.code("""# Launch the FastAPI Microservice:
+uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
 
-# 2. Multi-turn Dialogue Transcript Analysis
-conv = ConversationAffectAnalyzer()
-summary = conv.parse_and_analyze_transcript(chat_transcript)
-print("Escalation Risk:", summary.escalation_risk)
-print("Rapport Score:", summary.rapport_empathy_score)
+# Endpoints:
+GET  /health                                 -> Health and subsystem status
+POST /api/v1/predict/text                    -> Single sentence emotion & 3D VAD
+POST /api/v1/predict/batch                   -> High-throughput multi-text batch
+POST /api/v1/analyze/dialogue                -> Multi-turn escalation & empathy analysis
+POST /api/v1/anomalies/detect                -> Affective anomaly detection across timeline
+POST /api/v1/reports/diagnostic              -> Automated HTML / Markdown clinical report
+WS   /ws/affect-stream                       -> Real-time bidirectional streaming affect socket
+WS   /ws/speech-stream                       -> Real-time audio PCM transcription & affect socket
+""", language="bash")
+
+    st.markdown("#### WebSocket Streaming Example")
+    st.code("""import asyncio, websockets, json
+
+async def stream():
+    async with websockets.connect("ws://localhost:8000/ws/affect-stream") as ws:
+        # Send raw frame or state
+        await ws.send(json.dumps({"vision": {"dominant_emotion": "joy", "confidence": 0.95}}))
+        response = await ws.recv()
+        print("Fused State:", json.loads(response))
+
+asyncio.run(stream())
 """, language="python")
+
+with tab6:
+    st.markdown("### 🎞️ Audiovisual Container Demuxing & Dual-Track Sync")
+    st.markdown("""
+    When analyzing pre-recorded video media files (`.mp4`, `.avi`, `.mov`, `.mkv`), `AudiovisualDemuxer`
+    (`src/media/demuxer.py`) uses PyAV container demuxing to decode video frames and resample audio into
+    16kHz mono float32 arrays without external disk writes.
+    """)
+    st.markdown(r"""
+    #### Temporal Window Matching
+    For each video frame sampled at timestamp $t_k$:
+    
+    $$\text{Audio Window}(t_k) = \left[t_k - \frac{\Delta w}{2}, \, t_k + \frac{\Delta w}{2}\right]$$
+
+    A rolling temporal window of $\Delta w = 1.0\text{s}$ centered at $t_k$ is extracted.
+    Acoustic features (pitch $F_0$, RMS energy, jitter, vocal stress) and visual facial mesh Action Units are extracted in parallel and merged into a synchronized timeline point.
+    """)
+
+with tab7:
+    st.markdown("### 🛡️ Affective Anomaly Sentinel & Clinical Report Generator")
+    st.markdown("""
+    The `AffectiveAnomalyDetector` continuously monitors affective trajectories to detect 5 critical behavioral anomaly patterns:
+    """)
+    st.markdown("""
+    1. **Valence Crash**: Abrupt plunge in emotional valence ($\Delta \mathcal{V} \le -0.65$ within $\le 2.0\text{s}$). Indicates acute distress or panic trigger.
+    2. **Hyper-Arousal Spike**: Extreme surge in emotional arousal ($\mathcal{A} \ge +0.75$ and $\Delta \mathcal{A} \ge +0.50$). Indicates aggression, fear shock, or rage.
+    3. **Sustained Affective Distress**: Persistent negative valence ($\mathcal{V} < -0.35$ with distress emotions) for $> 5.0\text{s}$. Indicates clinical depressive episodes or chronic distress.
+    4. **Cognitive Fatigue Overload**: Rising fatigue ($\ge 0.70$) accompanied by declining engagement ($\le 0.30$).
+    5. **Attention Collapse**: Prolonged inattention (head pitch/yaw deviation with eye closure for $> 3.0\text{s}$).
+    """)
+    st.markdown("""
+    Reports can be exported in both clinical HTML (with inline SVG charts, CSS styling, and alert tables) or GitHub Flavored Markdown formats via `DiagnosticReportGenerator`.
+    """)
