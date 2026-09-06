@@ -203,22 +203,33 @@ EmotionSense/
 | `WS` | `/ws/stream-affect` | Real-time bi-directional affect streaming | JSON message: `{"text": "..."}` $\rightarrow$ JSON telemetry response |
 | `WS` | `/ws/stream-speech` | Live audio streaming for transcription and phonetic affect | JSON chunk: `{"audio_chunk": "..."}` $\rightarrow$ JSON transcription + prosody response |
 
+### 5.3 Audiovisual Container Demuxing & Synchronized Timeline
+- **`AudiovisualDemuxer` (`src/media/demuxer.py`)**: Pure Python container demuxer leveraging PyAV to extract interleaved video frames and resample audio into 16,000 Hz mono float32 without intermediate disk writes.
+- **Temporal Window Matching**: Centers an audio window ($\Delta w = 1.0\text{s}$) on each video frame timestamp $t_k$, extracting acoustic features and action units synchronously.
+- **Dual-Track Telemetry Visualizations (`src/ui/charts.py`)**: Synchronized Plotly dual-track chart showing continuous affect (valence, arousal, confidence) along track 1, and acoustic prosody (pitch F0, RMS volume, vocal stress) along track 2.
+- **Concurrent WebRTC Audio & Video Streaming (`src/ui/video_processor.py`)**:
+  - `MultimodalStreamContext`: Thread-safe synchronization container linking concurrent WebRTC video and audio worker threads.
+  - `MultimodalAudioProcessor`: WebRTC microphone audio processor with PyAV `AudioResampler` resampling to 16kHz mono float32, rolling circular buffer, and continuous vocal prosody extraction.
+  - `MultimodalVideoProcessor`: Annotates 468-point 3D FaceMesh, dominant affect HUD, and concurrent microphone acoustic status badges.
+
 ---
 
 ## 6. Verification & Quality Metrics
 
-All 46 unit, integration, and streaming tests pass cleanly across Python 3.10+:
+All **57** unit, integration, and streaming tests pass cleanly across Python 3.10+:
 
 ```bash
-pytest -v tests/
-# ============================= 46 passed in 3.57s ==============================
+pytest -v
+# ============================= 57 passed in 8.74s ==============================
 ```
 
-- **Vision Suite**: MediaPipe landmark tolerances, AU bounds, null frame handling.
-- **Audio Suite**: F0 pitch frequency estimation, silence thresholds, vocal sentiment.
-- **Text & Transformer Suite**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
-- **Speech Transcriber**: Chunked audio buffer management, energy-based voice activity detection.
-- **Multimodal Fusion**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
-- **Sentinel Anomaly Suite**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
-- **Reporting Suite**: Clinical Markdown and responsive HTML diagnostic generation.
-- **API Server Suite**: FastAPI REST routes and bidirectional WebSocket affect & speech streaming.
+- **Vision Suite (`test_vision.py`)**: MediaPipe landmark tolerances, AU bounds, null frame handling.
+- **Audio Suite (`test_audio.py`)**: F0 pitch frequency estimation, silence thresholds, vocal sentiment.
+- **Text & Transformer Suite (`test_text_emotion.py`, `test_transformer_hybrid.py`)**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
+- **Speech Transcriber (`test_speech_transcriber.py`)**: Chunked audio buffer management, energy-based voice activity detection.
+- **Audiovisual Demuxer Suite (`test_demuxer.py`)**: Container demuxing, synthetic video/audio generation, corrupted input resilience, audio window extraction, synchronized timeline generation, and audiovisual late fusion.
+- **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling and prosody extraction, video frame HUD annotations, and synchronized state fusion.
+- **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
+- **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
+- **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
+- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes and bidirectional WebSocket affect & speech streaming.
