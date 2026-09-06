@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from src.core.types import FacialActionUnits, VisionEmotionResult
 from src.core.config import LANDMARK_INDICES, EMOTION_LABELS
 
@@ -127,3 +127,26 @@ class FacialEmotionClassifier:
             head_pose=head_pose,
             landmarks_count=len(landmarks),
         )
+
+    def classify_frame(
+        self, frame: Optional[np.ndarray], detector: Optional[Any] = None
+    ) -> VisionEmotionResult:
+        """Convenience method to detect landmarks and classify emotion directly from an image frame."""
+        if frame is None:
+            return VisionEmotionResult(face_detected=False)
+        if detector is None:
+            from src.vision.face_mesh import FaceMeshDetector
+            detector = FaceMeshDetector()
+        landmarks, head_pose = detector.process_frame(frame)
+        return self.classify_emotion(landmarks, head_pose)
+
+    def classify(
+        self, frame_or_landmarks: Any, head_pose: Optional[Dict[str, float]] = None
+    ) -> VisionEmotionResult:
+        """Polymorphic classify method accepting either a video frame or extracted landmarks."""
+        if frame_or_landmarks is None:
+            return VisionEmotionResult(face_detected=False)
+        if isinstance(frame_or_landmarks, np.ndarray) and frame_or_landmarks.ndim == 3:
+            return self.classify_frame(frame_or_landmarks)
+        pose = head_pose if head_pose is not None else {"yaw": 0.0, "pitch": 0.0, "roll": 0.0}
+        return self.classify_emotion(frame_or_landmarks, pose)
