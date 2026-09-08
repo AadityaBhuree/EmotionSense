@@ -60,6 +60,90 @@ class LiveSpeechTranscriber:
         """Returns True if speech recognition package is available."""
         return self._is_available
 
+    def transcribe_audio_bytes(
+        self,
+        audio_bytes: bytes,
+        sample_rate: int = 16000,
+        voice_result: Optional[VoiceEmotionResult] = None,
+    ) -> LiveSpeechTranscriptionResult:
+        """Transcribes raw audio bytes (e.g. WAV/PCM container from microphone) and generates affect scoring."""
+        if not audio_bytes or len(audio_bytes) == 0:
+            return LiveSpeechTranscriptionResult(full_transcript="", voice_emotion=voice_result)
+
+        text = ""
+        if self._is_available and self._recognizer is not None:
+            try:
+                import io
+                import speech_recognition as sr
+                with sr.AudioFile(io.BytesIO(audio_bytes)) as source:
+                    audio_data = self._recognizer.record(source)
+                    text = self._recognizer.recognize_google(audio_data)
+            except Exception:
+                text = ""
+
+        if text and text.strip():
+            res = self.transcribe_text_stream(text.strip())
+            if voice_result:
+                res.voice_emotion = voice_result
+                # Align acoustic metrics onto word tokens
+                pitch = voice_result.acoustics.pitch_hz if voice_result.acoustics else 0.0
+                energy = voice_result.acoustics.rms_energy if voice_result.acoustics else 0.0
+                for tok in res.tokens:
+                    tok.pitch_hz = pitch
+                    tok.rms_energy = energy
+            return res
+
+        return LiveSpeechTranscriptionResult(
+            full_transcript="",
+            voice_emotion=voice_result,
+            timestamp=time.time(),
+        )
+
+    def transcribe_audio_array(
+        self,
+        audio_chunk: np.ndarray,
+        sample_rate: int = 16000,
+        voice_result: Optional[VoiceEmotionResult] = None,
+    ) -> LiveSpeechTranscriptionResult:
+        """Processes raw PCM numpy array and returns transcribed tokens with affective scoring."""
+        if audio_chunk is None or len(audio_chunk) == 0:
+            return LiveSpeechTranscriptionResult(full_transcript="", voice_emotion=voice_result)
+
+        rms = float(np.sqrt(np.mean(audio_chunk**2))) if len(audio_chunk) > 0 else 0.0
+        if rms < 0.005:
+            return LiveSpeechTranscriptionResult(full_transcript="", voice_emotion=voice_result)
+
+        text = ""
+        if self._is_available and self._recognizer is not None:
+            try:
+                import speech_recognition as sr
+                if audio_chunk.dtype != np.int16:
+                    audio_int16 = (np.clip(audio_chunk, -1.0, 1.0) * 32767).astype(np.int16)
+                else:
+                    audio_int16 = audio_chunk
+                raw_bytes = audio_int16.tobytes()
+                audio_data = sr.AudioData(raw_bytes, sample_rate, 2)
+                text = self._recognizer.recognize_google(audio_data)
+            except Exception:
+                text = ""
+
+        if text and text.strip():
+            res = self.transcribe_text_stream(text.strip())
+            if voice_result:
+                res.voice_emotion = voice_result
+                pitch = voice_result.acoustics.pitch_hz if voice_result.acoustics else 0.0
+                energy = voice_result.acoustics.rms_energy if voice_result.acoustics else 0.0
+                for tok in res.tokens:
+                    tok.pitch_hz = pitch
+                    tok.rms_energy = energy
+            return res
+
+        return LiveSpeechTranscriptionResult(
+            full_transcript="",
+            voice_emotion=voice_result,
+            timestamp=time.time(),
+        )
+
     def process_audio_buffer(
         self,
         audio_chunk: np.ndarray,
@@ -67,28 +151,7 @@ class LiveSpeechTranscriber:
         voice_result: Optional[VoiceEmotionResult] = None,
     ) -> LiveSpeechTranscriptionResult:
         """Processes raw PCM audio chunk and returns transcribed tokens with affective scoring."""
-        if audio_chunk is None or len(audio_chunk) == 0:
-            return LiveSpeechTranscriptionResult(full_transcript="")
-
-        # Compute energy to check if speech is active
-        rms = float(np.sqrt(np.mean(audio_chunk**2))) if len(audio_chunk) > 0 else 0.0
-        
-        # If silence or low volume, return empty transcript
-        if rms < 0.005:
-            return LiveSpeechTranscriptionResult(full_transcript="")
-
-        # Extract pitch if available from voice_result
-        pitch = voice_result.acoustics.pitch_hz if voice_result else 0.0
-
-        # Phonetic acoustic feature extraction
-        pitch_int = round(pitch, 1)
-        energy_int = round(rms * 100, 2)
-
-        return LiveSpeechTranscriptionResult(
-            full_transcript="",
-            voice_emotion=voice_result,
-            timestamp=time.time(),
-        )
+        return self.transcribe_audio_array(audio_chunk, sample_rate=sample_rate, voice_result=voice_result)
 
     def transcribe_text_stream(self, spoken_phrase: str) -> LiveSpeechTranscriptionResult:
         """Transcribes incoming speech string and executes instant NLP affect scoring."""
@@ -117,3 +180,4 @@ class LiveSpeechTranscriber:
             is_final=True,
             timestamp=cur_t,
         )
+
