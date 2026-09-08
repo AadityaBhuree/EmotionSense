@@ -211,25 +211,31 @@ EmotionSense/
   - `MultimodalStreamContext`: Thread-safe synchronization container linking concurrent WebRTC video and audio worker threads.
   - `MultimodalAudioProcessor`: WebRTC microphone audio processor with PyAV `AudioResampler` resampling to 16kHz mono float32, rolling circular buffer, and continuous vocal prosody extraction.
   - `MultimodalVideoProcessor`: Annotates 468-point 3D FaceMesh, dominant affect HUD, and concurrent microphone acoustic status badges.
+- **Spoken Voice & Speech Transcription in Text Studio (`src/pages/1_💬_Text_Studio.py`)**:
+  - Native browser microphone ingestion (`st.audio_input`) and audio file upload.
+  - Automatic vocal prosody extraction (`AcousticProsodyExtractor`), vocal tone emotion classification (`VoiceSentimentClassifier`), and speech-to-text transcription with word-level phonetic alignment (`LiveSpeechTranscriber`).
+  - Seamless "Apply Transcribed Text" bridging spoken voice into the deep NLP affect decoding and Russell circumplex engine.
+  - Interactive WebSocket streaming test interface validating `/ws/stream-speech` and `/ws/stream-affect`.
 
 ---
 
 ## 6. Verification & Quality Metrics
 
-All **57** unit, integration, and streaming tests pass cleanly across Python 3.10+:
+All **61** unit, integration, and streaming tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================= 57 passed in 8.74s ==============================
+# ============================= 61 passed in 7.37s ==============================
 ```
 
 - **Vision Suite (`test_vision.py`)**: MediaPipe landmark tolerances, AU bounds, null frame handling.
 - **Audio Suite (`test_audio.py`)**: F0 pitch frequency estimation, silence thresholds, vocal sentiment.
 - **Text & Transformer Suite (`test_text_emotion.py`, `test_transformer_hybrid.py`)**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
-- **Speech Transcriber (`test_speech_transcriber.py`)**: Chunked audio buffer management, energy-based voice activity detection.
+- **Speech Transcriber Suite (`test_speech_transcriber.py`)**: Audio byte and numpy array transcription, mocked speech recognition, phonetic token alignment with acoustic pitch and energy, and offline fallback resilience.
 - **Audiovisual Demuxer Suite (`test_demuxer.py`)**: Container demuxing, synthetic video/audio generation, corrupted input resilience, audio window extraction, synchronized timeline generation, and audiovisual late fusion.
 - **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling and prosody extraction, video frame HUD annotations, and synchronized state fusion.
 - **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
 - **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
 - **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
 - **API Server Suite (`test_api_server.py`)**: FastAPI REST routes and bidirectional WebSocket affect & speech streaming.
+
