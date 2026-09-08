@@ -22,24 +22,39 @@ from src.ui.charts import (
     render_emotion_horizontal_bars,
 )
 from src.text import TextEmotionClassifier, ConversationAffectAnalyzer, HybridEmotionClassifier
+from src.audio.speech_transcriber import LiveSpeechTranscriber
+from src.audio.prosody import AcousticProsodyExtractor
+from src.audio.voice_sentiment import VoiceSentimentClassifier
 from src.utils.session_manager import SessionManager
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
 inject_modern_styles()
 
-render_header("Text Emotion & Dialogue Studio", "Deep Affective NLP, Conversational Trajectory & Token Salience")
+render_header("Text Emotion & Dialogue Studio", "Deep Affective NLP, Conversational Trajectory & Spoken Speech Ingestion")
 
 # Initialize Session State
 if "hybrid_classifier" not in st.session_state:
     st.session_state.hybrid_classifier = HybridEmotionClassifier(mode="hybrid")
 if "conversation_analyzer" not in st.session_state:
     st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.hybrid_classifier)
+if "speech_transcriber" not in st.session_state:
+    st.session_state.speech_transcriber = LiveSpeechTranscriber(st.session_state.hybrid_classifier.lexical_clf)
+if "prosody_extractor" not in st.session_state:
+    st.session_state.prosody_extractor = AcousticProsodyExtractor()
+if "voice_classifier" not in st.session_state:
+    st.session_state.voice_classifier = VoiceSentimentClassifier()
 if "session_manager" not in st.session_state:
     st.session_state.session_manager = SessionManager()
+if "single_text_input" not in st.session_state:
+    st.session_state.single_text_input = "I am absolutely thrilled and excited about our new project launch!! The results are fantastic! 🚀🎉"
 
 clf = st.session_state.hybrid_classifier
 conv = st.session_state.conversation_analyzer
+transcriber = st.session_state.speech_transcriber
+prosody_ext = st.session_state.prosody_extractor
+voice_clf = st.session_state.voice_classifier
+
 
 # Controls Bar: Studio Mode & NLP Engine Selector
 ctl1, ctl2 = st.columns([6, 4])
@@ -66,27 +81,87 @@ st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=Tru
 
 if mode == "📝 Single Message & Live Salience":
     st.markdown("### ⌖ Single Message Affect Decoder")
-    
+
+    # Integrated Live Microphone & Speech-to-Text Ingestion Console
+    with st.expander("🎙️ Live Microphone & Spoken Voice Ingestion (Acoustic Prosody + Speech Recognition)", expanded=False):
+        mic_c1, mic_c2 = st.columns([6, 6])
+        with mic_c1:
+            st.markdown("<div class='es-section-title'>🎙️ Browser Microphone Recorder</div>", unsafe_allow_html=True)
+            voice_audio = st.audio_input("Record voice message", key="mic_audio_record")
+        with mic_c2:
+            st.markdown("<div class='es-section-title'>📁 Ingest Voice Note File</div>", unsafe_allow_html=True)
+            uploaded_voice = st.file_uploader("Upload audio recording (WAV, MP3, OGG)", type=["wav", "mp3", "ogg"], key="upload_voice_record")
+
+        active_audio_bytes = None
+        if voice_audio is not None:
+            active_audio_bytes = voice_audio.read()
+        elif uploaded_voice is not None:
+            active_audio_bytes = uploaded_voice.read()
+
+        if active_audio_bytes:
+            st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
+            st.audio(active_audio_bytes)
+
+            with st.spinner("Analyzing vocal acoustic prosody & running speech-to-text..."):
+                acoustics = prosody_ext.extract_from_file(active_audio_bytes)
+                voice_res = voice_clf.classify_voice_emotion(acoustics)
+                speech_res = transcriber.transcribe_audio_bytes(active_audio_bytes, voice_result=voice_res)
+
+            # Display Voice Acoustic Indicators
+            va1, va2, va3, va4 = st.columns(4)
+            with va1:
+                render_metric_card("Voice Dominant Affect", voice_res.dominant_emotion.upper(), delta=f"{int(voice_res.confidence * 100)}% Conf", color=EMOTION_COLORS.get(voice_res.dominant_emotion, "#3b82f6"))
+            with va2:
+                render_metric_card("Pitch F0", f"{acoustics.pitch_hz:.1f} Hz", delta="Fundamental Vocal F0", color="#10b981")
+            with va3:
+                render_metric_card("RMS Energy", f"{acoustics.rms_energy:.3f}", delta="Acoustic Loudness", color="#f59e0b")
+            with va4:
+                render_metric_card("Speech Stress", f"{int(voice_res.vocal_stress_level * 100)}%", delta=f"Jitter: {acoustics.jitter_percent:.1%}", color="#ef4444" if voice_res.vocal_stress_level > 0.5 else "#0ea5e9")
+
+            if speech_res.full_transcript:
+                st.success(f"🎙️ **Transcribed Speech:** \"{speech_res.full_transcript}\"")
+                if st.button("⚡ Apply Transcribed Text to Message Decoder", key="btn_apply_transcript", use_container_width=True):
+                    st.session_state.single_text_input = speech_res.full_transcript
+                    st.rerun()
+
+                # Display word tokens with phonetic prosody alignment
+                if speech_res.tokens:
+                    token_chips = " ".join([
+                        f'<span style="display: inline-block; background: var(--surface-raised); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 0.8rem; font-family: \'JetBrains Mono\', monospace;">'
+                        f'<b>{tok.word}</b> <span style="color: #10b981; font-size: 0.72rem;">{tok.pitch_hz:.0f}Hz</span> '
+                        f'<span style="color: var(--text-muted); font-size: 0.72rem;">[{tok.emotion_cue}]</span></span>'
+                        for tok in speech_res.tokens
+                    ])
+                    st.markdown(f"<div style='margin-top: 6px;'><b>Phonetic Prosody Alignment:</b><br>{token_chips}</div>", unsafe_allow_html=True)
+            else:
+                st.info("💡 Vocal acoustics extracted. Speech-to-text returned no tokens (silence, offline, or background noise). You can type or paste the message in the text field below.")
+
     col_in, col_opts = st.columns([8, 4])
     with col_in:
         text_input = st.text_area(
             "Input Message Text",
-            value="I am absolutely thrilled and excited about our new project launch!! The results are fantastic! 🚀🎉",
+            value=st.session_state.single_text_input,
             height=110,
             placeholder="Type or paste any message..."
         )
+        st.session_state.single_text_input = text_input
     with col_opts:
         st.markdown("<div class='es-panel'>", unsafe_allow_html=True)
         st.markdown("<div class='es-section-title'>⚡ Quick Presets</div>", unsafe_allow_html=True)
         if st.button("🎉 Joyful Milestone", use_container_width=True):
-            text_input = "We finally hit 1 million users today! So proud of the entire engineering team! 🥳🍾"
+            st.session_state.single_text_input = "We finally hit 1 million users today! So proud of the entire engineering team! 🥳🍾"
+            st.rerun()
         if st.button("😡 Outraged Customer", use_container_width=True):
-            text_input = "This is the worst customer service ever. You stole my money and refuse to answer! Absolute scam!"
+            st.session_state.single_text_input = "This is the worst customer service ever. You stole my money and refuse to answer! Absolute scam!"
+            st.rerun()
         if st.button("😰 Anxious / Stressed", use_container_width=True):
-            text_input = "I'm terrified of failing the final exam tomorrow, having panic attacks and cannot sleep."
+            st.session_state.single_text_input = "I'm terrified of failing the final exam tomorrow, having panic attacks and cannot sleep."
+            st.rerun()
         if st.button("💙 Heartfelt Empathy", use_container_width=True):
-            text_input = "I am so deeply sorry for your loss. Please know that we are all here to support you."
+            st.session_state.single_text_input = "I am so deeply sorry for your loss. Please know that we are all here to support you."
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
+
 
     if text_input.strip():
         res = clf.analyze_text(text_input)
@@ -274,3 +349,34 @@ Astonishing performance, way beyond expectations! 🚀""",
                 mime="application/json",
                 use_container_width=True
             )
+
+# Real-Time WebSocket Streaming Microservice Telemetry
+st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+with st.expander("📡 Real-Time Microservice Streaming Telemetry (`/ws/stream-speech` & `/ws/stream-affect`)", expanded=False):
+    st.markdown("""
+    <div style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0.8rem;">
+        EmotionSense exposes bi-directional streaming WebSocket gateways for sub-10ms streaming text and live speech transcription decoding.
+    </div>
+    """, unsafe_allow_html=True)
+
+    ws_col1, ws_col2 = st.columns([6, 6])
+    with ws_col1:
+        st.markdown("<div class='es-section-title'>WebSocket Gateway Endpoints</div>", unsafe_allow_html=True)
+        st.code("ws://127.0.0.1:8000/ws/stream-affect\nws://127.0.0.1:8000/ws/stream-speech", language="text")
+        st.caption("Protocol: Bi-directional JSON stream over WebSocket frame protocol.")
+
+    with ws_col2:
+        st.markdown("<div class='es-section-title'>Simulated Gateway Tester</div>", unsafe_allow_html=True)
+        ws_test_phrase = st.text_input("Stream phrase to simulate", value="I am completely amazed by how responsive this affective pipeline is! ⚡")
+        if st.button("Simulate WebSocket Payload Stream", use_container_width=True):
+            speech_stream_out = transcriber.transcribe_text_stream(ws_test_phrase)
+            st.json({
+                "endpoint": "/ws/stream-speech",
+                "transcript": speech_stream_out.full_transcript,
+                "dominant_emotion": speech_stream_out.text_emotion.dominant_emotion if speech_stream_out.text_emotion else "neutral",
+                "confidence": speech_stream_out.text_emotion.confidence if speech_stream_out.text_emotion else 0.0,
+                "valence": speech_stream_out.text_emotion.affect.valence if speech_stream_out.text_emotion else 0.0,
+                "tokens_count": len(speech_stream_out.tokens),
+                "timestamp": speech_stream_out.timestamp,
+            })
+
