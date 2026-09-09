@@ -7,6 +7,8 @@ multi-turn dialogue trajectory analysis, batch datasets, and real-time streaming
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 import time
+import json
+import base64
 
 try:
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
@@ -295,7 +297,24 @@ async def websocket_speech_stream(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             if data:
-                res = speech_transcriber.transcribe_text_stream(data)
+                res = None
+                trimmed = data.strip()
+                if trimmed.startswith("{") and trimmed.endswith("}"):
+                    try:
+                        payload = json.loads(trimmed)
+                        if "audio_base64" in payload or "audio_chunk" in payload:
+                            b64_str = payload.get("audio_base64") or payload.get("audio_chunk")
+                            audio_bytes = base64.b64decode(b64_str)
+                            sr = int(payload.get("sample_rate", 16000))
+                            res = speech_transcriber.transcribe_audio_bytes(audio_bytes, sample_rate=sr)
+                        elif "text" in payload:
+                            res = speech_transcriber.transcribe_text_stream(str(payload["text"]))
+                    except Exception:
+                        pass
+
+                if res is None:
+                    res = speech_transcriber.transcribe_text_stream(data)
+
                 await websocket.send_json({
                     "transcript": res.full_transcript,
                     "dominant_emotion": res.text_emotion.dominant_emotion if res.text_emotion else "neutral",

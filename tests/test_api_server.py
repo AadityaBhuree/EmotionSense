@@ -156,4 +156,27 @@ def test_websocket_speech_stream(client):
         assert len(data["tokens"]) > 0
 
 
+def test_websocket_speech_stream_json_payloads(client):
+    import json
+    import base64
+    import numpy as np
+
+    with client.websocket_connect("/ws/stream-speech") as websocket:
+        # 1. Test JSON text payload
+        websocket.send_text(json.dumps({"text": "I feel very anxious and scared today."}))
+        data = websocket.receive_json()
+        assert "transcript" in data
+        assert data["dominant_emotion"] in ["fear", "sadness", "neutral"]
+
+        # 2. Test JSON audio_base64 payload
+        t = np.linspace(0, 0.5, 8000, dtype=np.float32)
+        sine_pcm = (np.sin(2 * np.pi * 220 * t) * 32767).astype(np.int16).tobytes()
+        b64_audio = base64.b64encode(sine_pcm).decode("utf-8")
+        websocket.send_text(json.dumps({"audio_base64": b64_audio, "sample_rate": 16000}))
+        data2 = websocket.receive_json()
+        assert "transcript" in data2
+        assert "tokens" in data2
+
+
+
 
