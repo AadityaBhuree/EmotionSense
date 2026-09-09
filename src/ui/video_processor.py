@@ -13,18 +13,22 @@ import cv2
 import numpy as np
 import threading
 import collections
+import time
 from typing import Optional, Any, Dict, List
 
 from src.vision.face_mesh import FaceMeshDetector
 from src.vision.emotion_classifier import FacialEmotionClassifier
 from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
+from src.audio.speech_transcriber import LiveSpeechTranscriber
+from src.text.nlp_emotion import TextEmotionClassifier
 from src.fusion.multimodal_fusion import MultimodalFusionEngine
 from src.core.types import (
     MultimodalEmotionState,
     VisionEmotionResult,
     VoiceEmotionResult,
     AcousticFeatures,
+    TextEmotionResult,
 )
 
 try:
@@ -42,11 +46,15 @@ class MultimodalStreamContext:
     def __init__(self, window_size: int = 30):
         self.lock = threading.Lock()
         self.fusion_engine = MultimodalFusionEngine(window_size=window_size)
+        self.text_classifier = TextEmotionClassifier()
         self.latest_state: Optional[MultimodalEmotionState] = None
         self.latest_vision: Optional[VisionEmotionResult] = None
         self.latest_voice: Optional[VoiceEmotionResult] = None
         self.latest_acoustics: Optional[AcousticFeatures] = None
         self.live_text_prompt: Optional[str] = None
+        self.latest_transcript: Optional[str] = None
+        self.latest_text_emotion: Optional[TextEmotionResult] = None
+        self.transcript_history: collections.deque = collections.deque(maxlen=25)
         self.speech_active: bool = False
         self.audio_energy_history: collections.deque = collections.deque(maxlen=30)
         self.sample_count: int = 0
@@ -66,14 +74,37 @@ class MultimodalStreamContext:
             self.latest_vision = vision_res
             self.sample_count += 1
 
+    def update_transcript(self, text: str, text_res: Optional[TextEmotionResult] = None):
+        """Updates live transcript detected by AudioProcessor speech recognizer."""
+        with self.lock:
+            self.latest_transcript = text
+            if text:
+                if text_res is None:
+                    text_res = self.text_classifier.analyze_text(text)
+                self.latest_text_emotion = text_res
+                self.transcript_history.append({
+                    "text": text,
+                    "timestamp": time.time(),
+                    "dominant_emotion": text_res.dominant_emotion if text_res else "neutral",
+                    "confidence": text_res.confidence if text_res else 0.0,
+                })
+
     def set_live_text(self, text: Optional[str]):
         """Injects active text/spoken prompt into the fusion pipeline."""
         with self.lock:
             self.live_text_prompt = text
+            if text and text.strip():
+                self.latest_text_emotion = self.text_classifier.analyze_text(text.strip())
+            elif not self.latest_transcript:
+                self.latest_text_emotion = None
 
     def get_latest_state(self) -> Optional[MultimodalEmotionState]:
         with self.lock:
             return self.latest_state
+
+    def get_latest_vision(self) -> Optional[VisionEmotionResult]:
+        with self.lock:
+            return self.latest_vision
 
     def get_latest_voice(self) -> Optional[VoiceEmotionResult]:
         with self.lock:
@@ -85,27 +116,67 @@ class MultimodalStreamContext:
 
     def get_live_text(self) -> Optional[str]:
         with self.lock:
-            return self.live_text_prompt
+            return self.live_text_prompt or self.latest_transcript
+
+    def get_latest_transcript(self) -> Optional[str]:
+        with self.lock:
+            return self.latest_transcript
+
+    def get_latest_text_emotion(self) -> Optional[TextEmotionResult]:
+        with self.lock:
+            return self.latest_text_emotion
+
+    def get_transcript_history(self) -> List[Dict[str, Any]]:
+        with self.lock:
+            return list(self.transcript_history)
 
 
 class MultimodalAudioProcessor(AudioProcessorBase):
     """Processes real-time WebRTC microphone audio buffers.
 
-    Resamples incoming audio frames into 16kHz mono float32, maintains a rolling buffer,
-    and calculates continuous acoustic prosody and vocal sentiment.
+    Resamples incoming audio frames into 16kHz mono float32, maintains rolling buffers,
+    calculates continuous acoustic prosody, and autonomously transcribes speech segments.
     """
 
-    def __init__(self, context: Optional[MultimodalStreamContext] = None, sample_rate: int = 16000):
+    def __init__(
+        self,
+        context: Optional[MultimodalStreamContext] = None,
+        sample_rate: int = 16000,
+        enable_speech_recognition: bool = True,
+    ):
         self.context = context or MultimodalStreamContext()
         self.sample_rate = sample_rate
+        self.enable_speech_recognition = enable_speech_recognition
         self.audio_extractor = AcousticProsodyExtractor(sample_rate=self.sample_rate)
         self.voice_classifier = VoiceSentimentClassifier()
+        self.speech_transcriber = LiveSpeechTranscriber()
 
         # Rolling circular buffer for 1.5 seconds of audio (24,000 samples at 16kHz)
         self.buffer_size = int(self.sample_rate * 1.5)
         self.audio_buffer = collections.deque(maxlen=self.buffer_size)
+
+        # Speech chunk accumulator for transcription (holds up to 3.5 seconds)
+        self.speech_buffer = collections.deque(maxlen=int(self.sample_rate * 3.5))
+        self._silence_count = 0
+        self._is_transcribing = False
         self.resampler = None
         self._step_counter = 0
+
+    def _transcribe_worker(self, audio_array: np.ndarray):
+        """Asynchronous worker executing speech-to-text without blocking the audio stream."""
+        try:
+            voice_res = self.context.get_latest_voice()
+            res = self.speech_transcriber.transcribe_audio_array(
+                audio_array,
+                sample_rate=self.sample_rate,
+                voice_result=voice_res,
+            )
+            if res and res.full_transcript:
+                self.context.update_transcript(res.full_transcript, res.text_emotion)
+        except Exception:
+            pass
+        finally:
+            self._is_transcribing = False
 
     def recv(self, frame: Any) -> Any:
         """Processes incoming audio frame from WebRTC microphone stream."""
@@ -125,6 +196,8 @@ class MultimodalAudioProcessor(AudioProcessorBase):
                 if arr is not None and len(arr) > 0:
                     samples_1d = arr[0].astype(np.float32)
                     self.audio_buffer.extend(samples_1d)
+                    if self.enable_speech_recognition:
+                        self.speech_buffer.extend(samples_1d)
 
             self._step_counter += 1
             # Run acoustic feature extraction every ~4 audio frames (approx 80-120ms)
@@ -133,6 +206,34 @@ class MultimodalAudioProcessor(AudioProcessorBase):
                 acoustics = self.audio_extractor.extract_features(buf_array)
                 voice_res = self.voice_classifier.classify_voice_emotion(acoustics)
                 self.context.update_voice(voice_res, acoustics)
+
+                # Trigger speech transcription when voice pause is detected or buffer full
+                if self.enable_speech_recognition and not self._is_transcribing:
+                    min_samples = int(self.sample_rate * 0.5)
+                    if not acoustics.speech_active:
+                        self._silence_count += 1
+                        if self._silence_count >= 3 and len(self.speech_buffer) >= min_samples:
+                            chunk_to_transcribe = np.array(self.speech_buffer, dtype=np.float32)
+                            self.speech_buffer.clear()
+                            self._silence_count = 0
+                            self._is_transcribing = True
+                            threading.Thread(
+                                target=self._transcribe_worker,
+                                args=(chunk_to_transcribe,),
+                                daemon=True
+                            ).start()
+                    else:
+                        self._silence_count = 0
+                        # Auto-trigger if speaker talks continuously for > 3.0 seconds
+                        if len(self.speech_buffer) >= int(self.sample_rate * 3.0):
+                            chunk_to_transcribe = np.array(self.speech_buffer, dtype=np.float32)
+                            self.speech_buffer.clear()
+                            self._is_transcribing = True
+                            threading.Thread(
+                                target=self._transcribe_worker,
+                                args=(chunk_to_transcribe,),
+                                daemon=True
+                            ).start()
 
         except Exception:
             pass
@@ -213,19 +314,30 @@ class MultimodalVideoProcessor(VideoTransformerBase):
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1, cv2.LINE_AA
             )
 
-        # 5. Render Live Subtitle Bar if live text prompt is active
-        prompt = self.context.get_live_text()
-        if prompt:
-            cv2.rectangle(img, (20, h - 50), (w - 20, h - 15), (15, 23, 42), -1)
-            cv2.rectangle(img, (20, h - 50), (w - 20, h - 15), (6, 182, 212), 1)
-            sub_text = prompt[:50] + ("..." if len(prompt) > 50 else "")
+        # 5. Render Live Subtitle Bar if speech transcript or prompt is active
+        active_text = self.context.get_live_text()
+        text_res = self.context.get_latest_text_emotion()
+        if active_text:
+            bar_y1 = max(h - 52, 10)
+            bar_y2 = max(h - 14, bar_y1 + 38)
+            cv2.rectangle(img, (20, bar_y1), (w - 20, bar_y2), (15, 23, 42), -1)
+
+            accent_color = (6, 182, 212)
+            if text_res and text_res.dominant_emotion == "joy":
+                accent_color = (16, 185, 129)
+            elif text_res and text_res.dominant_emotion in ["anger", "fear"]:
+                accent_color = (239, 68, 68)
+            cv2.rectangle(img, (20, bar_y1), (w - 20, bar_y2), accent_color, 1)
+
+            sub_text = active_text[:48] + ("..." if len(active_text) > 48 else "")
+            emo_tag = f" [{text_res.dominant_emotion.upper()}]" if text_res else ""
             cv2.putText(
-                img, f"SPEECH: {sub_text}", (30, h - 26),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (248, 250, 252), 1, cv2.LINE_AA
+                img, f"SPEECH: \"{sub_text}\"{emo_tag}", (30, bar_y2 - 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.48, (248, 250, 252), 1, cv2.LINE_AA
             )
 
-        # 6. Fuse modalities and store latest synchronized state
-        fused_state = self.fusion_engine.fuse(vision=vision_res, voice=voice_res)
+        # 6. Tri-Modal late fusion (Vision + Audio Prosody + Spoken Text)
+        fused_state = self.fusion_engine.fuse(vision=vision_res, voice=voice_res, text=text_res)
         self.context.update_state(fused_state, vision_res)
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")

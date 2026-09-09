@@ -114,3 +114,46 @@ def test_multimodal_video_processor_synthetic_frame():
     assert latest_state is not None
     assert isinstance(latest_state, MultimodalEmotionState)
     assert ctx.sample_count == 1
+
+
+def test_stream_context_transcript_and_history():
+    ctx = MultimodalStreamContext()
+    assert ctx.get_latest_transcript() is None
+    assert ctx.get_live_text() is None
+
+    # Update transcript from speech recognition
+    ctx.update_transcript("I feel absolutely amazing and thrilled today!")
+    assert ctx.get_latest_transcript() == "I feel absolutely amazing and thrilled today!"
+    assert ctx.get_live_text() == "I feel absolutely amazing and thrilled today!"
+    assert ctx.get_latest_text_emotion() is not None
+    assert ctx.get_latest_text_emotion().dominant_emotion == "joy"
+
+    history = ctx.get_transcript_history()
+    assert len(history) == 1
+    assert history[0]["text"] == "I feel absolutely amazing and thrilled today!"
+
+    # Explicit live prompt overrides transcript in get_live_text()
+    ctx.set_live_text("Overridden prompt")
+    assert ctx.get_live_text() == "Overridden prompt"
+
+
+def test_multimodal_video_processor_tri_modal_subtitles():
+    ctx = MultimodalStreamContext()
+    video_proc = MultimodalVideoProcessor(context=ctx)
+
+    # Set transcript in context
+    ctx.update_transcript("We are making fantastic progress with this release!")
+
+    canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+    canvas[:] = (20, 20, 20)
+    frame = av.VideoFrame.from_ndarray(canvas, format="bgr24")
+
+    out_frame = video_proc.recv(frame)
+    assert isinstance(out_frame, av.VideoFrame)
+
+    latest_state = ctx.get_latest_state()
+    assert latest_state is not None
+    # Verify tri-modal late fusion includes text emotion
+    assert latest_state.text is not None
+    assert latest_state.text.dominant_emotion == "joy"
+
