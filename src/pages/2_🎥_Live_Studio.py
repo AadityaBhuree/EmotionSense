@@ -18,6 +18,8 @@ from src.vision.face_mesh import FaceMeshDetector
 from src.vision.emotion_classifier import FacialEmotionClassifier
 from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
+from src.audio.speech_transcriber import LiveSpeechTranscriber
+from src.text.nlp_emotion import TextEmotionClassifier
 from src.fusion.multimodal_fusion import MultimodalFusionEngine
 from src.utils.session_manager import SessionManager
 from src.ui.video_processor import (
@@ -208,12 +210,46 @@ with left_col:
         st.image(canvas, channels="BGR", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Live Text & Spoken Prompt Input for True Tri-Modal Fusion
-    st.markdown("#### 💬 Live Spoken Prompt (Tri-Modal Context)")
+    # Live Speech & Spoken Prompt Ingestion for True Tri-Modal Fusion
+    st.markdown("#### 💬 Live Speech & Spoken Text (Tri-Modal Context)")
+
+    # Direct Browser Microphone Ingestion Widget
+    with st.expander("🎙️ Direct Microphone Capture & Transcribe", expanded=False):
+        st.markdown(
+            "<div style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px;'>"
+            "Record a spoken audio snippet to instantly classify vocal prosody and transcribe text into live affect fusion:"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        audio_mic_input = st.audio_input("Record Speech Sample", key="live_studio_audio_input")
+        if audio_mic_input is not None:
+            raw_audio_bytes = audio_mic_input.getvalue()
+            if "live_transcriber" not in st.session_state:
+                st.session_state.live_transcriber = LiveSpeechTranscriber()
+            if "audio_extractor" not in st.session_state:
+                st.session_state.audio_extractor = AcousticProsodyExtractor()
+            if "voice_classifier" not in st.session_state:
+                st.session_state.voice_classifier = VoiceSentimentClassifier()
+
+            try:
+                # Transcribe speech and compute prosody
+                trans_res = st.session_state.live_transcriber.transcribe_audio_bytes(raw_audio_bytes)
+                if trans_res and trans_res.full_transcript:
+                    st.session_state.stream_context.update_transcript(
+                        trans_res.full_transcript, trans_res.text_emotion
+                    )
+                    st.session_state.stream_context.set_live_text(trans_res.full_transcript)
+                    st.success(f"Transcribed: \"{trans_res.full_transcript}\"")
+                else:
+                    st.info("Audio processed. No clear speech detected.")
+            except Exception as e:
+                st.warning(f"Audio processing notice: {e}")
+
     live_prompt = st.text_input(
         "Spoken / Typed Phrase Context",
-        placeholder="Type or paste what the speaker is saying...",
-        key="live_stream_text_prompt"
+        placeholder="Type or paste what the speaker is saying (or speak via microphone)...",
+        key="live_stream_text_prompt",
+        value=st.session_state.stream_context.get_latest_transcript() or "",
     )
     if live_prompt.strip():
         if "text_classifier" not in st.session_state:
@@ -228,6 +264,25 @@ with left_col:
         """, unsafe_allow_html=True)
     else:
         st.session_state.stream_context.set_live_text(None)
+
+    # Real-Time Spoken Utterance Feed
+    transcript_history = st.session_state.stream_context.get_transcript_history()
+    if transcript_history:
+        st.markdown("<div class='es-section-title'>🗣️ Live Utterances & Speech Affect Feed</div>", unsafe_allow_html=True)
+        feed_items = ""
+        for item in reversed(transcript_history[-4:]):
+            emo = str(item.get("dominant_emotion", "neutral")).upper()
+            txt = str(item.get("text", ""))
+            conf = int(float(item.get("confidence", 0.0)) * 100)
+            feed_items += (
+                f"<div style='margin-bottom: 4px; font-size: 0.78rem; font-family: \"JetBrains Mono\", monospace;'>"
+                f"<span style='color: #06b6d4;'>●</span> <b>[{emo} {conf}%]</b>: {txt}</div>"
+            )
+        st.markdown(
+            f"<div style='max-height: 120px; overflow-y: auto; background: var(--surface-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; margin-bottom: 12px;'>"
+            f"{feed_items}</div>",
+            unsafe_allow_html=True,
+        )
 
     # Action Units Section
     current_state = getattr(st.session_state, "latest_state", None)
@@ -263,6 +318,19 @@ with right_col:
             with ac4:
                 act_str = "ACTIVE 🎙️" if latest_acoustics.speech_active else "QUIET 🔇"
                 render_metric_card("Mic Status", act_str, color="#10b981" if latest_acoustics.speech_active else "#94a3b8")
+
+        # Spoken / Text Affect Mini-Rack
+        if current_state.text:
+            st.markdown("<div class='es-section-title'>💬 Spoken & Semantic Affect Telemetry</div>", unsafe_allow_html=True)
+            tx1, tx2, tx3, tx4 = st.columns(4)
+            with tx1:
+                render_metric_card("Text Emotion", current_state.text.dominant_emotion.upper(), delta="Semantic NLP", color="#3b82f6")
+            with tx2:
+                render_metric_card("Valence", f"{current_state.text.affect.valence:+.2f}", color="#10b981")
+            with tx3:
+                render_metric_card("Arousal", f"{current_state.text.affect.arousal:+.2f}", color="#f59e0b")
+            with tx4:
+                render_metric_card("Confidence", f"{int(current_state.text.confidence * 100)}%", color="#06b6d4")
 
         tab1, tab2 = st.tabs(["📊 Radar & Circumplex", "📈 Dynamic Timeline"])
         with tab1:
