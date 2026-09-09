@@ -288,7 +288,7 @@ Validate the full computer vision, audio DSP, NLP, and FastAPI pipelines using `
 ```bash
 pytest -v
 ```
-*All 57 unit and integration tests run in under 9 seconds with 100% pass rate.*
+*All 67 unit and integration tests run in under 9 seconds with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -303,7 +303,17 @@ pytest -v
 | `POST` | `/api/v1/detect-anomalies` | Evaluates timeline frames for sudden valence crashes & fatigue overload |
 | `POST` | `/api/v1/generate-diagnostic-report` | Generates standalone clinical diagnostic reports (HTML & Markdown) |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
-| `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
+| `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect (supports raw text and base64 audio chunks) |
+
+### Real-Time WebSocket Streaming Client CLI
+
+```bash
+# Live affect telemetry from text
+python scripts/ws_stream_client.py --endpoint affect --text "We just shipped Phase 3 with full test coverage!"
+
+# Live speech transcription & phonetic prosody alignment from audio
+python scripts/ws_stream_client.py --endpoint speech --simulate-audio --pitch 220
+```
 
 ---
 

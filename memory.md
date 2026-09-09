@@ -161,13 +161,16 @@ EmotionSense/
 │   │   ├── __init__.py
 │   │   ├── logger.py                  # Structured application logging
 │   │   ├── session_manager.py         # Session recording, persistence & JSON export
-│   │   └── report_generator.py        # Diagnostic HTML & Markdown clinical report generator
+│   │   ├── report_generator.py        # Diagnostic HTML & Markdown clinical report generator
+│   │   └── ws_client.py               # Asynchronous WebSocket client for affect and speech streams
 │   └── pages/
 │       ├── 1_💬_Text_Studio.py          # Single message, multi-turn chat & batch analysis
 │       ├── 2_🎥_Live_Studio.py          # Real-time multimodal streaming studio
 │       ├── 3_📁_File_Analysis.py        # Offline video & audio file container analysis
 │       ├── 4_📑_Session_History.py      # Timeline scrubbing, anomaly log & diagnostic reports
 │       └── 5_📐_Architecture.py         # System architecture & multimodal documentation
+├── scripts/
+│   └── ws_stream_client.py            # CLI utility for real-time WebSocket telemetry testing
 └── tests/
     ├── __init__.py
     ├── test_vision.py                 # MediaPipe landmarks, AU boundaries & null frame handling
@@ -175,6 +178,9 @@ EmotionSense/
     ├── test_text_emotion.py           # Lexical VAD, emoji extraction, negation handling
     ├── test_transformer_hybrid.py     # Transformer availability, mode switching, ensemble fusion
     ├── test_speech_transcriber.py     # Audio buffer processing, speech transcription stream
+    ├── test_demuxer.py                # Audiovisual demuxing, synchronized timeline & late fusion
+    ├── test_webrtc_stream.py          # WebRTC audio resampling, prosody, transcript & HUD subtitles
+    ├── test_ws_client.py              # WebSocket streaming client tests (URL construction, flow)
     ├── test_fusion.py                 # Multimodal late fusion, attention penalty, VAD quadrant
     ├── test_anomaly_detector.py       # Valence crash, hyper-arousal, sustained distress, fatigue
     ├── test_report_generator.py       # Markdown and HTML clinical diagnostic report formatting
@@ -211,21 +217,25 @@ EmotionSense/
   - `MultimodalStreamContext`: Thread-safe synchronization container linking concurrent WebRTC video and audio worker threads.
   - `MultimodalAudioProcessor`: WebRTC microphone audio processor with PyAV `AudioResampler` resampling to 16kHz mono float32, rolling circular buffer, and continuous vocal prosody extraction.
   - `MultimodalVideoProcessor`: Annotates 468-point 3D FaceMesh, dominant affect HUD, and concurrent microphone acoustic status badges.
-- **Spoken Voice & Speech Transcription in Text Studio (`src/pages/1_💬_Text_Studio.py`)**:
+- **Spoken Voice & Speech Transcription in Text Studio & Live Studio (`src/pages/1_💬_Text_Studio.py`, `src/pages/2_🎥_Live_Studio.py`)**:
   - Native browser microphone ingestion (`st.audio_input`) and audio file upload.
-  - Automatic vocal prosody extraction (`AcousticProsodyExtractor`), vocal tone emotion classification (`VoiceSentimentClassifier`), and speech-to-text transcription with word-level phonetic alignment (`LiveSpeechTranscriber`).
+  - Autonomous speech-to-text transcription worker (`LiveSpeechTranscriber`) and acoustic prosody extraction (`AcousticProsodyExtractor`).
+  - Live subtitle overlay with dominant affect coloring directly on WebRTC video frames.
+  - Real-time spoken utterance feed and text affect telemetry mini-rack.
   - Seamless "Apply Transcribed Text" bridging spoken voice into the deep NLP affect decoding and Russell circumplex engine.
-  - Interactive WebSocket streaming test interface validating `/ws/stream-speech` and `/ws/stream-affect`.
+- **WebSocket Client & CLI Utility (`src/utils/ws_client.py`, `scripts/ws_stream_client.py`)**:
+  - `EmotionSenseWSClient`: Asynchronous Python client for streaming affect and audio bytes over WebSockets.
+  - `scripts/ws_stream_client.py`: Command-line interface for interactive streaming and latency testing against `/ws/stream-speech` and `/ws/stream-affect`.
 
 ---
 
 ## 6. Verification & Quality Metrics
 
-All **61** unit, integration, and streaming tests pass cleanly across Python 3.10+:
+All **67** unit, integration, and streaming tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================= 61 passed in 7.37s ==============================
+# ============================= 67 passed in 8.84s ==============================
 ```
 
 - **Vision Suite (`test_vision.py`)**: MediaPipe landmark tolerances, AU bounds, null frame handling.
@@ -233,9 +243,11 @@ pytest -v
 - **Text & Transformer Suite (`test_text_emotion.py`, `test_transformer_hybrid.py`)**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
 - **Speech Transcriber Suite (`test_speech_transcriber.py`)**: Audio byte and numpy array transcription, mocked speech recognition, phonetic token alignment with acoustic pitch and energy, and offline fallback resilience.
 - **Audiovisual Demuxer Suite (`test_demuxer.py`)**: Container demuxing, synthetic video/audio generation, corrupted input resilience, audio window extraction, synchronized timeline generation, and audiovisual late fusion.
-- **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling and prosody extraction, video frame HUD annotations, and synchronized state fusion.
+- **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling, vocal prosody, autonomous speech recognition worker, live subtitle rendering, and tri-modal fusion.
+- **WebSocket Streaming Suite (`test_ws_client.py`, `test_api_server.py`)**: URL construction, bidirectional `/ws/stream-affect` telemetry, and base64 audio chunk / JSON text `/ws/stream-speech` streaming.
 - **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
 - **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
 - **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
 - **API Server Suite (`test_api_server.py`)**: FastAPI REST routes and bidirectional WebSocket affect & speech streaming.
+
 
