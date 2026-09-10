@@ -15,7 +15,7 @@ try:
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, HRFlowable
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
     )
     REPORTLAB_AVAILABLE = True
 except ImportError:
@@ -113,10 +113,7 @@ class ClinicalPDFExporter:
         # Custom Palette
         c_dark = colors.HexColor("#0f172a")
         c_primary = colors.HexColor("#1e40af")
-        c_cyan = colors.HexColor("#0284c7")
         c_green = colors.HexColor("#15803d")
-        c_red = colors.HexColor("#b91c1c")
-        c_amber = colors.HexColor("#b45309")
         c_gray_bg = colors.HexColor("#f8fafc")
         c_border = colors.HexColor("#cbd5e1")
         c_muted = colors.HexColor("#64748b")

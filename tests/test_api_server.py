@@ -178,5 +178,81 @@ def test_websocket_speech_stream_json_payloads(client):
         assert "tokens" in data2
 
 
+def test_api_session_crud_and_stats(client):
+    """Tests the full REST persistence lifecycle: creation, listing, metadata patch, stats, and deletion."""
+    session_id = "test_api_crud_sess_01"
+    payload = {
+        "session_id": session_id,
+        "start_time": 1000.0,
+        "end_time": 1050.0,
+        "samples_count": 10,
+        "timeline": [
+            {
+                "timestamp": 1000.0,
+                "dominant_emotion": "joy",
+                "confidence": 0.9,
+                "affect": {"valence": 0.7, "arousal": 0.6, "dominance": 0.5},
+            }
+        ],
+        "metadata": {
+            "subject_name": "API Tester",
+            "assessment_type": "clinical_screening",
+            "notes": "Testing REST persistence",
+            "tags": ["ci", "rest"],
+        },
+    }
+
+    # 1. Create Session
+    create_res = client.post("/api/sessions", json=payload)
+    assert create_res.status_code == 200
+    assert create_res.json()["session_id"] == session_id
+
+    # 2. List Sessions
+    list_res = client.get("/api/sessions?assessment_type=clinical_screening")
+    assert list_res.status_code == 200
+    sessions = list_res.json()["sessions"]
+    matching = [s for s in sessions if s["session_id"] == session_id]
+    assert len(matching) == 1
+    assert matching[0]["subject_name"] == "API Tester"
+
+    # 3. Get Session
+    get_res = client.get(f"/api/sessions/{session_id}")
+    assert get_res.status_code == 200
+    sess_data = get_res.json()
+    assert sess_data["session_id"] == session_id
+    assert len(sess_data["timeline"]) == 1
+
+    # 4. Patch Metadata
+    patch_res = client.patch(
+        f"/api/sessions/{session_id}/metadata",
+        json={"notes": "Updated through PATCH", "tags": ["ci", "rest", "verified"]}
+    )
+    assert patch_res.status_code == 200
+
+    get_updated = client.get(f"/api/sessions/{session_id}")
+    assert get_updated.json()["metadata"]["notes"] == "Updated through PATCH"
+    assert "verified" in get_updated.json()["metadata"]["tags"]
+
+    # 5. Platform Stats
+    stats_res = client.get("/api/stats")
+    assert stats_res.status_code == 200
+    stats = stats_res.json()["stats"]
+    assert stats["total_sessions"] >= 1
+
+    # 6. Delete Session
+    del_res = client.delete(f"/api/sessions/{session_id}")
+    assert del_res.status_code == 200
+
+    # 7. Verify 404
+    get_404 = client.get(f"/api/sessions/{session_id}")
+    assert get_404.status_code == 404
+
+    # 8. Migrate Endpoint
+    migrate_res = client.post("/api/sessions/migrate")
+    assert migrate_res.status_code == 200
+    assert "migrated_sessions_count" in migrate_res.json()
+
+
+
 
 

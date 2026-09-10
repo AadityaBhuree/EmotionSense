@@ -1,6 +1,7 @@
 """SQLite persistence engine for EmotionSense session intelligence."""
 
 import json
+import logging
 import sqlite3
 import time
 from pathlib import Path
@@ -9,7 +10,8 @@ from typing import Dict, Any, Optional, List, Union
 from config import DB_PATH, SESSIONS_DIR
 from src.core.types import SessionRecord
 from src.storage.models import AssessmentType, SessionMetadata, StoredSession
-from src.utils.logger import logger
+
+logger = logging.getLogger("EmotionSense.Storage")
 
 
 class SessionDatabase:
@@ -120,24 +122,24 @@ class SessionDatabase:
         else:
             duration_sec = 0.0
 
-        samples_count = int(rec_dict.get("samples_count", 0))
-        avg_affect = rec_dict.get("average_affect", {})
-        avg_v = float(avg_affect.get("valence", 0.0))
-        avg_a = float(avg_affect.get("arousal", 0.0))
-        avg_d = float(avg_affect.get("dominance", 0.0))
+        samples_count = int(rec_dict.get("samples_count") or 0)
+        avg_affect = rec_dict.get("average_affect") or {}
+        avg_v = float(avg_affect.get("valence") or 0.0)
+        avg_a = float(avg_affect.get("arousal") or 0.0)
+        avg_d = float(avg_affect.get("dominance") or 0.0)
 
-        avg_eng = float(rec_dict.get("average_engagement", 0.0))
-        avg_fat = float(rec_dict.get("average_fatigue", 0.0))
-        avg_att = float(rec_dict.get("average_attention", 0.0))
+        avg_eng = float(rec_dict.get("average_engagement") or 0.0)
+        avg_fat = float(rec_dict.get("average_fatigue") or 0.0)
+        avg_att = float(rec_dict.get("average_attention") or 0.0)
 
-        distribution = rec_dict.get("dominant_emotion_distribution", {})
+        distribution = rec_dict.get("dominant_emotion_distribution") or {}
         if distribution:
             dominant_emotion = max(distribution.items(), key=lambda x: x[1])[0]
         else:
             dominant_emotion = "neutral"
 
         emotion_dist_json = json.dumps(distribution)
-        key_moments_json = json.dumps(rec_dict.get("key_moments", []))
+        key_moments_json = json.dumps(rec_dict.get("key_moments") or [])
         created_at = time.time()
 
         # Metadata extraction

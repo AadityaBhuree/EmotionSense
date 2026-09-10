@@ -6,10 +6,10 @@ discrete categories, extended nuances, and continuous 3D VAD spaces.
 """
 
 import time
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple
 import numpy as np
 
-from src.core.types import TextEmotionResult, AffectVector, TokenSalience, EmotionCategory
+from src.core.types import TextEmotionResult, AffectVector, TokenSalience
 
 
 _TORCH_AVAILABLE: Optional[bool] = None
@@ -30,8 +30,8 @@ def _probe_torch_availability() -> bool:
             pass
 
     try:
-        import torch
-        import transformers
+        import torch  # noqa: F401
+        import transformers  # noqa: F401
         _TORCH_AVAILABLE = True
     except (ImportError, OSError, Exception):
         _TORCH_AVAILABLE = False
@@ -160,7 +160,6 @@ class TransformerEmotionClassifier:
             )
 
         clean_text = text.strip()
-        t0 = time.time()
 
         # If model is not loaded yet, attempt lazy load
         if not self._is_loaded:

@@ -7,8 +7,8 @@ handling, token salience explainability, continuous 3D VAD projection, and empat
 import re
 import math
 import time
-from typing import Dict, List, Tuple, Optional, Any
-from src.core.types import TextEmotionResult, AffectVector, TokenSalience, EmotionCategory
+from typing import Dict, List, Tuple
+from src.core.types import TextEmotionResult, AffectVector, TokenSalience
 
 
 class TextEmotionClassifier:
@@ -195,7 +195,6 @@ class TextEmotionClassifier:
 
         total_words = len(tokens)
         exclamation_count = clean_text.count("!")
-        question_count = clean_text.count("?")
         is_all_caps = clean_text.isupper() and len(clean_text) > 3
 
         # Window-based token analysis with Negation and Intensifier lookahead
@@ -381,7 +380,7 @@ class TextEmotionClassifier:
         a = max(-1.0, min(1.0, a))
         d = max(-1.0, min(1.0, d))
 
-        return AffectVector(valence=round(v, 3), arousal=round(arousal_val := a, 3), dominance=round(d, 3))
+        return AffectVector(valence=round(v, 3), arousal=round(a, 3), dominance=round(d, 3))
 
     def _generate_empathy_advice(self, dominant_emotion: str, confidence: float, affect: AffectVector) -> str:
         """Generates actionable empathy and communication response suggestions."""

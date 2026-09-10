@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, Optional, Any
 from src.core.types import FacialActionUnits, VisionEmotionResult
 from src.core.config import LANDMARK_INDICES, EMOTION_LABELS
 
@@ -47,7 +47,6 @@ class FacialEmotionClassifier:
         au6 = np.clip(au12 * 0.85, 0.0, 1.0)
 
         # 4. Lip Corner Depressor (AU15 - Sadness)
-        chin = landmarks[152]
         mouth_corner_y = (mouth_corner_left[1] + mouth_corner_right[1]) / 2.0
         lip_center_y = lower_lip_center[1]
         au15 = np.clip((mouth_corner_y - lip_center_y + 0.02) * 8.0, 0.0, 1.0)

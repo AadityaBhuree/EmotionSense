@@ -1,11 +1,9 @@
 """Plotly-based scientific interactive visualization & neuro-affective telemetry charts."""
 
 import plotly.graph_objects as go
-import plotly.express as px
 from typing import Dict, List, Any, Optional
-import numpy as np
 
-from config import THEME_COLORS, EMOTION_COLORS
+from config import EMOTION_COLORS
 from src.core.types import MultimodalEmotionState, AffectVector, FacialActionUnits
 
 
@@ -420,7 +418,6 @@ def render_dual_track_multimodal_timeline(history: List[MultimodalEmotionState])
         subplot_titles=("Fused Affect Dynamics (Valence & Arousal)", "Acoustic Telemetry (Pitch & Energy)"),
     )
 
-    timestamps = [f"{i * 0.2:.1f}s" for i in range(len(history))]
     x_vals = list(range(len(history)))
 
     # Track 1: Valence, Arousal, Confidence

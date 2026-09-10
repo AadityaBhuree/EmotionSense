@@ -36,7 +36,7 @@ class DiagnosticReportGenerator:
         )
 
         md = []
-        md.append(f"# 🧠 EmotionSense — Session Diagnostic Report")
+        md.append("# 🧠 EmotionSense — Session Diagnostic Report")
         md.append(f"**Session ID:** `{session.session_id}` | **Duration:** {dur_str} | **Samples:** {session.samples_count}\n")
         md.append("---")
         md.append("## 1. Executive Telemetry Overview")
@@ -92,9 +92,6 @@ class DiagnosticReportGenerator:
         """Generates a styled, standalone HTML diagnostic report ready for printing or viewing."""
         duration_sec = round((session.end_time or time.time()) - session.start_time, 1)
         dur_str = f"{int(duration_sec // 60)}m {int(duration_sec % 60)}s"
-
-        avg_v = session.average_affect.get("valence", 0.0)
-        avg_a = session.average_affect.get("arousal", 0.0)
 
         sorted_emotions = sorted(
             session.dominant_emotion_distribution.items(),
