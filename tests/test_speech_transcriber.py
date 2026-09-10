@@ -1,7 +1,6 @@
 """Unit tests for LiveSpeechTranscriber and phonetic affect alignment."""
 
 import numpy as np
-import pytest
 from src.audio.speech_transcriber import LiveSpeechTranscriber, LiveSpeechTranscriptionResult
 
 

@@ -1,7 +1,6 @@
 """Internal model weights, emotion mapping matrices, and algorithm parameters."""
 
 from typing import Dict, List
-import numpy as np
 
 # Emotion Classes
 EMOTION_LABELS: List[str] = [

@@ -1,6 +1,5 @@
 """Unit tests for TransformerEmotionClassifier and HybridEmotionClassifier."""
 
-import pytest
 from src.text.transformer_emotion import TransformerEmotionClassifier
 from src.text.hybrid_classifier import HybridEmotionClassifier
 from src.core.types import TextEmotionResult

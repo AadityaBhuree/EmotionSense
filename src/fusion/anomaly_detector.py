@@ -9,11 +9,11 @@ Detects real-time anomalies in multimodal emotional telemetry:
 
 import time
 from enum import Enum
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
 from collections import deque
 
-from src.core.types import MultimodalEmotionState, AffectVector
+from src.core.types import MultimodalEmotionState
 
 
 class AnomalySeverity(str, Enum):

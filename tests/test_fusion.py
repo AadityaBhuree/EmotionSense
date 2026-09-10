@@ -5,9 +5,7 @@ from src.fusion.multimodal_fusion import MultimodalFusionEngine
 from src.fusion.metrics import AffectMetricsCalculator
 from src.core.types import (
     VisionEmotionResult,
-    VoiceEmotionResult,
     FacialActionUnits,
-    AcousticFeatures,
     MultimodalEmotionState,
 )
 

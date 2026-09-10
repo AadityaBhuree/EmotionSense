@@ -1,8 +1,6 @@
 """Global configuration and design token constants for EmotionSense."""
 
-import os
 from pathlib import Path
-from dataclasses import dataclass
 
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent

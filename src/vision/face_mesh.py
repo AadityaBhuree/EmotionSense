@@ -3,7 +3,7 @@ try:
 except ImportError:
     cv2 = None
 import numpy as np
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, Dict
 from src.core.config import LANDMARK_INDICES
 
 
@@ -35,7 +35,7 @@ class FaceMeshDetector:
                 min_detection_confidence=self.min_detection_confidence,
                 min_tracking_confidence=self.min_tracking_confidence,
             )
-        except Exception as e:
+        except Exception:
             self._face_mesh = None
 
     def process_frame(self, frame: np.ndarray) -> Tuple[Optional[np.ndarray], Dict[str, float]]:

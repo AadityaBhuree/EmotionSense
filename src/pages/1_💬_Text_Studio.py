@@ -1,11 +1,9 @@
 """Page 1: Dedicated Text Message & Conversational Affective Intelligence Studio."""
 
 import streamlit as st
-import time
 import pandas as pd
-import json
 
-from config import THEME_COLORS, EMOTION_COLORS
+from config import EMOTION_COLORS
 from src.ui.styles import inject_modern_styles
 from src.ui.components import (
     render_header,
@@ -21,7 +19,7 @@ from src.ui.charts import (
     render_emotion_distribution_pie,
     render_emotion_horizontal_bars,
 )
-from src.text import TextEmotionClassifier, ConversationAffectAnalyzer, HybridEmotionClassifier
+from src.text import ConversationAffectAnalyzer, HybridEmotionClassifier
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier

@@ -8,7 +8,7 @@ import asyncio
 import base64
 import json
 import time
-from typing import Dict, Any, Optional, AsyncIterator, List
+from typing import Dict, Any
 
 
 class EmotionSenseWSClient:

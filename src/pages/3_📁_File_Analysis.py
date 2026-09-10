@@ -5,15 +5,14 @@ import tempfile
 import time
 import json
 import cv2
-import soundfile as sf
 import numpy as np
 from pathlib import Path
 
-from config import THEME_COLORS, SESSIONS_DIR
+from config import SESSIONS_DIR
 from src.core.config import EMOTION_LABELS
 from src.core.types import AffectVector
 from src.ui.styles import inject_modern_styles
-from src.ui.components import render_header, render_metric_card, render_affect_summary_badge
+from src.ui.components import render_header, render_metric_card
 from src.ui.charts import (
     render_emotion_radar_chart,
     render_affect_quadrant_chart,
@@ -51,8 +50,8 @@ if uploaded_file is not None:
 
     # 1. TEXT / CHAT TRANSCRIPT FILE ANALYSIS
     if file_ext in [".csv", ".json", ".txt"]:
-        from src.text import ConversationAffectAnalyzer, TextEmotionClassifier
-        from src.ui.charts import render_conversation_flow_chart, render_emotion_distribution_pie
+        from src.text import ConversationAffectAnalyzer
+        from src.ui.charts import render_conversation_flow_chart
         from src.ui.components import render_chat_bubble
 
         analyzer = ConversationAffectAnalyzer()

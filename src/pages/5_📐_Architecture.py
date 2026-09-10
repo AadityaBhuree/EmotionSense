@@ -3,9 +3,8 @@
 import streamlit as st
 import pandas as pd
 
-from config import THEME_COLORS, EMOTION_COLORS
 from src.ui.styles import inject_modern_styles
-from src.ui.components import render_header, render_metric_card
+from src.ui.components import render_header
 from src.core.config import EMOTION_VAD_COORDINATES
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")

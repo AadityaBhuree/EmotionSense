@@ -6,7 +6,7 @@ with recognized word tokens for synchronized tri-modal affective intelligence.
 
 import time
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
+from typing import List, Optional
 from dataclasses import dataclass, field
 
 from src.core.types import TextEmotionResult, VoiceEmotionResult

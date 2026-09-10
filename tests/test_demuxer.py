@@ -1,7 +1,6 @@
 """Unit and integration tests for AudiovisualDemuxer and synchronized multimodal fusion."""
 
 import io
-import pytest
 import numpy as np
 import av
 

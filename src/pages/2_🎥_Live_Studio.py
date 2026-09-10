@@ -1,11 +1,9 @@
 """Page 2: Real-Time Multimodal Streaming Studio with WebRTC & Telemetry."""
 
 import streamlit as st
-import time
 import cv2
 import numpy as np
 
-from config import THEME_COLORS, EMOTION_COLORS
 from src.ui.styles import inject_modern_styles
 from src.ui.components import render_header, render_metric_card, render_affect_summary_badge, render_state_indicators
 from src.ui.charts import (
@@ -20,7 +18,6 @@ from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.text.nlp_emotion import TextEmotionClassifier
-from src.fusion.multimodal_fusion import MultimodalFusionEngine
 from src.utils.session_manager import SessionManager
 from src.ui.video_processor import (
     MultimodalStreamContext,
@@ -142,7 +139,7 @@ with left_col:
         total = sum(probs.values())
         probs = {k: v / total for k, v in probs.items()}
 
-        from src.core.types import VisionEmotionResult, VoiceEmotionResult, FacialActionUnits, AcousticFeatures
+        from src.core.types import VisionEmotionResult, FacialActionUnits, AcousticFeatures
         synthetic_aus = FacialActionUnits(
             lip_corner_puller=0.8 if sim_emotion == "joy" else 0.1,
             brow_lowerer=0.7 if sim_emotion == "anger" else 0.05,

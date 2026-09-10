@@ -1,7 +1,7 @@
 """Acoustic tone and vocal sentiment classification engine."""
 
 import numpy as np
-from typing import Dict, Any
+from typing import Dict
 from src.core.types import VoiceEmotionResult, AcousticFeatures, AffectVector
 from src.core.config import EMOTION_LABELS, AUDIO_THRESHOLDS, EMOTION_VAD_COORDINATES
 

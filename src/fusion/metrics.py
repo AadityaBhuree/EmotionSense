@@ -1,8 +1,8 @@
 """Calculates higher-order behavioral metrics: Engagement Index, Attention Score, and Fatigue Level."""
 
 import numpy as np
-from typing import Dict, Any, Optional
-from src.core.types import VisionEmotionResult, VoiceEmotionResult, FacialActionUnits, AcousticFeatures
+from typing import Optional
+from src.core.types import VisionEmotionResult, VoiceEmotionResult, AcousticFeatures
 
 
 class AffectMetricsCalculator:

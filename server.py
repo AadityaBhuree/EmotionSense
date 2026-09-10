@@ -16,12 +16,12 @@ try:
 except ImportError:
     FastAPI = None
 
-from src.core.types import TextEmotionResult, DialogueEmotionSummary, MultimodalEmotionState, AffectVector, SessionRecord
+from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
 from src.text import HybridEmotionClassifier, ConversationAffectAnalyzer
 from src.fusion.anomaly_detector import AffectiveAnomalyDetector
 from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
-from src.storage import SessionDatabase, SessionMetadata, AssessmentType
+from src.storage import SessionDatabase
 
 
 # Initialize FastAPI App

@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, Union
+from typing import Any
 from pathlib import Path
 import numpy as np
 from src.core.types import AcousticFeatures

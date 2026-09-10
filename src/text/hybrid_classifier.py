@@ -5,7 +5,7 @@ with deep neural transformer models (contextual RoBERTa embeddings) into a unifi
 """
 
 import time
-from typing import Dict, Optional, Any
+from typing import Dict
 import numpy as np
 
 from src.core.types import TextEmotionResult, AffectVector

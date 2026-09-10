@@ -9,7 +9,7 @@ import pandas as pd
 from config import SESSIONS_DIR
 from src.core.types import MultimodalEmotionState, SessionRecord
 from src.core.config import EMOTION_LABELS
-from src.storage.models import AssessmentType, SessionMetadata, StoredSession
+from src.storage.models import SessionMetadata, StoredSession
 from src.storage.db import SessionDatabase
 
 

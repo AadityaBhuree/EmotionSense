@@ -1,9 +1,9 @@
 """Reusable high-density UI components, telemetry cards, and layout blocks."""
 
 import streamlit as st
-from typing import Any, List, Dict, Optional
+from typing import Any, Optional
 from config import APP_NAME, APP_TAGLINE, APP_ICON, THEME_COLORS, EMOTION_COLORS
-from src.core.types import MultimodalEmotionState, AffectVector
+from src.core.types import MultimodalEmotionState
 
 
 def render_header(title: str = APP_NAME, subtitle: str = APP_TAGLINE):

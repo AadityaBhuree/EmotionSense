@@ -3,10 +3,9 @@
 import streamlit as st
 import pandas as pd
 import json
-from pathlib import Path
 from datetime import datetime
 
-from config import THEME_COLORS, SESSIONS_DIR
+from config import SESSIONS_DIR
 from src.ui.styles import inject_modern_styles
 from src.ui.components import render_header, render_metric_card
 from src.ui.charts import render_emotion_radar_chart, render_affect_quadrant_chart

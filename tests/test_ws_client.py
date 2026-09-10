@@ -1,6 +1,5 @@
 """Unit tests for WebSocket streaming client utility."""
 
-import pytest
 import numpy as np
 import base64
 import json

@@ -33,3 +33,9 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Databases & Session Data
+*.db
+*.db-wal
+*.db-shm
+data/

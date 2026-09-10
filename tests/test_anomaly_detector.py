@@ -1,7 +1,6 @@
 """Unit tests for AffectiveAnomalyDetector sentinel engine."""
 
 import pytest
-import time
 from src.core.types import MultimodalEmotionState, AffectVector
 from src.fusion.anomaly_detector import (
     AffectiveAnomalyDetector,

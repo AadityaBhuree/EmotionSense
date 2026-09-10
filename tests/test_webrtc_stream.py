@@ -1,6 +1,5 @@
 """Unit and integration tests for real-time WebRTC audio and video stream processors."""
 
-import pytest
 import numpy as np
 import av
 import threading

@@ -1,9 +1,6 @@
 """EmotionSense — Enterprise Multimodal Affective Intelligence & Real-Time Emotion Recognition Platform."""
 
 import streamlit as st
-import time
-import pandas as pd
-from typing import Dict, List, Any
 
 # Page Configuration
 st.set_page_config(
@@ -13,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from config import APP_NAME, APP_TAGLINE, APP_ICON, THEME_COLORS, EMOTION_COLORS
+from config import APP_NAME, APP_ICON, EMOTION_COLORS
 from src.ui.styles import inject_modern_styles
 from src.ui.components import (
     render_header,
@@ -29,7 +26,7 @@ from src.ui.charts import (
     render_emotion_distribution_pie,
     render_emotion_horizontal_bars,
 )
-from src.text import TextEmotionClassifier, ConversationAffectAnalyzer, HybridEmotionClassifier
+from src.text import ConversationAffectAnalyzer, HybridEmotionClassifier
 
 # Apply precision neuro-instrument styling
 inject_modern_styles()

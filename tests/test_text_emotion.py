@@ -3,7 +3,6 @@
 import pytest
 from src.text.nlp_emotion import TextEmotionClassifier
 from src.text.conversation_analyzer import ConversationAffectAnalyzer
-from src.core.types import TextEmotionResult, DialogueEmotionSummary, AffectVector
 from src.fusion.multimodal_fusion import MultimodalFusionEngine
 
 
