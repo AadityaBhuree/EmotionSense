@@ -2,23 +2,40 @@
 
 import json
 import time
-import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
+import pandas as pd
 
 from config import SESSIONS_DIR
 from src.core.types import MultimodalEmotionState, SessionRecord
 from src.core.config import EMOTION_LABELS
+from src.storage.models import AssessmentType, SessionMetadata, StoredSession
+from src.storage.db import SessionDatabase
 
 
 class SessionManager:
-    """Manages active session state history, file persistence (JSON/CSV), and analytics summarization."""
+    """Manages active session state history, SQLite persistence, JSON export, and analytics summarization."""
 
-    def __init__(self, session_id: Optional[str] = None):
+    _db_instance: Optional[SessionDatabase] = None
+
+    def __init__(
+        self,
+        session_id: Optional[str] = None,
+        metadata: Optional[SessionMetadata] = None
+    ):
         self.session_id = session_id or f"session_{int(time.time())}"
         self.start_time = time.time()
         self.samples: List[MultimodalEmotionState] = []
         self.is_recording = False
+        self.metadata = metadata or SessionMetadata(session_id=self.session_id)
+        self.metadata.session_id = self.session_id
+
+    @classmethod
+    def get_database(cls) -> SessionDatabase:
+        """Returns or lazily creates a singleton SessionDatabase instance."""
+        if cls._db_instance is None:
+            cls._db_instance = SessionDatabase()
+        return cls._db_instance
 
     def start_recording(self):
         self.samples.clear()
@@ -92,12 +109,24 @@ class SessionManager:
             key_moments=key_moments[:10],
         )
 
-    def save_session(self) -> Path:
-        """Saves session summary to JSON in sessions directory."""
+    def save_session(
+        self,
+        metadata: Optional[Union[SessionMetadata, Dict[str, Any]]] = None,
+        anomalies: Optional[List[Dict[str, Any]]] = None
+    ) -> Path:
+        """Saves session summary to JSON and persists to SQLite database."""
         summary = self.generate_summary()
         file_path = SESSIONS_DIR / f"{self.session_id}.json"
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(summary.to_dict(), f, indent=2)
+
+        # Persist to SQLite Database
+        meta = metadata or self.metadata
+        try:
+            self.get_database().save_session(summary, metadata=meta, anomalies=anomalies)
+        except Exception:
+            pass
+
         return file_path
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -115,7 +144,6 @@ class SessionManager:
                 "fatigue_level": s.fatigue_level,
                 "attention_score": s.attention_score,
             }
-            # Add emotion probabilities
             for emo, p in s.probabilities.items():
                 row[f"prob_{emo}"] = p
             rows.append(row)
@@ -131,3 +159,31 @@ class SessionManager:
         """Loads and returns saved session JSON dictionary."""
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
+
+    @classmethod
+    def load_from_db(cls, session_id: str) -> Optional[StoredSession]:
+        """Retrieves session from SQLite database."""
+        return cls.get_database().get_session(session_id)
+
+    @classmethod
+    def list_db_sessions(
+        cls,
+        assessment_type: Optional[str] = None,
+        tag: Optional[str] = None,
+        search_query: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Lists sessions from SQLite database matching filters."""
+        return cls.get_database().list_sessions(
+            assessment_type=assessment_type,
+            tag=tag,
+            search_query=search_query,
+            limit=limit,
+            offset=offset
+        )
+
+    @classmethod
+    def sync_legacy_json_sessions(cls) -> int:
+        """Synchronizes all flat-file JSON sessions into SQLite."""
+        return cls.get_database().migrate_from_json(SESSIONS_DIR)

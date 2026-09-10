@@ -21,6 +21,7 @@ from src.text import HybridEmotionClassifier, ConversationAffectAnalyzer
 from src.fusion.anomaly_detector import AffectiveAnomalyDetector
 from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
+from src.storage import SessionDatabase, SessionMetadata, AssessmentType
 
 
 # Initialize FastAPI App
@@ -41,10 +42,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Classifiers & Engines
+# Global Classifiers, Engines & Database
 classifier = HybridEmotionClassifier(mode="hybrid")
 conversation_analyzer = ConversationAffectAnalyzer(classifier)
 speech_transcriber = LiveSpeechTranscriber(classifier.lexical_clf)
+db = SessionDatabase()
 
 
 # Request & Response Schemas
@@ -98,6 +100,31 @@ class DiagnosticReportRequest(BaseModel):
     session_id: str = Field("session_export", description="Unique session identifier")
     frames: List[Dict[str, Any]] = Field(..., description="Timeline affect frames")
     key_moments: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Optional key moments")
+
+
+class MetadataUpdateRequest(BaseModel):
+    subject_id: Optional[str] = Field(None, description="Candidate or patient ID")
+    subject_name: Optional[str] = Field(None, description="Candidate or patient full name")
+    assessment_type: Optional[str] = Field("general_affect", description="Assessment category")
+    evaluator: Optional[str] = Field(None, description="Clinician or assessor name")
+    notes: Optional[str] = Field(None, description="Clinical or behavioral notes")
+    tags: Optional[List[str]] = Field(None, description="Categorization tags")
+
+
+class SaveSessionRequest(BaseModel):
+    session_id: Optional[str] = Field(None, description="Unique session ID")
+    start_time: float = Field(..., description="Unix epoch start timestamp")
+    end_time: Optional[float] = Field(None, description="Unix epoch end timestamp")
+    samples_count: Optional[int] = Field(0, description="Total sample frames")
+    timeline: List[Dict[str, Any]] = Field(default_factory=list, description="Raw or summarized timeline frames")
+    average_affect: Optional[Dict[str, float]] = Field(None, description="Mean VAD coordinates")
+    dominant_emotion_distribution: Optional[Dict[str, float]] = Field(None, description="Distribution of emotions")
+    average_engagement: Optional[float] = Field(0.0, description="Mean engagement index")
+    average_fatigue: Optional[float] = Field(0.0, description="Mean fatigue level")
+    average_attention: Optional[float] = Field(0.0, description="Mean attention score")
+    key_moments: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Pivot moments")
+    metadata: Optional[MetadataUpdateRequest] = Field(None, description="Session metadata")
+    anomalies: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Affective anomalies")
 
 
 class HealthResponse(BaseModel):
@@ -263,6 +290,88 @@ async def generate_diagnostic_report(request: DiagnosticReportRequest):
         "html_report": html_report,
         "markdown_report": md_report,
     }
+
+
+# ============================================================================
+# Session Persistence & Intelligence Endpoints
+# ============================================================================
+
+@app.get("/api/sessions", tags=["Session Persistence"])
+def list_persisted_sessions(
+    assessment_type: Optional[str] = Query(None, description="Filter by assessment type"),
+    tag: Optional[str] = Query(None, description="Filter by tag"),
+    search: Optional[str] = Query(None, description="Search term across session ID, subject name, or notes"),
+    limit: int = Query(50, ge=1, le=200, description="Max records to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+):
+    """Lists saved multimodal sessions with filtering, pagination, and metadata."""
+    sessions = db.list_sessions(
+        assessment_type=assessment_type,
+        tag=tag,
+        search_query=search,
+        limit=limit,
+        offset=offset
+    )
+    return {
+        "status": "success",
+        "count": len(sessions),
+        "limit": limit,
+        "offset": offset,
+        "sessions": sessions,
+    }
+
+
+@app.get("/api/sessions/{session_id}", tags=["Session Persistence"])
+def get_persisted_session(session_id: str, include_samples: bool = Query(True, description="Whether to include granular timeline samples")):
+    """Retrieves full persisted session, aggregates, metadata, and anomaly alerts."""
+    session = db.get_session(session_id, include_samples=include_samples)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    return session.to_dict()
+
+
+@app.post("/api/sessions", tags=["Session Persistence"])
+def save_persisted_session(request: SaveSessionRequest):
+    """Creates or updates a session in SQLite database."""
+    sess_dict = request.model_dump()
+    meta_dict = sess_dict.pop("metadata", None)
+    anom_list = sess_dict.pop("anomalies", None)
+    saved_id = db.save_session(sess_dict, metadata=meta_dict, anomalies=anom_list)
+    return {"status": "success", "session_id": saved_id}
+
+
+@app.patch("/api/sessions/{session_id}/metadata", tags=["Session Persistence"])
+def update_session_metadata(session_id: str, request: MetadataUpdateRequest):
+    """Updates candidate/patient metadata, notes, and tags for a session."""
+    existing = db.get_session(session_id, include_samples=False)
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    meta_dict = request.model_dump(exclude_unset=True)
+    meta_dict["session_id"] = session_id
+    success = db.update_metadata(session_id, meta_dict)
+    return {"status": "success" if success else "failed", "session_id": session_id}
+
+
+@app.delete("/api/sessions/{session_id}", tags=["Session Persistence"])
+def delete_persisted_session(session_id: str):
+    """Deletes a session and cascading samples and anomalies from database."""
+    deleted = db.delete_session(session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    return {"status": "success", "deleted_session_id": session_id}
+
+
+@app.post("/api/sessions/migrate", tags=["Session Persistence"])
+def trigger_json_migration():
+    """Migrates all legacy flat JSON sessions into SQLite database."""
+    count = db.migrate_from_json()
+    return {"status": "success", "migrated_sessions_count": count}
+
+
+@app.get("/api/stats", tags=["System"])
+def get_platform_statistics():
+    """Returns platform-wide metrics: total sessions, samples, anomalies, and assessment types."""
+    return {"status": "success", "stats": db.get_stats()}
 
 
 @app.websocket("/ws/stream-affect")
