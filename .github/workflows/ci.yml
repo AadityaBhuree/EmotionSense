@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Run Automated Test Suite
+  lint-and-test:
+    name: Code Quality & Automated Test Suite
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +30,29 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov httpx
+          pip install pytest pytest-cov httpx ruff
 
-      - name: Execute Full Pytest Suite
+      - name: Run Ruff Code Quality & Lint Checks
         run: |
-          pytest tests/ -v
+          ruff check . --exit-zero
+
+      - name: Execute Full Pytest Suite with Coverage
+        run: |
+          pytest tests/ -v --cov=src --cov-report=term-missing
+
+  docker-build:
+    name: Verify Docker Container Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Build Production Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: emotionsense:ci-verify
