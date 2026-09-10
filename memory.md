@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Sprint 2 Completed — Full-Stack Multimodal Neural & Microservice Architecture  
+> **Status:** Sprint 3 Completed — Enterprise SQLite Persistence, Clinical PDF Export & Hardened CI/CD  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -19,10 +19,11 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 4. **Speech-to-Text & Phonetic Prosody**: Synchronized acoustic-lexical alignment linking live spoken audio buffers to transcribed tokens.
 5. **Multimodal Fusion**: Real-time Valence-Arousal-Dominance (VAD) coordinate mapping, Engagement Index, Fatigue Level, Attention Scores, and Affective Anomaly Sentinel detection.
 6. **Microservice API**: Production-ready asynchronous FastAPI REST microservice and bi-directional WebSocket streaming gateways.
+7. **Enterprise Persistence & Clinical Reporting**: Embedded SQLite storage engine with cascading metadata management, automated legacy JSON sync, and publication-quality Clinical PDF diagnostics via ReportLab.
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
-- **Mental Health & Wellness Providers**: Longitudinal tracking of affective response patterns, hyper-arousal spikes, and valence crashes.
+- **Mental Health & Wellness Providers**: Longitudinal tracking of affective response patterns, hyper-arousal spikes, and valence crashes with formal clinical PDF records.
 - **Customer Experience & Sales Teams**: Real-time sentiment cues, conversational trajectory escalation alerts, and empathy guidance.
 - **Researchers & EdTech**: Monitoring student focus, cognitive overload, fatigue, and engagement levels during live sessions.
 
@@ -33,7 +34,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 | Domain | Technology / Library | Role & Rationale |
 | :--- | :--- | :--- |
 | **Framework & UI** | **Streamlit + Precision Neuro-Instrument CSS** | Reactive workstation with calibrated technical grid, Russell circumplex vector trails, and tactile telemetry consoles |
-| **Microservice Backend** | **FastAPI + Uvicorn + WebSockets + HTTPX** | Asynchronous high-throughput REST API and bi-directional streaming endpoints for telemetry and live speech |
+| **Microservice Backend** | **FastAPI + Uvicorn + WebSockets + HTTPX** | Asynchronous high-throughput REST API and bi-directional streaming endpoints for telemetry, live speech, and session persistence |
 | **Real-Time Video/Audio Stream** | **streamlit-webrtc + PyAV (`av`) + WebRTC** | Low-latency bi-directional video and audio frame transformation and container demuxing |
 | **Computer Vision** | **MediaPipe + OpenCV + NumPy** | 468-point 3D Face Mesh, Facial Action Units (AU), and Micro-expression Classifier |
 | **Audio & Acoustics** | **Librosa + SoundFile + SciPy** | Acoustic prosody, fundamental frequency (F0 pitch), RMS energy, jitter & shimmer |
@@ -41,7 +42,9 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 | **Speech Processing** | **SpeechRecognition + Acoustic Buffering** | Chunked PCM audio stream transcription with phonetic word-level prosodic alignment |
 | **Data Visualization & Telemetry** | **Plotly (Graph Objects & Express)** | Dynamic Russell 2D Circumplex, Action Unit bar charts, radar dials, and real-time timelines |
 | **Anomaly & Reporting** | **Statistical Z-Score Sentinel + Markdown/HTML** | Autonomous affective distress detection (valence crashes, hyper-arousal, attention collapse) and clinical reports |
-| **State & Persistence** | **Streamlit Session State + JSON/CSV** | Session recording, timeline scrubbing, and diagnostic export |
+| **Database & Persistence** | **SQLite3 (WAL Mode) + JSON/CSV** | ACID-compliant relational persistence for sessions, candidates, timeline samples, and affective anomaly history |
+| **Clinical PDF Export** | **ReportLab** | Publication-grade printable PDF diagnostic evaluation dossiers with metadata blocks, VAD tables, and audit sign-off |
+| **Code Quality & CI/CD** | **Ruff + Docker Buildx + GitHub Actions** | Lightning-fast static analysis, formatting, coverage reporting, and container build validation |
 
 ---
 
@@ -95,10 +98,17 @@ flowchart TB
         TemporalAlign --> LateFusion --> AffectMetrics --> Sentinel
     end
 
+    subgraph StorageLayer["Persistence & Document Engine"]
+        SQLiteDB["SQLite SessionDatabase (WAL Mode)\n(sessions, session_metadata, session_samples, session_anomalies)"]
+        PDFGen["ClinicalPDFExporter (ReportLab Printable Reports)"]
+        JSONSync["Legacy JSON Migration Engine"]
+        JSONSync --> SQLiteDB
+    end
+
     subgraph Interfaces["Presentation & Delivery Layer"]
         StreamlitUI["Streamlit Precision Neuro-Instrument UI"]
-        FastAPI_REST["FastAPI OpenAPI Endpoints (/api/predict, /api/anomalies, /api/reports)"]
-        ReportExporter["DiagnosticReportGenerator (HTML / Markdown Clinical Summaries)"]
+        FastAPI_REST["FastAPI Endpoints (/api/predict, /api/sessions, /api/stats)"]
+        ReportExporter["DiagnosticReportGenerator (HTML / Markdown)"]
     end
 
     Cam --> WebRTC --> VisionEngine --> TemporalAlign
@@ -108,6 +118,8 @@ flowchart TB
     TextIn --> TextEngine --> TemporalAlign
     SpeechTranscriber --> TextEngine
     Sentinel --> StreamlitUI & FastAPI_REST & ReportExporter
+    TemporalAlign --> StorageLayer
+    StorageLayer --> StreamlitUI & FastAPI_REST & PDFGen
 ```
 
 ---
@@ -116,13 +128,16 @@ flowchart TB
 
 ```text
 EmotionSense/
-├── .gitignore                         # Git exclusion rules
-├── requirements.txt                   # Production dependencies (Streamlit, FastAPI, WebSockets, AV, etc.)
+├── .github/
+│   └── workflows/
+│       └── ci.yml                     # GitHub Actions CI with Ruff, Pytest-cov & Docker build
+├── .gitignore                         # Git exclusion rules (venv, *.db, data/, cache)
+├── requirements.txt                   # Production dependencies (Streamlit, FastAPI, WebSockets, AV, ReportLab, etc.)
 ├── Dockerfile                         # Multi-stage production container definition
 ├── docker-compose.yml                 # Docker service orchestration
 ├── README.md                          # Repository overview and setup instructions
 ├── memory.md                          # System memory, architecture, and sprint logs
-├── config.py                          # Global application tokens and configuration
+├── config.py                          # Global application tokens, paths (DB_PATH), and theme palette
 ├── app.py                             # Streamlit entry point, telemetry HUD, and navigation
 ├── server.py                          # FastAPI REST microservice and WebSocket streaming server
 ├── src/
@@ -130,7 +145,11 @@ EmotionSense/
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py                  # Thresholds, modality weights, and taxonomy definitions
-│   │   └── types.py                   # Pydantic & dataclass definitions (AffectVector, TextEmotionResult, etc.)
+│   │   └── types.py                   # Pydantic & dataclass definitions (AffectVector, SessionRecord, etc.)
+│   ├── storage/
+│   │   ├── __init__.py                # Exported storage engine and models
+│   │   ├── models.py                  # AssessmentType, SessionMetadata, StoredSession dataclasses
+│   │   └── db.py                      # SQLite SessionDatabase engine with WAL mode, CRUD & migrations
 │   ├── vision/
 │   │   ├── __init__.py
 │   │   ├── face_mesh.py               # 468-point MediaPipe face mesh processor
@@ -162,12 +181,14 @@ EmotionSense/
 │   │   ├── logger.py                  # Structured application logging
 │   │   ├── session_manager.py         # Session recording, persistence & JSON export
 │   │   ├── report_generator.py        # Diagnostic HTML & Markdown clinical report generator
+│   │   ├── pdf_exporter.py            # Publication-grade Clinical PDF report exporter via ReportLab
+│   │   ├── demuxer.py                 # Audiovisual container demuxer (PyAV)
 │   │   └── ws_client.py               # Asynchronous WebSocket client for affect and speech streams
 │   └── pages/
 │       ├── 1_💬_Text_Studio.py          # Single message, multi-turn chat & batch analysis
 │       ├── 2_🎥_Live_Studio.py          # Real-time multimodal streaming studio
 │       ├── 3_📁_File_Analysis.py        # Offline video & audio file container analysis
-│       ├── 4_📑_Session_History.py      # Timeline scrubbing, anomaly log & diagnostic reports
+│       ├── 4_📑_Session_History.py      # Timeline scrubbing, SQLite persistence, metadata editor & PDF export
 │       └── 5_📐_Architecture.py         # System architecture & multimodal documentation
 ├── scripts/
 │   └── ws_stream_client.py            # CLI utility for real-time WebSocket telemetry testing
@@ -184,7 +205,9 @@ EmotionSense/
     ├── test_fusion.py                 # Multimodal late fusion, attention penalty, VAD quadrant
     ├── test_anomaly_detector.py       # Valence crash, hyper-arousal, sustained distress, fatigue
     ├── test_report_generator.py       # Markdown and HTML clinical diagnostic report formatting
-    └── test_api_server.py             # FastAPI REST endpoints & WebSocket affect/speech streaming
+    ├── test_storage.py                # SQLite schema, CRUD, cascade delete, JSON migration & stats
+    ├── test_pdf_exporter.py           # ReportLab compilation, magic bytes, filesystem save & empty sessions
+    └── test_api_server.py             # FastAPI REST endpoints, session CRUD & WebSocket streaming
 ```
 
 ---
@@ -201,6 +224,13 @@ EmotionSense/
 | `POST` | `/api/batch/predict` | Batch text list affect processing | `BatchTextRequest` (`texts`, `mode`) | `List[TextEmotionResult]` |
 | `POST` | `/api/anomalies/detect` | Affective anomaly detection across session frames | `AnomalyDetectionRequest` (`history`, `sample_rate`) | `List[Dict[str, Any]]` |
 | `POST` | `/api/reports/generate` | Automated clinical diagnostic report export | `ReportGenerationRequest` (`session_data`, `format`) | `{"format": "html", "report": "..."}` |
+| `GET` | `/api/sessions` | Query persisted sessions with filters & pagination | Query: `assessment_type`, `tag`, `search`, `limit`, `offset` | `{"count": int, "sessions": [...]}` |
+| `GET` | `/api/sessions/{id}` | Get complete session details with timeline samples | Query: `include_samples` | `StoredSession` dictionary |
+| `POST` | `/api/sessions` | Save or update session record in SQLite | `SaveSessionRequest` | `{"status": "success", "session_id": "..."}` |
+| `PATCH` | `/api/sessions/{id}/metadata` | Update session clinical metadata, notes, and tags | `MetadataUpdateRequest` | `{"status": "success", "session_id": "..."}` |
+| `DELETE` | `/api/sessions/{id}` | Delete session and cascading samples from database | None | `{"status": "success", "deleted_session_id": "..."}` |
+| `POST` | `/api/sessions/migrate` | Trigger migration of legacy JSON sessions to SQLite | None | `{"status": "success", "migrated_sessions_count": int}` |
+| `GET` | `/api/stats` | Retrieve platform-wide metrics and assessment type counts | None | `{"status": "success", "stats": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -209,35 +239,19 @@ EmotionSense/
 | `WS` | `/ws/stream-affect` | Real-time bi-directional affect streaming | JSON message: `{"text": "..."}` $\rightarrow$ JSON telemetry response |
 | `WS` | `/ws/stream-speech` | Live audio streaming for transcription and phonetic affect | JSON chunk: `{"audio_chunk": "..."}` $\rightarrow$ JSON transcription + prosody response |
 
-### 5.3 Audiovisual Container Demuxing & Synchronized Timeline
-- **`AudiovisualDemuxer` (`src/media/demuxer.py`)**: Pure Python container demuxer leveraging PyAV to extract interleaved video frames and resample audio into 16,000 Hz mono float32 without intermediate disk writes.
-- **Temporal Window Matching**: Centers an audio window ($\Delta w = 1.0\text{s}$) on each video frame timestamp $t_k$, extracting acoustic features and action units synchronously.
-- **Dual-Track Telemetry Visualizations (`src/ui/charts.py`)**: Synchronized Plotly dual-track chart showing continuous affect (valence, arousal, confidence) along track 1, and acoustic prosody (pitch F0, RMS volume, vocal stress) along track 2.
-- **Concurrent WebRTC Audio & Video Streaming (`src/ui/video_processor.py`)**:
-  - `MultimodalStreamContext`: Thread-safe synchronization container linking concurrent WebRTC video and audio worker threads.
-  - `MultimodalAudioProcessor`: WebRTC microphone audio processor with PyAV `AudioResampler` resampling to 16kHz mono float32, rolling circular buffer, and continuous vocal prosody extraction.
-  - `MultimodalVideoProcessor`: Annotates 468-point 3D FaceMesh, dominant affect HUD, and concurrent microphone acoustic status badges.
-- **Spoken Voice & Speech Transcription in Text Studio & Live Studio (`src/pages/1_💬_Text_Studio.py`, `src/pages/2_🎥_Live_Studio.py`)**:
-  - Native browser microphone ingestion (`st.audio_input`) and audio file upload.
-  - Autonomous speech-to-text transcription worker (`LiveSpeechTranscriber`) and acoustic prosody extraction (`AcousticProsodyExtractor`).
-  - Live subtitle overlay with dominant affect coloring directly on WebRTC video frames.
-  - Real-time spoken utterance feed and text affect telemetry mini-rack.
-  - Seamless "Apply Transcribed Text" bridging spoken voice into the deep NLP affect decoding and Russell circumplex engine.
-- **WebSocket Client & CLI Utility (`src/utils/ws_client.py`, `scripts/ws_stream_client.py`)**:
-  - `EmotionSenseWSClient`: Asynchronous Python client for streaming affect and audio bytes over WebSockets.
-  - `scripts/ws_stream_client.py`: Command-line interface for interactive streaming and latency testing against `/ws/stream-speech` and `/ws/stream-affect`.
-
 ---
 
 ## 6. Verification & Quality Metrics
 
-All **67** unit, integration, and streaming tests pass cleanly across Python 3.10+:
+All **79** unit, integration, persistence, and streaming tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================= 67 passed in 8.84s ==============================
+# ============================= 79 passed in 7.63s ==============================
 ```
 
+- **Persistence & Database Suite (`test_storage.py`)**: Schema creation, table constraints, transaction rollbacks, index verification, session upsert, metadata updates, cascade deletion, legacy JSON file migration, and platform stats calculation.
+- **Clinical PDF Exporter Suite (`test_pdf_exporter.py`)**: ReportLab document compilation, PDF magic bytes validation (`%PDF-`), multi-page layout generation, embedded VAD tables, anomaly blocks, clinical sign-off, filesystem saving, and empty session resilience.
 - **Vision Suite (`test_vision.py`)**: MediaPipe landmark tolerances, AU bounds, null frame handling.
 - **Audio Suite (`test_audio.py`)**: F0 pitch frequency estimation, silence thresholds, vocal sentiment.
 - **Text & Transformer Suite (`test_text_emotion.py`, `test_transformer_hybrid.py`)**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
@@ -248,6 +262,5 @@ pytest -v
 - **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
 - **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
 - **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
-- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes and bidirectional WebSocket affect & speech streaming.
-
-
+- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes, full session persistence lifecycle (POST, GET, PATCH, DELETE, migrate, stats), and bidirectional WebSocket affect & speech streaming.
+- **Static Code Analysis (`ruff check .`)**: Zero linting or formatting errors across entire repository.

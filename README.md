@@ -56,6 +56,14 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Real-Time Distress Sentinel**: Evaluates sudden emotional valence crashes ($\Delta V \le -0.45$), hyper-arousal stress spikes, sustained distress, and cognitive fatigue overload.
 - **Severity-Graded Alerting**: Automatically classifies anomalies into `INFO`, `WARNING`, and `CRITICAL` tiers with context-aware mitigation recommendations.
 - **Standalone Diagnostic HTML & Markdown Reports**: 1-click export of executive telemetry summaries, emotion distributions, anomaly event logs, and pivot moments.
+- **🏥 Publication-Grade Clinical PDF Dossiers**: Generates multi-page printable PDF clinical evaluation records via ReportLab with metadata headers, VAD coordinate tables, and clinician audit sign-off blocks.
+
+### 💾 Structured SQLite Persistence & Session Intelligence
+- **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
+- **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
+- **Cascading Relational Schemas**: Relational mapping across `sessions`, `session_metadata`, `session_samples`, and `session_anomalies`.
+- **Idempotent Legacy Migration**: 1-click and automated synchronization of legacy flat-file JSON sessions into the relational database.
+
 
 ### 🎛️ Precision Neuro-Affective Instrument UI & Design System
 - **Authentic Domain Aesthetic**: Replaces generic AI tropes (purple gradients, bloated glassmorphism blur) with a high-precision laboratory instrument interface.
@@ -281,14 +289,18 @@ docker compose logs -f
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Running Tests & Quality Verification
 
-Validate the full computer vision, audio DSP, NLP, and FastAPI pipelines using `pytest`:
+Validate the full multimodal vision, audio DSP, NLP, SQLite persistence, and FastAPI microservice pipelines using `pytest` and `ruff`:
 
 ```bash
+# Execute automated test suite (79 tests)
 pytest -v
+
+# Run code hygiene and lint validation
+ruff check .
 ```
-*All 67 unit and integration tests run in under 9 seconds with 100% pass rate across Python 3.10+.*
+*All 79 unit, integration, and persistence tests run in under 8 seconds with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -297,13 +309,20 @@ pytest -v
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Service health status & active neural mode |
-| `POST` | `/api/v1/predict-text` | Single message 8-Ekman + 3D VAD + Token Salience |
-| `POST` | `/api/v1/analyze-dialogue` | Multi-turn transcript parser with escalation & synchrony |
-| `POST` | `/api/v1/batch-predict` | Batch text list affective classification & distributions |
-| `POST` | `/api/v1/detect-anomalies` | Evaluates timeline frames for sudden valence crashes & fatigue overload |
-| `POST` | `/api/v1/generate-diagnostic-report` | Generates standalone clinical diagnostic reports (HTML & Markdown) |
+| `POST` | `/api/predict/text` | Single message 8-Ekman + 3D VAD + Token Salience |
+| `POST` | `/api/analyze/dialogue` | Multi-turn transcript parser with escalation & synchrony |
+| `POST` | `/api/batch/predict` | Batch text list affective classification & distributions |
+| `POST` | `/api/anomalies/detect` | Evaluates timeline frames for sudden valence crashes & fatigue overload |
+| `POST` | `/api/reports/generate` | Generates standalone clinical diagnostic reports (HTML & Markdown) |
+| `GET` | `/api/sessions` | Query saved sessions with filters (`assessment_type`, `tag`, `search`) & pagination |
+| `GET` | `/api/sessions/{id}` | Retrieve complete session record with timeline samples |
+| `POST` | `/api/sessions` | Persist or update session record in SQLite database |
+| `PATCH` | `/api/sessions/{id}/metadata` | Update subject details, assessment category, notes, and tags |
+| `DELETE` | `/api/sessions/{id}` | Delete session and cascading samples from database |
+| `POST` | `/api/sessions/migrate` | Import legacy flat JSON sessions into SQLite |
+| `GET` | `/api/stats` | Platform-wide metrics, session counts, and assessment distributions |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
-| `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect (supports raw text and base64 audio chunks) |
+| `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 
 ### Real-Time WebSocket Streaming Client CLI
 
