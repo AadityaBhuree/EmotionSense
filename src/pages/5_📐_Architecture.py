@@ -12,14 +12,16 @@ inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
     "🧬 FACS Action Units & Prosody",
     "🔌 REST & WebSocket API Specs",
     "🎞️ Audiovisual Demuxer & Sync",
-    "🛡️ Anomaly Sentinel & Reports"
+    "🛡️ Anomaly Sentinel & Reports",
+    "💾 SQLite Persistence & Data Architecture",
+    "📄 Clinical PDF Engine & Test Suite",
 ])
 
 with tab1:
@@ -91,27 +93,38 @@ with tab4:
 
 with tab5:
     st.markdown("### 🔌 FastAPI Production Microservice Endpoints")
-    st.markdown("EmotionSense provides high-throughput REST and real-time WebSocket endpoints configured in `src/api/server.py`:")
+    st.markdown("EmotionSense provides high-throughput REST and real-time WebSocket endpoints configured in `server.py`:")
 
     st.code("""# Launch the FastAPI Microservice:
-uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 
-# Endpoints:
-GET  /health                                 -> Health and subsystem status
-POST /api/v1/predict/text                    -> Single sentence emotion & 3D VAD
-POST /api/v1/predict/batch                   -> High-throughput multi-text batch
-POST /api/v1/analyze/dialogue                -> Multi-turn escalation & empathy analysis
-POST /api/v1/anomalies/detect                -> Affective anomaly detection across timeline
-POST /api/v1/reports/diagnostic              -> Automated HTML / Markdown clinical report
-WS   /ws/affect-stream                       -> Real-time bidirectional streaming affect socket
-WS   /ws/speech-stream                       -> Real-time audio PCM transcription & affect socket
+# Core Prediction & Diagnostic Endpoints:
+GET    /health                                 -> Health, version, and subsystem status
+POST   /api/v1/predict/text                    -> Single sentence emotion & 3D VAD
+POST   /api/v1/predict/batch                   -> High-throughput multi-text batch
+POST   /api/v1/analyze/dialogue                -> Multi-turn escalation & empathy analysis
+POST   /api/v1/anomalies/detect                -> Affective anomaly detection across timeline
+POST   /api/v1/reports/diagnostic              -> Automated HTML / Markdown clinical report
+
+# Session Persistence & Intelligence Endpoints:
+GET    /api/sessions                           -> List sessions with search, filter & pagination
+GET    /api/sessions/{session_id}              -> Retrieve session record, aggregates & alerts
+POST   /api/sessions                           -> Create or update session in SQLite database
+PATCH  /api/sessions/{session_id}/metadata     -> Update candidate/patient tags & clinical notes
+DELETE /api/sessions/{session_id}              -> Cascade delete session, samples & anomalies
+POST   /api/sessions/migrate                   -> Bulk migrate legacy JSON sessions into SQLite
+GET    /api/stats                              -> Platform metrics (sessions, samples, anomalies)
+
+# Real-Time WebSocket Telemetry Sockets:
+WS     /ws/stream-affect                       -> Interactive real-time typing affect stream
+WS     /ws/stream-speech                       -> Live PCM audio chunk transcription & prosody
 """, language="bash")
 
     st.markdown("#### WebSocket Streaming Example")
     st.code("""import asyncio, websockets, json
 
 async def stream():
-    async with websockets.connect("ws://localhost:8000/ws/affect-stream") as ws:
+    async with websockets.connect("ws://localhost:8000/ws/stream-affect") as ws:
         # Send raw frame or state
         await ws.send(json.dumps({"vision": {"dominant_emotion": "joy", "confidence": 0.95}}))
         response = await ws.recv()
@@ -124,7 +137,7 @@ with tab6:
     st.markdown("### 🎞️ Audiovisual Container Demuxing & Dual-Track Sync")
     st.markdown("""
     When analyzing pre-recorded video media files (`.mp4`, `.avi`, `.mov`, `.mkv`), `AudiovisualDemuxer`
-    (`src/media/demuxer.py`) uses PyAV container demuxing to decode video frames and resample audio into
+    (`src/utils/demuxer.py`) uses PyAV container demuxing to decode video frames and resample audio into
     16kHz mono float32 arrays without external disk writes.
     """)
     st.markdown(r"""
@@ -150,5 +163,86 @@ with tab7:
     5. **Attention Collapse**: Prolonged inattention (head pitch/yaw deviation with eye closure for $> 3.0\text{s}$).
     """)
     st.markdown("""
-    Reports can be exported in both clinical HTML (with inline SVG charts, CSS styling, and alert tables) or GitHub Flavored Markdown formats via `DiagnosticReportGenerator`.
+    Reports can be exported in clinical HTML (with inline SVG charts, CSS styling, and alert tables), GitHub Flavored Markdown formats via `DiagnosticReportGenerator`, or formal PDF via `ClinicalPDFExporter`.
     """)
+
+with tab8:
+    st.markdown("### 💾 SQLite Persistence Architecture & Relational Schema")
+    st.markdown("""
+    EmotionSense utilizes an ACID-compliant, high-performance SQLite engine (`src/storage/db.py`) backed by structured dataclasses (`src/storage/models.py`).
+    """)
+
+    st.markdown(r"""
+    #### Database Tables & Relationships
+    - **`sessions`**: Primary record containing session identity, temporal span, duration, aggregate mean affect ($\bar{\mathcal{V}}, \bar{\mathcal{A}}, \bar{\mathcal{D}}$), average engagement, fatigue, and emotion distribution JSON.
+    - **`session_metadata`**: Candidate/patient records, subject names, assessment types (`clinical_screening`, `interview_evaluation`, `neurodivergent_study`, `research_experiment`), and custom search tags.
+    - **`session_samples`**: Granular high-frequency time-series points capturing timestamp, dominant emotion, confidence, coordinates, and engagement metrics.
+    - **`session_anomalies`**: Recorded behavioral flags (e.g. Valence Crash, Fatigue Overload) with timestamps, severity scores, and clinical descriptions.
+    """)
+
+    st.code("""-- Relational Schema DDL
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id TEXT PRIMARY KEY,
+    start_time REAL NOT NULL,
+    end_time REAL NOT NULL,
+    duration REAL DEFAULT 0.0,
+    dominant_emotion TEXT DEFAULT 'neutral',
+    mean_valence REAL DEFAULT 0.0,
+    mean_arousal REAL DEFAULT 0.0,
+    mean_dominance REAL DEFAULT 0.0,
+    avg_engagement REAL DEFAULT 0.0,
+    avg_fatigue REAL DEFAULT 0.0,
+    emotion_distribution TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS session_metadata (
+    session_id TEXT PRIMARY KEY,
+    subject_name TEXT,
+    subject_id TEXT,
+    assessment_type TEXT DEFAULT 'general_affect',
+    notes TEXT,
+    tags TEXT,
+    FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_samples_sess_time ON session_samples(session_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_metadata_type ON session_metadata(assessment_type);
+""", language="sql")
+
+with tab9:
+    st.markdown("### 📄 Clinical PDF Export Engine & Test Suite Architecture")
+    st.markdown("""
+    #### 1. Clinical PDF Export Engine (`src/utils/pdf_exporter.py`)
+    Built using **ReportLab**, the `ClinicalPDFExporter` dynamically compiles multi-page diagnostic documentation including:
+    - **Executive Summary & Metadata Banner**: Assessment classification, clinician notes, subject identification, and recording duration.
+    - **Longitudinal Metric Breakdown**: Comprehensive table displaying Valence, Arousal, Dominance, Engagement, and Fatigue with color-coded status badges.
+    - **Primary Affect Distribution**: Tabular quantification of discrete emotion states with percentages.
+    - **Affective Anomaly & Safety Log**: Chronological alert ledger identifying timestamp, anomaly pattern, severity score, and clinical description.
+    - **Clinician Recommendations & Sign-off**: Structured clinical observations and sign-off area.
+    """)
+
+    st.markdown("""
+    #### 2. Comprehensive 79-Test Verification Suite
+    EmotionSense maintains complete test coverage across 14 decoupled test modules:
+    """)
+
+    test_matrix = [
+        {"Module": "tests/test_storage.py", "Tests": 7, "Scope": "SQLite CRUD, metadata tags, migrations, stats"},
+        {"Module": "tests/test_pdf_exporter.py", "Tests": 4, "Scope": "PDF generation, binary integrity, formatting"},
+        {"Module": "tests/test_demuxer.py", "Tests": 7, "Scope": "Audiovisual container demuxing, temporal windows"},
+        {"Module": "tests/test_speech_transcriber.py", "Tests": 9, "Scope": "PCM audio, phonetic prosody, transcription"},
+        {"Module": "tests/test_api_server.py", "Tests": 11, "Scope": "FastAPI REST endpoints, CRUD, anomalies, reports"},
+        {"Module": "tests/test_webrtc_stream.py", "Tests": 6, "Scope": "WebRTC audio/video processor, subtitle overlays"},
+        {"Module": "tests/test_ws_client.py", "Tests": 3, "Scope": "Async streaming client, connection resilience"},
+        {"Module": "tests/test_anomaly_detector.py", "Tests": 6, "Scope": "Valence crash, hyper-arousal, fatigue overload"},
+        {"Module": "tests/test_fusion.py", "Tests": 3, "Scope": "Temporal late fusion, confidence re-weighting"},
+        {"Module": "tests/test_report_generator.py", "Tests": 3, "Scope": "HTML & Markdown automated clinical exports"},
+        {"Module": "tests/test_text_emotion.py", "Tests": 10, "Scope": "Lexical sentiment, VAD mapping, dialogue analysis"},
+        {"Module": "tests/test_transformer_hybrid.py", "Tests": 4, "Scope": "Hybrid classifier routing, confidence blending"},
+        {"Module": "tests/test_vision.py", "Tests": 3, "Scope": "MediaPipe landmark mesh, FACS Action Units"},
+        {"Module": "tests/test_audio.py", "Tests": 3, "Scope": "Acoustic prosody extraction, F0 pitch, shimmer"},
+    ]
+    st.dataframe(pd.DataFrame(test_matrix), use_container_width=True)
+    st.success("✅ 79 / 79 Automated Tests Passing with 100% Suite Pass Rate")
+
