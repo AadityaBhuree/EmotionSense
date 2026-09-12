@@ -253,6 +253,65 @@ def test_api_session_crud_and_stats(client):
     assert "migrated_sessions_count" in migrate_res.json()
 
 
+def test_api_analyze_dyadic_endpoint(client):
+    payload = {
+        "participant_a_samples": [
+            {"timestamp": float(i), "valence": 0.5 + 0.05 * i, "arousal": 0.4, "smile": 0.8, "yaw": 2.0}
+            for i in range(10)
+        ],
+        "participant_b_samples": [
+            {"timestamp": float(i), "valence": 0.55 + 0.04 * i, "arousal": 0.45, "smile": 0.75, "yaw": -2.0}
+            for i in range(10)
+        ],
+        "diarization": {
+            "speakers": ["Speaker_0", "Speaker_1"],
+            "speaker_durations": {"Speaker_0": 5.0, "Speaker_1": 5.0},
+            "dominance_ratios": {"Speaker_0": 0.5, "Speaker_1": 0.5},
+            "interruption_count": 0,
+            "total_speech_duration": 10.0,
+            "total_audio_duration": 10.0,
+            "turns": [
+                {"speaker_id": "Speaker_0", "start_time": 0.0, "end_time": 5.0, "duration": 5.0},
+                {"speaker_id": "Speaker_1", "start_time": 5.0, "end_time": 10.0, "duration": 5.0},
+            ],
+        },
+    }
+    response = client.post("/api/analyze/dyadic", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "metrics" in data
+    assert data["metrics"]["rapport_score"] >= 70.0
+    assert data["metrics"]["conversational_balance"] == 1.0
+
+
+def test_api_audio_diarize_endpoint(client):
+    import base64
+    import io
+    import numpy as np
+    import soundfile as sf
+
+    sr = 16000
+    t = np.linspace(0, 1.2, int(sr * 1.2), endpoint=False)
+    tone = (0.5 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)
+
+    buf = io.BytesIO()
+    sf.write(buf, tone, sr, format="WAV")
+    b64_audio = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    payload = {
+        "audio_base64": b64_audio,
+        "sample_rate": 16000,
+        "num_speakers": 1,
+    }
+    response = client.post("/api/audio/diarize", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "diarization" in data
+    assert len(data["diarization"]["speakers"]) == 1
+
+
 
 
 

@@ -16,11 +16,13 @@ try:
 except ImportError:
     FastAPI = None
 
-from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
+from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord, DiarizationResult, SpeakerTurn
 from src.text import HybridEmotionClassifier, ConversationAffectAnalyzer
 from src.fusion.anomaly_detector import AffectiveAnomalyDetector
+from src.fusion.interaction_dynamics import DyadicInteractionAnalyzer
 from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
+from src.audio.diarizer import AcousticDiarizer
 from src.storage import SessionDatabase
 
 
@@ -100,6 +102,18 @@ class DiagnosticReportRequest(BaseModel):
     session_id: str = Field("session_export", description="Unique session identifier")
     frames: List[Dict[str, Any]] = Field(..., description="Timeline affect frames")
     key_moments: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Optional key moments")
+
+
+class DyadicAnalysisRequest(BaseModel):
+    participant_a_samples: List[Dict[str, Any]] = Field(..., description="Temporal samples for Participant A")
+    participant_b_samples: List[Dict[str, Any]] = Field(..., description="Temporal samples for Participant B")
+    diarization: Optional[Dict[str, Any]] = Field(None, description="Optional diarization result dictionary")
+
+
+class AudioDiarizeRequest(BaseModel):
+    audio_base64: str = Field(..., description="Base64 encoded audio track (WAV, MP3)")
+    sample_rate: Optional[int] = Field(16000, description="Target audio sample rate in Hz")
+    num_speakers: Optional[int] = Field(2, description="Expected number of speakers")
 
 
 class MetadataUpdateRequest(BaseModel):
@@ -290,6 +304,59 @@ async def generate_diagnostic_report(request: DiagnosticReportRequest):
         "html_report": html_report,
         "markdown_report": md_report,
     }
+
+
+# ============================================================================
+# Phase 5: Multi-Speaker Diarization & Dyadic Interaction Endpoints
+# ============================================================================
+
+@app.post("/api/analyze/dyadic", tags=["Dyadic Interaction"])
+async def analyze_dyadic_interaction(request: DyadicAnalysisRequest):
+    """Computes interpersonal synchrony, conversational balance, and Dyadic Rapport Score."""
+    try:
+        diar_res = None
+        if request.diarization:
+            turns = [
+                SpeakerTurn(
+                    speaker_id=t.get("speaker_id", "Speaker_0"),
+                    start_time=float(t.get("start_time", 0.0)),
+                    end_time=float(t.get("end_time", 0.0)),
+                    duration=float(t.get("duration", 0.0)),
+                )
+                for t in request.diarization.get("turns", [])
+            ]
+            diar_res = DiarizationResult(
+                turns=turns,
+                speakers=request.diarization.get("speakers", []),
+                speaker_durations=request.diarization.get("speaker_durations", {}),
+                dominance_ratios=request.diarization.get("dominance_ratios", {}),
+                interruption_count=int(request.diarization.get("interruption_count", 0)),
+                total_speech_duration=float(request.diarization.get("total_speech_duration", 0.0)),
+                total_audio_duration=float(request.diarization.get("total_audio_duration", 0.0)),
+            )
+        analyzer = DyadicInteractionAnalyzer()
+        metrics = analyzer.analyze(request.participant_a_samples, request.participant_b_samples, diar_res)
+        return {
+            "status": "success",
+            "metrics": metrics.to_dict(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Dyadic analysis failed: {str(exc)}")
+
+
+@app.post("/api/audio/diarize", tags=["Acoustic Diarization"])
+async def diarize_audio(request: AudioDiarizeRequest):
+    """Performs acoustic speaker diarization on base64 encoded audio."""
+    try:
+        audio_bytes = base64.b64decode(request.audio_base64)
+        diarizer = AcousticDiarizer(sample_rate=request.sample_rate or 16000, num_speakers=request.num_speakers or 2)
+        res = diarizer.diarize_file(audio_bytes)
+        return {
+            "status": "success",
+            "diarization": res.to_dict(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Speaker diarization failed: {str(exc)}")
 
 
 # ============================================================================
