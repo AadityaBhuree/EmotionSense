@@ -58,6 +58,14 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Standalone Diagnostic HTML & Markdown Reports**: 1-click export of executive telemetry summaries, emotion distributions, anomaly event logs, and pivot moments.
 - **🏥 Publication-Grade Clinical PDF Dossiers**: Generates multi-page printable PDF clinical evaluation records via ReportLab with metadata headers, VAD coordinate tables, and clinician audit sign-off blocks.
 
+### 👥 Multi-Speaker Affect & Dyadic Social Dynamics (Phase 5)
+- **Multi-Face Centroid Tracking**: Simultaneously tracks up to 4 distinct faces with Euclidean centroid distance matching, bounding box IoU association, persistent subject IDs (`P0`, `P1`, etc.), and disappearance grace periods.
+- **Acoustic Speaker Diarization**: Energy-based Voice Activity Detection (VAD) coupled with spectral centroid, rolloff, zero-crossing rate, and 13 MFCC feature embeddings clustered via K-Means to identify speaker turns and speaking durations.
+- **Dyadic Conversational Dynamics**: Quantifies talk-time dominance ratios, conversational balance entropy ($H_{\text{balance}} = - \sum p_i \log_2 p_i$), and speech overlap interruption frequency.
+- **Interpersonal Synchrony & Mimicry**: Computes Pearson cross-correlation of emotional valence trajectories, cross-lagged smile mimicry (0.5s–2.5s window), and attention reciprocity.
+- **Composite Dyadic Rapport Index (0–100)**: Multi-factor clinical rapport scoring combining valence synchrony, arousal concordance, conversational balance, dynamic mimicry, mutual gaze attentiveness, and turn-taking fluency.
+- **Clinical Dyadic PDF Dossier**: Comprehensive multi-speaker assessment records with participant profiles, dominance donuts, synchrony metrics, and clinician audit blocks.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -172,46 +180,55 @@ EmotionSense/
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py             # Model thresholds, fusion weights & categories
-│   │   └── types.py              # EmotionData, AffectVector, AudioProsody dataclasses
+│   │   └── types.py              # EmotionData, AffectVector, Dyadic metrics dataclasses
 │   │
 │   ├── vision/
 │   │   ├── __init__.py
-│   │   ├── face_mesh.py          # 468-point MediaPipe face mesh processor
-│   │   └── emotion_classifier.py # Action unit geometric classifier & head pose
+│   │   ├── face_mesh.py          # 468-point MediaPipe face mesh & multi-face extraction
+│   │   ├── emotion_classifier.py # Action unit geometric classifier & head pose
+│   │   └── multi_face_tracker.py # Centroid & IoU multi-subject tracking engine
 │   │
 │   ├── audio/
 │   │   ├── __init__.py
 │   │   ├── prosody.py            # Pitch (F0), RMS energy, jitter, shimmer DSP
-│   │   └── voice_sentiment.py    # Acoustic sentiment & vocal emotion classifier
+│   │   ├── voice_sentiment.py    # Acoustic sentiment & vocal emotion classifier
+│   │   └── diarizer.py           # Acoustic speaker diarization & turn-taking
 │   │
 │   ├── fusion/
 │   │   ├── __init__.py
 │   │   ├── multimodal_fusion.py  # Temporal sliding window late fusion engine
 │   │   ├── metrics.py            # Attention, Engagement, and Fatigue metrics
-│   │   └── anomaly_detector.py   # Affective anomaly & distress sentinel engine
+│   │   ├── anomaly_detector.py   # Affective anomaly & distress sentinel engine
+│   │   └── interaction_dynamics.py# Dyadic synchrony, mimicry & rapport index analyzer
 │   │
 │   ├── media/
 │   │   ├── __init__.py
 │   │   ├── demuxer.py            # Audiovisual PyAV container demuxer & sync timeline
 │   │   └── speech_transcriber.py # Live microphone speech-to-text & phonetic affect engine
 │   │
+│   ├── storage/
+│   │   ├── __init__.py
+│   │   ├── database.py           # Thread-safe SQLite engine with WAL mode
+│   │   └── models.py             # SQLAlchemy models & schema definitions
+│   │
 │   ├── ui/
 │   │   ├── __init__.py
 │   │   ├── styles.py             # Dark glassmorphism CSS injection
-│   │   ├── charts.py             # Plotly radar, quadrant, dual-track, and timeline figures
-│   │   ├── components.py         # Metric badges, score gauges, and HUD cards
-│   │   └── video_processor.py    # WebRTC Video & Audio Stream Transformer callbacks
+│   │   ├── charts.py             # Dyadic synchrony, dominance, radar & circumplex charts
+│   │   ├── components.py         # Dyadic summary cards, score gauges, and HUD cards
+│   │   └── video_processor.py    # Multi-face WebRTC Video & Audio Stream Transformers
 │   │
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── logger.py             # Structured application logging
 │   │   ├── session_manager.py    # Session state recording, analytics & export
-│   │   └── report_generator.py   # Diagnostic HTML/Markdown clinical report generator
+│   │   ├── report_generator.py   # Diagnostic HTML/Markdown clinical report generator
+│   │   └── pdf_exporter.py       # Publication-grade clinical PDF generator (ReportLab)
 │   │
 │   └── pages/
 │       ├── 1_💬_Text_Studio.py     # Single message, multi-turn chat & batch analysis
-│       ├── 2_🎥_Live_Studio.py     # Real-time multimodal streaming studio
-│       ├── 3_📁_File_Analysis.py   # Pre-recorded video/audio file diagnostics & demuxer
+│       ├── 2_🎥_Live_Studio.py     # Real-time multimodal streaming studio (Multi-Face support)
+│       ├── 3_📁_File_Analysis.py   # Pre-recorded video/audio & Dyadic interaction analyzer
 │       ├── 4_📑_Session_History.py # History viewer, timeline scrubbing & reports
 │       └── 5_📐_Architecture.py    # System architecture & documentation viewer
 │
@@ -227,7 +244,13 @@ EmotionSense/
     ├── test_transformer_hybrid.py# Transformer fallback & hybrid classifier tests
     ├── test_demuxer.py           # Audiovisual container demuxer & synchronization tests
     ├── test_speech_transcriber.py# Speech transcription & phonetic buffer tests
-    └── test_webrtc_stream.py     # Concurrent WebRTC audio/video processor stream tests
+    ├── test_webrtc_stream.py     # Concurrent WebRTC audio/video processor stream tests
+    ├── test_multi_face_tracker.py# Multi-face centroid & IoU tracking unit tests
+    ├── test_diarizer.py          # Acoustic speaker diarization & turn segmentation tests
+    ├── test_interaction_dynamics.py# Dyadic synchrony, mimicry & rapport index tests
+    ├── test_ui_dyadic_charts.py  # Dyadic UI telemetry charts & dominance donut tests
+    ├── test_storage.py           # SQLite database persistence & migration tests
+    └── test_pdf_exporter.py      # Clinical PDF dossier generation tests
 ```
 
 ---
@@ -291,16 +314,16 @@ docker compose logs -f
 
 ## 🧪 Running Tests & Quality Verification
 
-Validate the full multimodal vision, audio DSP, NLP, SQLite persistence, and FastAPI microservice pipelines using `pytest` and `ruff`:
+Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, and FastAPI microservice pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (79 tests)
+# Execute automated test suite (105 tests)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 79 unit, integration, and persistence tests run in under 8 seconds with 100% pass rate across Python 3.10+.*
+*All 105 unit, integration, persistence, and dyadic telemetry tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -311,6 +334,8 @@ ruff check .
 | `GET` | `/health` | Service health status & active neural mode |
 | `POST` | `/api/predict/text` | Single message 8-Ekman + 3D VAD + Token Salience |
 | `POST` | `/api/analyze/dialogue` | Multi-turn transcript parser with escalation & synchrony |
+| `POST` | `/api/analyze/dyadic` | Dyadic interaction dynamics, valence/arousal cross-correlation & rapport index |
+| `POST` | `/api/audio/diarize` | Acoustic speaker diarization, turn segmentation & conversational balance |
 | `POST` | `/api/batch/predict` | Batch text list affective classification & distributions |
 | `POST` | `/api/anomalies/detect` | Evaluates timeline frames for sudden valence crashes & fatigue overload |
 | `POST` | `/api/reports/generate` | Generates standalone clinical diagnostic reports (HTML & Markdown) |
