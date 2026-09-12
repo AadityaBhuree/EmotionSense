@@ -293,3 +293,99 @@ def render_empathy_advice_card(advice: str, dominant_emotion: str):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+def render_dyadic_summary_card(
+    rapport_score: float,
+    resonance_category: str,
+    valence_sync: float,
+    balance: float,
+    mimicry: float,
+    notes: Optional[list] = None,
+):
+    """Renders a comprehensive Dyadic Interaction overview card."""
+    accent = "#10b981" if rapport_score >= 70 else "#f59e0b" if rapport_score >= 40 else "#ef4444"
+    notes_html = "".join([f"<li style='margin-bottom: 4px;'>{n}</li>" for n in (notes or [])])
+
+    st.markdown(f"""
+    <div style="
+        background: var(--surface-raised);
+        border: 1px solid var(--border-color);
+        border-top: 3px solid {accent};
+        border-radius: 8px;
+        padding: 1.1rem 1.25rem;
+        margin-top: 0.75rem;
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; text-transform: uppercase;">
+                    Dyadic Assessment Mode
+                </span>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #f8fafc;">
+                    {resonance_category}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 1.6rem; font-weight: 800; color: {accent}; font-family: 'JetBrains Mono', monospace;">
+                    {rapport_score:.1f}
+                </span>
+                <span style="font-size: 0.8rem; color: #64748b;">/100</span>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 0.75rem;">
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 0.68rem; color: #64748b;">VALENCE SYNCHRONY</div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: #38bdf8; font-family: 'JetBrains Mono', monospace;">{valence_sync:+.2f}</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 0.68rem; color: #64748b;">FLOOR BALANCE</div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: #10b981; font-family: 'JetBrains Mono', monospace;">{balance * 100:.0f}%</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 0.68rem; color: #64748b;">FACIAL MIMICRY</div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: #a855f7; font-family: 'JetBrains Mono', monospace;">{mimicry * 100:.0f}%</div>
+            </div>
+        </div>
+        {f'<ul style="margin: 0; padding-left: 1.2rem; color: #cbd5e1; font-size: 0.84rem; line-height: 1.5;">{notes_html}</ul>' if notes_html else ''}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_participant_badge(
+    label: str,
+    dominant_emotion: str,
+    confidence: float,
+    valence: float,
+    arousal: float,
+    color: str = "#3b82f6",
+):
+    """Renders a sleek telemetry pill badge for an individual participant."""
+    emo_color = EMOTION_COLORS.get(dominant_emotion.lower(), color)
+    st.markdown(f"""
+    <div style="
+        background: var(--surface-raised);
+        border: 1px solid var(--border-color);
+        border-left: 3px solid {color};
+        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    ">
+        <div>
+            <div style="font-size: 0.82rem; font-weight: 700; color: {color}; font-family: 'JetBrains Mono', monospace;">
+                ● {label}
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                V: <span style="color: #e2e8f0; font-family: 'JetBrains Mono', monospace;">{valence:+.2f}</span> |
+                A: <span style="color: #e2e8f0; font-family: 'JetBrains Mono', monospace;">{arousal:+.2f}</span>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <span class="es-pill" style="background: rgba(255,255,255,0.05); color: {emo_color}; font-size: 0.75rem; border: 1px solid {emo_color}40;">
+                {dominant_emotion.upper()} {confidence * 100:.0f}%
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)

@@ -475,3 +475,168 @@ def render_dual_track_multimodal_timeline(history: List[MultimodalEmotionState])
     fig.update_yaxes(gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=8, family=FONT_MONO))
 
     return fig
+
+
+# =====================================================================
+# Phase 5: Multi-Subject & Dyadic Interaction Telemetry Charts
+# =====================================================================
+
+def render_dyadic_synchrony_chart(
+    times: List[float],
+    val_a: List[float],
+    val_b: List[float],
+    label_a: str = "Participant A",
+    label_b: str = "Participant B",
+    synchrony_score: float = 0.0,
+) -> go.Figure:
+    """Renders dual synchronized valence waveforms comparing two participants over time."""
+    fig = go.Figure()
+
+    t_min = min(times) if times else 0
+    t_max = max(times) if times else 10
+
+    # Zero reference line
+    fig.add_shape(
+        type="line", x0=t_min, x1=t_max,
+        y0=0, y1=0, line=dict(color="rgba(255, 255, 255, 0.15)", dash="dash", width=1)
+    )
+
+    # Participant A Trace (Blue)
+    fig.add_trace(go.Scatter(
+        x=times, y=val_a, mode='lines',
+        name=label_a,
+        line=dict(color='#3b82f6', width=2.5),
+        hoverinfo='x+y+name'
+    ))
+
+    # Participant B Trace (Emerald)
+    fig.add_trace(go.Scatter(
+        x=times, y=val_b, mode='lines',
+        name=label_b,
+        line=dict(color='#10b981', width=2.5),
+        hoverinfo='x+y+name'
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=f"Affective Valence Synchrony (Pearson r: {synchrony_score:+.2f})",
+            font=dict(color="#f8fafc", size=12, family=FONT_DISPLAY)
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor=CHART_BG,
+        margin=dict(l=25, r=25, t=35, b=25),
+        height=280,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)
+        ),
+        yaxis=dict(range=[-1.05, 1.05], title="Valence", gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=9, family=FONT_MONO)),
+        xaxis=dict(title="Time (seconds)", gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=9, family=FONT_MONO)),
+    )
+    return fig
+
+
+def render_conversational_dominance_pie(speaker_durations: Dict[str, float]) -> go.Figure:
+    """Renders a sleek donut chart showing speaking floor dominance between participants."""
+    labels = list(speaker_durations.keys()) if speaker_durations else ["Silence"]
+    values = list(speaker_durations.values()) if speaker_durations else [1.0]
+    colors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7']
+
+    fig = go.Figure(data=[go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.55,
+        marker=dict(colors=colors[:len(labels)], line=dict(color='#0b0f19', width=2)),
+        textinfo='label+percent',
+        hoverinfo='label+value+percent',
+        textfont=dict(color='#ffffff', size=11, family=FONT_DISPLAY)
+    )])
+
+    fig.update_layout(
+        title=dict(text="Conversational Floor Share", font=dict(color="#f8fafc", size=11, family=FONT_DISPLAY)),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=20, r=20, t=35, b=20),
+        height=260,
+        showlegend=False,
+    )
+    return fig
+
+
+def render_rapport_gauge(rapport_score: float, category: str = "Collaborative") -> go.Figure:
+    """Renders a precision semicircular gauge for Dyadic Rapport Index."""
+    import numpy as np
+    score = float(np.clip(rapport_score, 0.0, 100.0))
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number=dict(suffix="/100", font=dict(color="#f8fafc", size=24, family=FONT_DISPLAY)),
+        title=dict(text=f"DYADIC RAPPORT: {category.upper()}", font=dict(color=AXIS_COLOR, size=11, family=FONT_MONO)),
+        gauge=dict(
+            axis=dict(range=[0, 100], tickwidth=1, tickcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=8, family=FONT_MONO)),
+            bar=dict(color="#3b82f6", thickness=0.3),
+            bgcolor="rgba(255, 255, 255, 0.05)",
+            borderwidth=0,
+            steps=[
+                dict(range=[0, 40], color="rgba(239, 68, 68, 0.25)"),
+                dict(range=[40, 70], color="rgba(245, 158, 11, 0.25)"),
+                dict(range=[70, 100], color="rgba(16, 185, 129, 0.25)"),
+            ],
+            threshold=dict(
+                line=dict(color="#10b981" if score >= 70 else "#f59e0b" if score >= 40 else "#ef4444", width=4),
+                thickness=0.8,
+                value=score
+            )
+        )
+    ))
+
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=25, r=25, t=35, b=20),
+        height=220,
+    )
+    return fig
+
+
+def render_turn_taking_timeline(turns: List[Any]) -> go.Figure:
+    """Renders horizontal segment timeline of conversational turn taking."""
+    fig = go.Figure()
+    palette = {'Speaker_0': '#3b82f6', 'Speaker_1': '#10b981', 'Interviewer': '#3b82f6', 'Candidate': '#10b981'}
+
+    for t in turns:
+        spk = getattr(t, "speaker_id", t.get("speaker_id", "Speaker_0") if isinstance(t, dict) else "Speaker_0")
+        st = getattr(t, "start_time", t.get("start_time", 0.0) if isinstance(t, dict) else 0.0)
+        et = getattr(t, "end_time", t.get("end_time", 0.0) if isinstance(t, dict) else 0.0)
+        dur = getattr(t, "duration", et - st)
+        emo = getattr(t, "dominant_emotion", "neutral")
+
+        color = palette.get(spk, '#f59e0b')
+        fig.add_trace(go.Bar(
+            x=[dur],
+            y=[spk],
+            base=[st],
+            orientation='h',
+            marker=dict(color=color, opacity=0.85, line=dict(color='#0f172a', width=1)),
+            name=spk,
+            hovertext=f"{spk}: {st:.1f}s - {et:.1f}s ({dur:.1f}s) | {emo}",
+            hoverinfo='text',
+            showlegend=False
+        ))
+
+    fig.update_layout(
+        title=dict(text="Conversational Turn-Taking & Floor Transitions", font=dict(color="#f8fafc", size=11, family=FONT_DISPLAY)),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor=CHART_BG,
+        margin=dict(l=20, r=20, t=35, b=25),
+        height=200,
+        barmode='stack',
+        xaxis=dict(title="Timeline (seconds)", gridcolor=GRID_COLOR, tickfont=dict(color="#526079", size=9, family=FONT_MONO)),
+        yaxis=dict(gridcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)),
+    )
+    return fig
