@@ -92,3 +92,41 @@ def test_generate_pdf_empty_session():
     pdf_bytes = ClinicalPDFExporter.generate_pdf(minimal_record)
     assert pdf_bytes.startswith(b"%PDF-")
     assert len(pdf_bytes) > 1000
+
+
+def test_generate_pdf_dyadic_session():
+    """Verifies that a dyadic session with interpersonal metrics exports cleanly to PDF."""
+    now = 1700000000.0
+    record = SessionRecord(
+        session_id="pdf_dyadic_session_001",
+        start_time=now,
+        end_time=now + 300.0,
+        samples_count=500,
+        average_affect={"valence": 0.55, "arousal": 0.48, "dominance": 0.50},
+        dominant_emotion_distribution={"joy": 0.7, "neutral": 0.3},
+    )
+
+    metadata = SessionMetadata(
+        session_id="pdf_dyadic_session_001",
+        subject_name="Candidate & Interviewer Panel",
+        assessment_type=AssessmentType.DYADIC_INTERVIEW.value,
+        evaluator="Senior Tech Lead",
+        notes="High collaborative resonance throughout the architectural discussion.",
+    )
+
+    dyadic_metrics = {
+        "rapport_score": 84.5,
+        "resonance_category": "High Collaborative Resonance",
+        "valence_synchrony": 0.72,
+        "conversational_balance": 0.90,
+        "mimicry_index": 0.45,
+        "dominance_speaker": "balanced",
+    }
+
+    sess_dict = record.to_dict()
+    sess_dict["dyadic_metrics"] = dyadic_metrics
+
+    pdf_bytes = ClinicalPDFExporter.generate_pdf(sess_dict, metadata=metadata)
+    assert isinstance(pdf_bytes, bytes)
+    assert pdf_bytes.startswith(b"%PDF-")
+    assert len(pdf_bytes) > 2500

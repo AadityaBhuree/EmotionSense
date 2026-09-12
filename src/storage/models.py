@@ -15,6 +15,8 @@ class AssessmentType(str, Enum):
     WELLNESS_TRACKING = "wellness_tracking"
     RESEARCH_STUDY = "research_study"
     CUSTOMER_EXPERIENCE = "customer_experience"
+    DYADIC_INTERVIEW = "dyadic_interview"
+    GROUP_DYNAMICS = "group_dynamics"
 
     @classmethod
     def display_names(cls) -> Dict[str, str]:
@@ -25,6 +27,8 @@ class AssessmentType(str, Enum):
             cls.WELLNESS_TRACKING.value: "Mental Wellness Tracking",
             cls.RESEARCH_STUDY.value: "Academic / Cognitive Research",
             cls.CUSTOMER_EXPERIENCE.value: "Customer Experience Analysis",
+            cls.DYADIC_INTERVIEW.value: "Dyadic / Two-Person Interview Assessment",
+            cls.GROUP_DYNAMICS.value: "Group Affect & Collaborative Dynamics",
         }
 
 

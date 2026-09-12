@@ -382,9 +382,57 @@ class ClinicalPDFExporter:
             elements.append(Paragraph("<i>No affective anomalies or escalation distress events detected during this recording session. Affect trajectory maintained baseline stability.</i>", body_p))
         elements.append(Spacer(1, 6))
 
+        # Dyadic Interpersonal Synchrony Section (if dyadic metrics present)
+        dyadic_data = sess_dict.get("dyadic_metrics") or meta_dict.get("dyadic_metrics")
+        if dyadic_data:
+            elements.append(Paragraph("5. DYADIC INTERACTION & INTERPERSONAL SYNCHRONY", section_h))
+            dy_table_data = [
+                [
+                    Paragraph("Dyadic Metric", tbl_hdr),
+                    Paragraph("Score / Index", tbl_hdr),
+                    Paragraph("Assessment Status", tbl_hdr),
+                    Paragraph("Clinical / Behavioral Interpretation", tbl_hdr),
+                ],
+                [
+                    Paragraph("<b>Dyadic Rapport Score</b>", tbl_cell),
+                    Paragraph(f"<b>{float(dyadic_data.get('rapport_score', 50.0)):.1f} / 100</b>", tbl_cell_bold),
+                    Paragraph(str(dyadic_data.get("resonance_category", "Collaborative")), tbl_cell),
+                    Paragraph("Composite index of affective synchrony, turn balance, and mimicry", tbl_cell),
+                ],
+                [
+                    Paragraph("<b>Valence Synchrony (r)</b>", tbl_cell),
+                    Paragraph(f"{float(dyadic_data.get('valence_synchrony', 0.0)):+.2f}", tbl_cell_bold),
+                    Paragraph("Aligned Trajectory" if float(dyadic_data.get('valence_synchrony', 0.0)) > 0.3 else "Discordant / Independent", tbl_cell),
+                    Paragraph("Temporal concordance of emotional pleasantness/positivity", tbl_cell),
+                ],
+                [
+                    Paragraph("<b>Floor Balance</b>", tbl_cell),
+                    Paragraph(f"{float(dyadic_data.get('conversational_balance', 1.0)) * 100:.0f}%", tbl_cell_bold),
+                    Paragraph(f"Dominance: {dyadic_data.get('dominance_speaker', 'balanced')}", tbl_cell),
+                    Paragraph("Equality of conversational floor distribution (50/50 balance)", tbl_cell),
+                ],
+                [
+                    Paragraph("<b>Facial Mimicry Index</b>", tbl_cell),
+                    Paragraph(f"{float(dyadic_data.get('mimicry_index', 0.0)) * 100:.0f}%", tbl_cell_bold),
+                    Paragraph("Responsive" if float(dyadic_data.get('mimicry_index', 0.0)) > 0.25 else "Reserved", tbl_cell),
+                    Paragraph("Lagged micro-expression smile matching (0.5s - 2.5s window)", tbl_cell),
+                ],
+            ]
+            dy_table = Table(dy_table_data, colWidths=[130, 90, 140, 180])
+            dy_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), c_primary),
+                ("BOX", (0, 0), (-1, -1), 0.5, c_border),
+                ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, c_gray_bg]),
+            ]))
+            elements.append(dy_table)
+            elements.append(Spacer(1, 6))
+
         # 6. Key Pivot Moments (if any)
         if key_moments:
-            elements.append(Paragraph(f"5. KEY AFFECTIVE PIVOT MOMENTS ({len(key_moments[:6])} HIGHEST INTENSITY TRANSITIONS)", section_h))
+            elements.append(Paragraph(f"6. KEY AFFECTIVE PIVOT MOMENTS ({len(key_moments[:6])} HIGHEST INTENSITY TRANSITIONS)", section_h))
             km_data = [
                 [
                     Paragraph("Time Offset", tbl_hdr),

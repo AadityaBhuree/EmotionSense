@@ -238,29 +238,35 @@ EmotionSense/
 | :--- | :--- | :--- | :--- |
 | `WS` | `/ws/stream-affect` | Real-time bi-directional affect streaming | JSON message: `{"text": "..."}` $\rightarrow$ JSON telemetry response |
 | `WS` | `/ws/stream-speech` | Live audio streaming for transcription and phonetic affect | JSON chunk: `{"audio_chunk": "..."}` $\rightarrow$ JSON transcription + prosody response |
+| `POST` | `/api/analyze/dyadic` | Dyadic interaction synchrony, floor balance & rapport scoring | `DyadicAnalysisRequest` (samples_a, samples_b, diarization) | `DyadicInteractionMetrics` |
+| `POST` | `/api/audio/diarize` | Multi-speaker acoustic segmentation and turn-taking | `AudioDiarizeRequest` (audio_base64, sample_rate, num_speakers) | `DiarizationResult` |
 
 ---
 
 ## 6. Verification & Quality Metrics
 
-All **79** unit, integration, persistence, and streaming tests pass cleanly across Python 3.10+:
+All **105** unit, integration, persistence, dyadic, and streaming tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================= 79 passed in 7.63s ==============================
+# ============================ 105 passed in 11.96s =============================
 ```
 
+- **Multi-Face Tracking Suite (`test_multi_face_tracker.py`)**: Persistent spatial centroid tracking, IoU matching, multi-face FACS Action Units, disappearance grace periods, and HUD corner overlay rendering.
+- **Acoustic Diarization Suite (`test_diarizer.py`)**: Short-time energy VAD segmentation, spectral + MFCC embeddings, multi-speaker clustering, turn merging, speaking duration, conversational dominance ratio, and interruption detection.
+- **Dyadic Interaction Dynamics Suite (`test_interaction_dynamics.py`)**: Temporal grid interpolation, Pearson valence/arousal cross-correlation, lagged facial smile mimicry (0.5s–2.5s), turn transition latency, mutual attentiveness, and Dyadic Rapport Index scoring.
+- **Dyadic UI Visualizations Suite (`test_ui_dyadic_charts.py`)**: Synchronized dual-valence Plotly waveforms, conversational floor share donut, semicircular rapport gauge, and alternating speaker turn timeline bars.
 - **Persistence & Database Suite (`test_storage.py`)**: Schema creation, table constraints, transaction rollbacks, index verification, session upsert, metadata updates, cascade deletion, legacy JSON file migration, and platform stats calculation.
-- **Clinical PDF Exporter Suite (`test_pdf_exporter.py`)**: ReportLab document compilation, PDF magic bytes validation (`%PDF-`), multi-page layout generation, embedded VAD tables, anomaly blocks, clinical sign-off, filesystem saving, and empty session resilience.
+- **Clinical PDF Exporter Suite (`test_pdf_exporter.py`)**: ReportLab document compilation, PDF magic bytes validation (`%PDF-`), multi-page layout generation, embedded VAD tables, dyadic interpersonal synchrony table, anomaly blocks, clinical sign-off, filesystem saving, and empty session resilience.
 - **Vision Suite (`test_vision.py`)**: MediaPipe landmark tolerances, AU bounds, null frame handling.
 - **Audio Suite (`test_audio.py`)**: F0 pitch frequency estimation, silence thresholds, vocal sentiment.
 - **Text & Transformer Suite (`test_text_emotion.py`, `test_transformer_hybrid.py`)**: Lexical VAD, emoji affect, negation inversions, protected PyTorch DLL SEH handling, hybrid ensemble blending.
 - **Speech Transcriber Suite (`test_speech_transcriber.py`)**: Audio byte and numpy array transcription, mocked speech recognition, phonetic token alignment with acoustic pitch and energy, and offline fallback resilience.
 - **Audiovisual Demuxer Suite (`test_demuxer.py`)**: Container demuxing, synthetic video/audio generation, corrupted input resilience, audio window extraction, synchronized timeline generation, and audiovisual late fusion.
-- **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling, vocal prosody, autonomous speech recognition worker, live subtitle rendering, and tri-modal fusion.
+- **WebRTC Stream Suite (`test_webrtc_stream.py`)**: Multimodal stream context thread safety, synthetic PyAV audio frame resampling, vocal prosody, autonomous speech recognition worker, live subtitle rendering, and multi-face tracking mode.
 - **WebSocket Streaming Suite (`test_ws_client.py`, `test_api_server.py`)**: URL construction, bidirectional `/ws/stream-affect` telemetry, and base64 audio chunk / JSON text `/ws/stream-speech` streaming.
 - **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
 - **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
 - **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
-- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes, full session persistence lifecycle (POST, GET, PATCH, DELETE, migrate, stats), and bidirectional WebSocket affect & speech streaming.
+- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes, full session persistence lifecycle, dyadic interaction analysis endpoint, audio diarization endpoint, and bidirectional WebSocket affect & speech streaming.
 - **Static Code Analysis (`ruff check .`)**: Zero linting or formatting errors across entire repository.
