@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field, asdict
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import time
 
 
@@ -268,6 +268,105 @@ class SessionRecord:
     average_fatigue: float = 0.0
     average_attention: float = 0.0
     key_moments: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+# =====================================================================
+# Phase 5: Multi-Speaker & Multi-Face Interpersonal Dynamics Dataclasses
+# =====================================================================
+
+@dataclass
+class TrackedFace:
+    """Individual face tracked across frames with persistent spatial ID."""
+    track_id: int
+    bbox: Tuple[int, int, int, int]             # (x, y, width, height) in pixel coords
+    centroid: Tuple[float, float]               # (center_x, center_y) normalized 0.0 - 1.0
+    vision_result: VisionEmotionResult
+    active_frames: int = 1
+    lost_frames: int = 0
+    label: str = "Subject"
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        res["vision_result"] = self.vision_result.to_dict()
+        return res
+
+
+@dataclass
+class MultiFaceResult:
+    """Consolidated tracking frame containing multiple detected faces."""
+    faces: List[TrackedFace] = field(default_factory=list)
+    face_count: int = 0
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "face_count": self.face_count,
+            "timestamp": self.timestamp,
+            "faces": [f.to_dict() for f in self.faces],
+        }
+
+
+@dataclass
+class SpeakerTurn:
+    """Individual segmented speech turn attributed to a speaker."""
+    speaker_id: str                             # e.g., "Speaker_0", "Speaker_1"
+    start_time: float                           # Seconds from audio stream start
+    end_time: float                             # Seconds
+    duration: float                             # Duration in seconds
+    transcript: str = ""
+    acoustics: Optional[AcousticFeatures] = None
+    affect: Optional[AffectVector] = None
+    dominant_emotion: str = "neutral"
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        if self.acoustics:
+            res["acoustics"] = self.acoustics.to_dict()
+        if self.affect:
+            res["affect"] = self.affect.to_dict()
+        return res
+
+
+@dataclass
+class DiarizationResult:
+    """Complete speaker diarization and turn-taking segmentation output."""
+    turns: List[SpeakerTurn] = field(default_factory=list)
+    speakers: List[str] = field(default_factory=list)
+    speaker_durations: Dict[str, float] = field(default_factory=dict)
+    dominance_ratios: Dict[str, float] = field(default_factory=dict)
+    interruption_count: int = 0
+    total_speech_duration: float = 0.0
+    total_audio_duration: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "speakers": self.speakers,
+            "speaker_durations": self.speaker_durations,
+            "dominance_ratios": self.dominance_ratios,
+            "interruption_count": self.interruption_count,
+            "total_speech_duration": self.total_speech_duration,
+            "total_audio_duration": self.total_audio_duration,
+            "turns": [t.to_dict() for t in self.turns],
+        }
+
+
+@dataclass
+class DyadicInteractionMetrics:
+    """Interpersonal synchrony, conversational balance, and rapport metrics."""
+    rapport_score: float = 50.0                 # 0.0 (Alienated/Hostile) to 100.0 (High Rapport)
+    valence_synchrony: float = 0.0              # -1.0 (Opposite) to +1.0 (Aligned Valence)
+    arousal_synchrony: float = 0.0              # -1.0 to +1.0
+    mimicry_index: float = 0.0                  # 0.0 to 1.0 (Lagged facial/vocal mimicry)
+    conversational_balance: float = 1.0         # 0.0 (100% one-sided) to 1.0 (50/50 balance)
+    dominance_speaker: str = "balanced"         # "Speaker_0", "Speaker_1", or "balanced"
+    mutual_attentiveness: float = 0.5           # 0.0 to 1.0 (Head pose mutual orientation)
+    turn_transition_latency: float = 0.0        # Seconds (turn response latency)
+    interruption_rate: float = 0.0              # Interruptions per minute
+    resonance_category: str = "Collaborative"   # "Collaborative", "Empathic", "Guarded", "Dissonant"
+    summary_notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

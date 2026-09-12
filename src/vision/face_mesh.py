@@ -3,7 +3,7 @@ try:
 except ImportError:
     cv2 = None
 import numpy as np
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 from src.core.config import LANDMARK_INDICES
 
 
@@ -39,25 +39,33 @@ class FaceMeshDetector:
             self._face_mesh = None
 
     def process_frame(self, frame: np.ndarray) -> Tuple[Optional[np.ndarray], Dict[str, float]]:
-        """Processes an RGB frame and returns normalized landmarks (468, 3) and head pose."""
-        if frame is None or self._face_mesh is None or cv2 is None:
+        """Processes an RGB frame and returns normalized landmarks (468, 3) and head pose for first face."""
+        all_faces = self.process_all_faces(frame)
+        if not all_faces:
             return None, {"yaw": 0.0, "pitch": 0.0, "roll": 0.0}
+        return all_faces[0]
+
+    def process_all_faces(self, frame: np.ndarray) -> List[Tuple[np.ndarray, Dict[str, float]]]:
+        """Processes an RGB frame and returns normalized landmarks and head pose for all detected faces."""
+        if frame is None or self._face_mesh is None or cv2 is None:
+            return []
 
         h, w, _ = frame.shape
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) if frame.ndim == 3 else frame
         results = self._face_mesh.process(rgb_frame)
 
         if not results.multi_face_landmarks:
-            return None, {"yaw": 0.0, "pitch": 0.0, "roll": 0.0}
+            return []
 
-        face_landmarks = results.multi_face_landmarks[0]
-        landmarks = np.zeros((len(face_landmarks.landmark), 3), dtype=np.float32)
+        faces = []
+        for face_landmarks in results.multi_face_landmarks:
+            landmarks = np.zeros((len(face_landmarks.landmark), 3), dtype=np.float32)
+            for i, lm in enumerate(face_landmarks.landmark):
+                landmarks[i] = [lm.x, lm.y, lm.z]
+            head_pose = self._estimate_head_pose(landmarks, w, h)
+            faces.append((landmarks, head_pose))
 
-        for i, lm in enumerate(face_landmarks.landmark):
-            landmarks[i] = [lm.x, lm.y, lm.z]
-
-        head_pose = self._estimate_head_pose(landmarks, w, h)
-        return landmarks, head_pose
+        return faces
 
     def _estimate_head_pose(self, landmarks: np.ndarray, w: int, h: int) -> Dict[str, float]:
         """Estimates 3D Head orientation (Yaw, Pitch, Roll) using 2D-3D correspondence."""
