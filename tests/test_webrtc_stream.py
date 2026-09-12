@@ -156,3 +156,17 @@ def test_multimodal_video_processor_tri_modal_subtitles():
     assert latest_state.text is not None
     assert latest_state.text.dominant_emotion == "joy"
 
+
+def test_multimodal_video_processor_multi_face_mode():
+    ctx = MultimodalStreamContext()
+    video_proc = MultimodalVideoProcessor(context=ctx, multi_face_mode=True)
+    assert video_proc.multi_face_mode is True
+
+    canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+    frame = av.VideoFrame.from_ndarray(canvas, format="bgr24")
+
+    out_frame = video_proc.recv(frame)
+    assert isinstance(out_frame, av.VideoFrame)
+    assert ctx.get_latest_multi_face() is not None
+    assert ctx.get_latest_multi_face().face_count == 0
+

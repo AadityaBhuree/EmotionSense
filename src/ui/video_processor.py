@@ -18,6 +18,7 @@ from typing import Optional, Any, Dict, List
 
 from src.vision.face_mesh import FaceMeshDetector
 from src.vision.emotion_classifier import FacialEmotionClassifier
+from src.vision.multi_face_tracker import MultiFaceTracker
 from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
 from src.audio.speech_transcriber import LiveSpeechTranscriber
@@ -29,6 +30,7 @@ from src.core.types import (
     VoiceEmotionResult,
     AcousticFeatures,
     TextEmotionResult,
+    MultiFaceResult,
 )
 
 try:
@@ -57,7 +59,17 @@ class MultimodalStreamContext:
         self.transcript_history: collections.deque = collections.deque(maxlen=25)
         self.speech_active: bool = False
         self.audio_energy_history: collections.deque = collections.deque(maxlen=30)
+        self.latest_multi_face: Optional[MultiFaceResult] = None
         self.sample_count: int = 0
+
+    def update_multi_face(self, multi_res: MultiFaceResult):
+        """Called by VideoProcessor when multi-face tracking updates."""
+        with self.lock:
+            self.latest_multi_face = multi_res
+
+    def get_latest_multi_face(self) -> Optional[MultiFaceResult]:
+        with self.lock:
+            return self.latest_multi_face
 
     def update_voice(self, voice_res: VoiceEmotionResult, acoustics: AcousticFeatures):
         """Called by AudioProcessor when a new audio chunk is classified."""
@@ -244,10 +256,12 @@ class MultimodalAudioProcessor(AudioProcessorBase):
 class MultimodalVideoProcessor(VideoTransformerBase):
     """Processes real-time video frames, overlays 468-point 3D face mesh, and renders live affective HUD."""
 
-    def __init__(self, context: Optional[MultimodalStreamContext] = None):
+    def __init__(self, context: Optional[MultimodalStreamContext] = None, multi_face_mode: bool = False):
         self.context = context or MultimodalStreamContext()
-        self.face_mesh = FaceMeshDetector()
+        self.multi_face_mode = multi_face_mode
+        self.face_mesh = FaceMeshDetector(max_num_faces=2 if multi_face_mode else 1)
         self.emotion_classifier = FacialEmotionClassifier()
+        self.multi_tracker = MultiFaceTracker(max_faces=2, detector=self.face_mesh, classifier=self.emotion_classifier)
         self.fusion_engine = self.context.fusion_engine
 
     def set_live_text(self, text: Optional[str]):
@@ -262,34 +276,41 @@ class MultimodalVideoProcessor(VideoTransformerBase):
         img = frame.to_ndarray(format="bgr24")
         h, w, _ = img.shape
 
-        # 1. Process facial mesh
-        landmarks, head_pose = self.face_mesh.process_frame(img)
-        vision_res = self.emotion_classifier.classify_emotion(landmarks, head_pose)
+        # 1. Process facial tracking
+        if self.multi_face_mode:
+            multi_res = self.multi_tracker.track(img)
+            self.context.update_multi_face(multi_res)
+            img = self.multi_tracker.draw_overlay(img, multi_res)
+            if multi_res.faces:
+                vision_res = multi_res.faces[0].vision_result
+            else:
+                vision_res = VisionEmotionResult(face_detected=False)
+        else:
+            landmarks, head_pose = self.face_mesh.process_frame(img)
+            vision_res = self.emotion_classifier.classify_emotion(landmarks, head_pose)
+
+            if landmarks is not None:
+                img = self.face_mesh.draw_mesh_overlay(img, landmarks)
+
+                # Draw Dominant Affect HUD Card on top-left
+                emo = vision_res.dominant_emotion.upper()
+                conf_pct = int(vision_res.confidence * 100)
+
+                cv2.rectangle(img, (15, 15), (280, 75), (15, 23, 42), -1)
+                cv2.rectangle(img, (15, 15), (280, 75), (99, 102, 241), 1)
+
+                cv2.putText(
+                    img, f"AFFECT: {emo}", (25, 42),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (248, 250, 252), 2, cv2.LINE_AA
+                )
+                cv2.putText(
+                    img, f"CONF: {conf_pct}%  POSE: Y:{int(head_pose['yaw'])} P:{int(head_pose['pitch'])}", (25, 63),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1, cv2.LINE_AA
+                )
 
         # 2. Retrieve concurrent acoustic telemetry from shared stream context
         voice_res = self.context.get_latest_voice()
         acoustics = self.context.get_latest_acoustics()
-
-        # 3. Draw mesh overlay if face detected
-        if landmarks is not None:
-            img = self.face_mesh.draw_mesh_overlay(img, landmarks)
-
-            # Draw Dominant Affect HUD Card on top-left
-            emo = vision_res.dominant_emotion.upper()
-            conf_pct = int(vision_res.confidence * 100)
-
-            # Left card: Vision Affect
-            cv2.rectangle(img, (15, 15), (280, 75), (15, 23, 42), -1)
-            cv2.rectangle(img, (15, 15), (280, 75), (99, 102, 241), 1)
-
-            cv2.putText(
-                img, f"AFFECT: {emo}", (25, 42),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (248, 250, 252), 2, cv2.LINE_AA
-            )
-            cv2.putText(
-                img, f"CONF: {conf_pct}%  POSE: Y:{int(head_pose['yaw'])} P:{int(head_pose['pitch'])}", (25, 63),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1, cv2.LINE_AA
-            )
 
         # 4. Render Acoustic Telemetry HUD on top-right if audio is active
         if acoustics is not None:
