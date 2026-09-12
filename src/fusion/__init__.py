@@ -8,6 +8,7 @@ from src.fusion.anomaly_detector import (
     AnomalySeverity,
     AnomalyType,
 )
+from src.fusion.interaction_dynamics import DyadicInteractionAnalyzer
 
 __all__ = [
     "AffectMetricsCalculator",
@@ -16,5 +17,6 @@ __all__ = [
     "AffectiveAnomaly",
     "AnomalySeverity",
     "AnomalyType",
+    "DyadicInteractionAnalyzer",
 ]
 
