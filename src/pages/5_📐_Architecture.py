@@ -12,7 +12,7 @@ inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -22,6 +22,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "🛡️ Anomaly Sentinel & Reports",
     "💾 SQLite Persistence & Data Architecture",
     "📄 Clinical PDF Engine & Test Suite",
+    "👥 Multi-Speaker Diarization & Dyadic Synchrony",
 ])
 
 with tab1:
@@ -223,17 +224,17 @@ with tab9:
     """)
 
     st.markdown("""
-    #### 2. Comprehensive 79-Test Verification Suite
-    EmotionSense maintains complete test coverage across 14 decoupled test modules:
+    #### 2. Comprehensive 109-Test Verification Suite
+    EmotionSense maintains rigorous test coverage across 19 decoupled unit and integration test modules:
     """)
 
     test_matrix = [
         {"Module": "tests/test_storage.py", "Tests": 7, "Scope": "SQLite CRUD, metadata tags, migrations, stats"},
-        {"Module": "tests/test_pdf_exporter.py", "Tests": 4, "Scope": "PDF generation, binary integrity, formatting"},
+        {"Module": "tests/test_pdf_exporter.py", "Tests": 5, "Scope": "Clinical PDF generation, dyadic tables, binary integrity"},
         {"Module": "tests/test_demuxer.py", "Tests": 7, "Scope": "Audiovisual container demuxing, temporal windows"},
         {"Module": "tests/test_speech_transcriber.py", "Tests": 9, "Scope": "PCM audio, phonetic prosody, transcription"},
-        {"Module": "tests/test_api_server.py", "Tests": 11, "Scope": "FastAPI REST endpoints, CRUD, anomalies, reports"},
-        {"Module": "tests/test_webrtc_stream.py", "Tests": 6, "Scope": "WebRTC audio/video processor, subtitle overlays"},
+        {"Module": "tests/test_api_server.py", "Tests": 13, "Scope": "FastAPI REST endpoints, dyadic assessment, diarization"},
+        {"Module": "tests/test_webrtc_stream.py", "Tests": 7, "Scope": "WebRTC audio/video processor, multi-face mode"},
         {"Module": "tests/test_ws_client.py", "Tests": 3, "Scope": "Async streaming client, connection resilience"},
         {"Module": "tests/test_anomaly_detector.py", "Tests": 6, "Scope": "Valence crash, hyper-arousal, fatigue overload"},
         {"Module": "tests/test_fusion.py", "Tests": 3, "Scope": "Temporal late fusion, confidence re-weighting"},
@@ -242,7 +243,54 @@ with tab9:
         {"Module": "tests/test_transformer_hybrid.py", "Tests": 4, "Scope": "Hybrid classifier routing, confidence blending"},
         {"Module": "tests/test_vision.py", "Tests": 3, "Scope": "MediaPipe landmark mesh, FACS Action Units"},
         {"Module": "tests/test_audio.py", "Tests": 3, "Scope": "Acoustic prosody extraction, F0 pitch, shimmer"},
+        {"Module": "tests/test_multi_face_tracker.py", "Tests": 7, "Scope": "Centroid tracking, IoU matching, identity continuity"},
+        {"Module": "tests/test_diarizer.py", "Tests": 5, "Scope": "VAD segmentation, MFCCs, K-Means clustering"},
+        {"Module": "tests/test_interaction_dynamics.py", "Tests": 6, "Scope": "Pearson synchrony, lagged mimicry, rapport index"},
+        {"Module": "tests/test_ui_dyadic_charts.py", "Tests": 4, "Scope": "Rapport gauge, dominance pie, synchrony waveforms"},
+        {"Module": "tests/test_dyadic_studio.py", "Tests": 4, "Scope": "Live stream context multi-face history, persistence, fallback"},
     ]
     st.dataframe(pd.DataFrame(test_matrix), use_container_width=True)
-    st.success("✅ 79 / 79 Automated Tests Passing with 100% Suite Pass Rate")
+    st.success("✅ 109 / 109 Automated Tests Passing with 100% Suite Pass Rate")
+
+with tab10:
+    st.markdown("### 👥 Multi-Speaker Acoustic Diarization & Dyadic Interpersonal Dynamics")
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">Interpersonal Affective Resonance Architecture</div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Phase 5 expands EmotionSense into multi-participant social environments, simultaneously tracking multiple facial meshes, segmenting conversational turns, and computing interpersonal emotional synchrony, mimicry latency, and overall rapport.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Multi-Face Identity Continuity Tracking
+    For detected faces $\mathcal{F}_t = \{f_1, f_2, \dots, f_m\}$ at frame $t$, persistent tracking uses cost-matrix matching combining normalized Euclidean centroid distance and Bounding Box Intersection-over-Union (IoU):
+
+    $$\mathcal{C}(f_i, \tau_j) = \alpha \cdot \frac{\|\mathbf{c}_i - \mathbf{c}_j\|_2}{D_{\text{diag}}} + (1 - \alpha) \cdot (1 - \text{IoU}(B_i, B_j))$$
+
+    - A grace period of $\Delta t \le 30$ frames preserves identity continuity during rapid head turns or partial occlusions.
+
+    #### 2. Acoustic Speaker Diarization
+    Segments continuous mixed audio into distinct conversational turns:
+    1. **Voice Activity Detection (VAD)**: Short-time energy thresholding + spectral flux segmentation.
+    2. **Acoustic Embeddings**: 13 MFCCs, spectral centroid, spectral roll-off, zero-crossing rate, and F0 fundamental frequency distribution.
+    3. **Adaptive Turn Clustering**: K-Means clustering ($k=2$) partitions frames into `Speaker_0` and `Speaker_1` turns with overlap and interruption detection.
+
+    #### 3. Affective Synchrony & Lagged Facial Mimicry
+    Continuous affective alignment between Participant $A$ and Participant $B$:
+
+    $$\rho_{\text{valence}} = \frac{\sum_{i=1}^n (V_{A,i} - \bar{V}_A)(V_{B,i} - \bar{V}_B)}{\sqrt{\sum_{i=1}^n (V_{A,i} - \bar{V}_A)^2} \sqrt{\sum_{i=1}^n (V_{B,i} - \bar{V}_B)^2}}$$
+
+    Facial mimicry measures lagged cross-correlation across FACS Action Units (AU12 smile, AU4 brow lower) across latencies $\tau \in [0.5\text{s}, 2.5\text{s}]$:
+
+    $$M(\tau) = \frac{\text{Cov}(\text{AU}_A(t), \text{AU}_B(t + \tau))}{\sigma_A \sigma_B}$$
+
+    #### 4. Composite Dyadic Rapport Index ($\mathcal{R} \in [0, 100]$)
+    Calibrated composite interpersonal index synthesized from four orthogonal behavioral dimensions:
+
+    $$\mathcal{R} = 100 \cdot \left[ 0.35 \cdot \left(\frac{\rho_{\text{valence}} + 1}{2}\right) + 0.25 \cdot (1 - |D_A - D_B|) + 0.25 \cdot M^* + 0.15 \cdot \bar{A}_{\text{attention}} \right]$$
+
+    Where $D_A, D_B$ represent speaking floor shares, $M^*$ is normalized peak facial mimicry, and $\bar{A}$ is mutual head orientation concordance.
+    """)
 
