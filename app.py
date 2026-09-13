@@ -1,15 +1,6 @@
 """EmotionSense — Enterprise Multimodal Affective Intelligence & Real-Time Emotion Recognition Platform."""
 
 import streamlit as st
-
-# Page Configuration
-st.set_page_config(
-    page_title="EmotionSense | Affective Intelligence Workstation",
-    page_icon="🎭",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 from config import APP_NAME, APP_ICON, EMOTION_COLORS
 from src.ui.styles import inject_modern_styles
 from src.ui.components import (
@@ -27,6 +18,14 @@ from src.ui.charts import (
     render_emotion_horizontal_bars,
 )
 from src.text import ConversationAffectAnalyzer, HybridEmotionClassifier
+
+# Page Configuration
+st.set_page_config(
+    page_title="EmotionSense | Affective Intelligence Workstation",
+    page_icon="🎭",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # Apply precision neuro-instrument styling
 inject_modern_styles()

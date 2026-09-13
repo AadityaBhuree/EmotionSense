@@ -17,7 +17,7 @@ from pathlib import Path
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root_dir))
 
-from src.utils.ws_client import EmotionSenseWSClient
+from src.utils.ws_client import EmotionSenseWSClient  # noqa: E402
 
 
 async def main():

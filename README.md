@@ -61,10 +61,11 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 ### 👥 Multi-Speaker Affect & Dyadic Social Dynamics (Phase 5)
 - **Multi-Face Centroid Tracking**: Simultaneously tracks up to 4 distinct faces with Euclidean centroid distance matching, bounding box IoU association, persistent subject IDs (`P0`, `P1`, etc.), and disappearance grace periods.
 - **Acoustic Speaker Diarization**: Energy-based Voice Activity Detection (VAD) coupled with spectral centroid, rolloff, zero-crossing rate, and 13 MFCC feature embeddings clustered via K-Means to identify speaker turns and speaking durations.
+- **Live Studio Dual-Subject Mode**: Real-time WebRTC multi-face mesh overlays and dual-participant synthetic simulator with instant rapport gauge, floor dominance donut, and dual polar radar spectrums.
 - **Dyadic Conversational Dynamics**: Quantifies talk-time dominance ratios, conversational balance entropy ($H_{\text{balance}} = - \sum p_i \log_2 p_i$), and speech overlap interruption frequency.
 - **Interpersonal Synchrony & Mimicry**: Computes Pearson cross-correlation of emotional valence trajectories, cross-lagged smile mimicry (0.5s–2.5s window), and attention reciprocity.
 - **Composite Dyadic Rapport Index (0–100)**: Multi-factor clinical rapport scoring combining valence synchrony, arousal concordance, conversational balance, dynamic mimicry, mutual gaze attentiveness, and turn-taking fluency.
-- **Clinical Dyadic PDF Dossier**: Comprehensive multi-speaker assessment records with participant profiles, dominance donuts, synchrony metrics, and clinician audit blocks.
+- **Clinical Dyadic PDF Dossier & Session Review**: Comprehensive multi-speaker assessment records with participant profiles, dominance donuts, synchrony metrics, and clinician audit blocks in Session History & PDF export.
 
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
@@ -317,13 +318,13 @@ docker compose logs -f
 Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, and FastAPI microservice pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (105 tests)
+# Execute automated test suite (109 tests across 19 modules)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 105 unit, integration, persistence, and dyadic telemetry tests run with 100% pass rate across Python 3.10+.*
+*All 109 unit, integration, persistence, and dyadic telemetry tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
