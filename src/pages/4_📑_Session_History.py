@@ -7,8 +7,13 @@ from datetime import datetime
 
 from config import SESSIONS_DIR
 from src.ui.styles import inject_modern_styles
-from src.ui.components import render_header, render_metric_card
-from src.ui.charts import render_emotion_radar_chart, render_affect_quadrant_chart
+from src.ui.components import render_header, render_metric_card, render_dyadic_summary_card
+from src.ui.charts import (
+    render_emotion_radar_chart,
+    render_affect_quadrant_chart,
+    render_conversational_dominance_pie,
+    render_rapport_gauge,
+)
 from src.utils.session_manager import SessionManager
 from src.utils.report_generator import DiagnosticReportGenerator
 from src.utils.pdf_exporter import ClinicalPDFExporter
@@ -208,6 +213,33 @@ else:
     if detected_events:
         st.markdown(f"<div class='es-section-title'>🛡️ Affective Anomaly & Escalation Sentinel ({len(detected_events)} Events)</div>", unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(detected_events), use_container_width=True)
+
+    # Dyadic Interpersonal Dynamics Suite (if available in stored session)
+    d_met = getattr(stored_session, "dyadic_metrics", None)
+    if d_met:
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>👥 Dyadic Interpersonal Interaction & Rapport Profile</div>", unsafe_allow_html=True)
+        r_score = float(d_met.get("rapport_score", 50.0) if isinstance(d_met, dict) else getattr(d_met, "rapport_score", 50.0))
+        r_cat = str(d_met.get("resonance_category", "Collaborative") if isinstance(d_met, dict) else getattr(d_met, "resonance_category", "Collaborative"))
+        v_sync = float(d_met.get("valence_synchrony", 0.0) if isinstance(d_met, dict) else getattr(d_met, "valence_synchrony", 0.0))
+        c_bal = float(d_met.get("conversational_balance", 1.0) if isinstance(d_met, dict) else getattr(d_met, "conversational_balance", 1.0))
+        m_idx = float(d_met.get("mimicry_index", 0.0) if isinstance(d_met, dict) else getattr(d_met, "mimicry_index", 0.0))
+        s_notes = list(d_met.get("summary_notes", []) if isinstance(d_met, dict) else getattr(d_met, "summary_notes", []))
+
+        render_dyadic_summary_card(
+            rapport_score=r_score,
+            resonance_category=r_cat,
+            valence_sync=v_sync,
+            balance=c_bal,
+            mimicry=m_idx,
+            notes=s_notes,
+        )
+        dy_c1, dy_c2 = st.columns(2)
+        with dy_c1:
+            st.plotly_chart(render_rapport_gauge(r_score, r_cat), use_container_width=True)
+        with dy_c2:
+            dur_map = {"Participant A": c_bal * 50.0, "Participant B": max(0.0, 100.0 - c_bal * 50.0)}
+            st.plotly_chart(render_conversational_dominance_pie(dur_map), use_container_width=True)
 
     # Export Section
     st.markdown("<div class='es-section-title'>💾 Export Telemetry Dataset & Clinical Reports</div>", unsafe_allow_html=True)
