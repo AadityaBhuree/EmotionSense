@@ -60,16 +60,22 @@ class MultimodalStreamContext:
         self.speech_active: bool = False
         self.audio_energy_history: collections.deque = collections.deque(maxlen=30)
         self.latest_multi_face: Optional[MultiFaceResult] = None
+        self.multi_face_history: collections.deque = collections.deque(maxlen=120)
         self.sample_count: int = 0
 
     def update_multi_face(self, multi_res: MultiFaceResult):
         """Called by VideoProcessor when multi-face tracking updates."""
         with self.lock:
             self.latest_multi_face = multi_res
+            self.multi_face_history.append(multi_res)
 
     def get_latest_multi_face(self) -> Optional[MultiFaceResult]:
         with self.lock:
             return self.latest_multi_face
+
+    def get_multi_face_history(self) -> List[MultiFaceResult]:
+        with self.lock:
+            return list(self.multi_face_history)
 
     def update_voice(self, voice_res: VoiceEmotionResult, acoustics: AcousticFeatures):
         """Called by AudioProcessor when a new audio chunk is classified."""
