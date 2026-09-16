@@ -4,10 +4,13 @@ from src.audio.prosody import AcousticProsodyExtractor
 from src.audio.voice_sentiment import VoiceSentimentClassifier
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.diarizer import AcousticDiarizer
+from src.audio.deep_ser import DeepSpeechEmotionClassifier
 
 __all__ = [
     "AcousticProsodyExtractor",
     "VoiceSentimentClassifier",
     "LiveSpeechTranscriber",
     "AcousticDiarizer",
+    "DeepSpeechEmotionClassifier",
 ]
+
