@@ -371,3 +371,78 @@ class DyadicInteractionMetrics:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+
+# =====================================================================
+# Phase 6: Deep Speech Emotion (SER) & Cross-Modal Attentive Fusion
+# =====================================================================
+
+@dataclass
+class AcousticSERResult:
+    """Deep Speech Emotion Recognition result from neural/prosodic acoustic encoding."""
+    emotion_scores: Dict[str, float] = field(default_factory=dict)
+    dominant_emotion: str = "neutral"
+    confidence: float = 0.0
+    vad: Optional[AffectVector] = None
+    embedding: List[float] = field(default_factory=list)
+    backend: str = "deep_neural"               # "deep_neural", "onnx_quantized", "prosody_heuristic"
+    sample_rate: int = 16000
+    duration_sec: float = 0.0
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        if self.vad:
+            res["vad"] = self.vad.to_dict()
+        return res
+
+
+@dataclass
+class CrossModalAttentionWeights:
+    """Cross-attention interaction weights and gating across modalities."""
+    text_to_vision: float = 0.0
+    text_to_audio: float = 0.0
+    vision_to_audio: float = 0.0
+    audio_to_vision: float = 0.0
+    modality_gates: Dict[str, float] = field(default_factory=lambda: {"vision": 1.0, "audio": 1.0, "text": 1.0})
+    attention_matrix: List[List[float]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ModalityCongruence:
+    """Affective congruence assessment measuring emotional harmony across face, voice, and text."""
+    congruence_score: float = 100.0             # 0.0 (Severe Conflict/Masked) to 100.0 (Harmonious)
+    congruence_tier: str = "HARMONIOUS"         # "HARMONIOUS", "MODERATE_TENSION", "SIGNIFICANT_DISCORD", "MASKED_AFFECT"
+    pairwise_alignment: Dict[str, float] = field(default_factory=dict) # "face_vs_voice", "voice_vs_words", "face_vs_words"
+    primary_conflict: Optional[str] = None
+    clinical_notes: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class CrossModalFusionResult:
+    """Integrated multimodal state produced by the Cross-Modal Attention Transformer."""
+    emotion_scores: Dict[str, float] = field(default_factory=dict)
+    dominant_emotion: str = "neutral"
+    confidence: float = 0.0
+    vad: Optional[AffectVector] = None
+    attention_weights: Optional[CrossModalAttentionWeights] = None
+    congruence: Optional[ModalityCongruence] = None
+    modality_contributions: Dict[str, float] = field(default_factory=lambda: {"vision": 0.33, "audio": 0.33, "text": 0.34})
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        if self.vad:
+            res["vad"] = self.vad.to_dict()
+        if self.attention_weights:
+            res["attention_weights"] = self.attention_weights.to_dict()
+        if self.congruence:
+            res["congruence"] = self.congruence.to_dict()
+        return res
+
+

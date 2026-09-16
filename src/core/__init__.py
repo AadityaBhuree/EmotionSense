@@ -9,6 +9,10 @@ from src.core.types import (
     AffectVector,
     MultimodalEmotionState,
     SessionRecord,
+    AcousticSERResult,
+    CrossModalAttentionWeights,
+    ModalityCongruence,
+    CrossModalFusionResult,
 )
 
 __all__ = [
@@ -20,4 +24,9 @@ __all__ = [
     "AffectVector",
     "MultimodalEmotionState",
     "SessionRecord",
+    "AcousticSERResult",
+    "CrossModalAttentionWeights",
+    "ModalityCongruence",
+    "CrossModalFusionResult",
 ]
+

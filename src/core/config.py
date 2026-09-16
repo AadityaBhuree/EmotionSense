@@ -58,3 +58,32 @@ AUDIO_THRESHOLDS = {
     "jitter_stress_threshold": 0.025, # 2.5% jitter indicates vocal stress/tremor
     "shimmer_stress_threshold": 0.06,  # 6% shimmer indicates micro-tremors
 }
+
+# =====================================================================
+# Phase 6: Deep Speech Emotion (SER) & Cross-Modal Attention Parameters
+# =====================================================================
+
+SER_CONFIG = {
+    "sample_rate": 16000,
+    "chunk_duration_sec": 2.0,
+    "n_mels": 64,
+    "n_mfcc": 20,
+    "model_name": "superb/wav2vec2-base-superb-er",
+    "embedding_dim": 64,
+    "fallback_to_heuristic": True,
+}
+
+CROSS_MODAL_ATTENTION_CONFIG = {
+    "embed_dim": 64,
+    "num_heads": 4,
+    "temperature": 1.0,
+    "modality_gating": True,
+    "temporal_smoothing": 0.25,
+}
+
+CONGRUENCE_THRESHOLDS = {
+    "harmonious": 75.0,
+    "moderate": 50.0,
+    "discord": 25.0,
+}
+
