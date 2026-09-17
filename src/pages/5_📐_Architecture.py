@@ -12,7 +12,7 @@ inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -23,6 +23,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "💾 SQLite Persistence & Data Architecture",
     "📄 Clinical PDF Engine & Test Suite",
     "👥 Multi-Speaker Diarization & Dyadic Synchrony",
+    "📈 Longitudinal Profiling & Cohort Dynamics",
 ])
 
 with tab1:
@@ -229,11 +230,11 @@ with tab9:
     """)
 
     test_matrix = [
-        {"Module": "tests/test_storage.py", "Tests": 7, "Scope": "SQLite CRUD, metadata tags, migrations, stats"},
+        {"Module": "tests/test_storage.py", "Tests": 8, "Scope": "SQLite CRUD, metadata tags, subject queries, stats"},
         {"Module": "tests/test_pdf_exporter.py", "Tests": 5, "Scope": "Clinical PDF generation, dyadic tables, binary integrity"},
         {"Module": "tests/test_demuxer.py", "Tests": 7, "Scope": "Audiovisual container demuxing, temporal windows"},
         {"Module": "tests/test_speech_transcriber.py", "Tests": 9, "Scope": "PCM audio, phonetic prosody, transcription"},
-        {"Module": "tests/test_api_server.py", "Tests": 13, "Scope": "FastAPI REST endpoints, dyadic assessment, diarization"},
+        {"Module": "tests/test_api_server.py", "Tests": 14, "Scope": "FastAPI REST endpoints, dyadic, longitudinal, diarization"},
         {"Module": "tests/test_webrtc_stream.py", "Tests": 7, "Scope": "WebRTC audio/video processor, multi-face mode"},
         {"Module": "tests/test_ws_client.py", "Tests": 3, "Scope": "Async streaming client, connection resilience"},
         {"Module": "tests/test_anomaly_detector.py", "Tests": 6, "Scope": "Valence crash, hyper-arousal, fatigue overload"},
@@ -248,9 +249,13 @@ with tab9:
         {"Module": "tests/test_interaction_dynamics.py", "Tests": 6, "Scope": "Pearson synchrony, lagged mimicry, rapport index"},
         {"Module": "tests/test_ui_dyadic_charts.py", "Tests": 4, "Scope": "Rapport gauge, dominance pie, synchrony waveforms"},
         {"Module": "tests/test_dyadic_studio.py", "Tests": 4, "Scope": "Live stream context multi-face history, persistence, fallback"},
+        {"Module": "tests/test_deep_ser.py", "Tests": 7, "Scope": "Deep speech emotion recognition (SER), multi-tier fallback"},
+        {"Module": "tests/test_cross_modal_fusion.py", "Tests": 4, "Scope": "Cross-Modal Attentive Fusion (CMAF), masked affect"},
+        {"Module": "tests/test_longitudinal_analytics.py", "Tests": 6, "Scope": "OLS drift slope, volatility index, recovery time"},
+        {"Module": "tests/test_ui_longitudinal_charts.py", "Tests": 4, "Scope": "Trajectory chart, cohort volatility radar, recovery gauge"},
     ]
     st.dataframe(pd.DataFrame(test_matrix), use_container_width=True)
-    st.success("✅ 109 / 109 Automated Tests Passing with 100% Suite Pass Rate")
+    st.success("✅ 132 / 132 Automated Tests Passing with 100% Suite Pass Rate")
 
 with tab10:
     st.markdown("### 👥 Multi-Speaker Acoustic Diarization & Dyadic Interpersonal Dynamics")
@@ -293,4 +298,46 @@ with tab10:
 
     Where $D_A, D_B$ represent speaking floor shares, $M^*$ is normalized peak facial mimicry, and $\bar{A}$ is mutual head orientation concordance.
     """)
+
+with tab11:
+    st.markdown("### 📈 Longitudinal Affective Profiling, Volatility Index & Cohort Norms")
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">Longitudinal Clinical Affect Intelligence Architecture</div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Phase 7 tracks continuous emotional evolution across multi-week clinical interventions or talent interviews, computing ordinary least-squares (OLS) regression slopes, affective volatility indices, recovery rate time constants, and normative population cohort percentiles.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Longitudinal Ordinary Least-Squares (OLS) Trajectory Slopes
+    Given a chronological sequence of session evaluations $\mathcal{S} = \{s_1, s_2, \dots, s_n\}$ with mean affective valences $V = \{v_1, v_2, \dots, v_n\}$:
+
+    $$m_{\text{valence}} = \frac{\sum_{i=1}^n (i - \bar{i})(v_i - \bar{v})}{\sum_{i=1}^n (i - \bar{i})^2}$$
+
+    - $m_{\text{valence}} \ge +0.05/\text{session}$: **Progressing Positively** (Sustained emotional stabilization and recovery).
+    - $m_{\text{valence}} \le -0.05/\text{session}$: **Declining Affect** (Affective regression requiring clinical review).
+    - $|m_{\text{valence}}| < 0.05/\text{session}$: **Stable Baseline**.
+
+    #### 2. Affective Volatility Index & Stability Score
+    Measures cross-session emotional dysregulation and baseline dispersion:
+
+    $$\mathcal{V} = \frac{\sigma_V + \sigma_A}{2} = \frac{\sqrt{\frac{1}{n}\sum (v_i - \bar{v})^2} + \sqrt{\frac{1}{n}\sum (a_i - \bar{a})^2}}{2}$$
+
+    $$\mathcal{S}_{\text{stability}} = \max\left(0, 100 \cdot (1 - 1.5 \cdot \mathcal{V})\right)$$
+
+    - Volatility $\mathcal{V} \ge 0.25$ triggers the `ELEVATED_VOLATILITY` clinical trajectory alert.
+
+    #### 3. Affective Recovery Rate Time Constant ($\tau_{\text{recovery}}$)
+    Heuristic estimate of latency (seconds) required for the subject's autonomic nervous system and facial expressions to return to euthymic baseline following an acute emotional distress anomaly:
+
+    $$\tau_{\text{recovery}} = 12.0 + 0.2 \cdot \bar{F}_{\text{fatigue}} + 2.5 \cdot N_{\text{anomalies}}$$
+
+    #### 4. Normative Cohort Percentile ($z$-score Gaussian CDF)
+    Compares the subject's empirical trajectory against standard population cohorts (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*):
+
+    $$z = \frac{\bar{v}_{\text{subject}} - \mu_{\text{cohort}}}{\sigma_{\text{cohort}}}, \quad \Phi(z) = \frac{1}{2} \left[1 + \text{erf}\left(\frac{z}{\sqrt{2}}\right)\right] \times 100\%$$
+    """)
+
 
