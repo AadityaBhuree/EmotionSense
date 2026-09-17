@@ -312,6 +312,33 @@ def test_api_audio_diarize_endpoint(client):
     assert len(data["diarization"]["speakers"]) == 1
 
 
+def test_longitudinal_endpoints(client):
+    """Tests Phase 7 longitudinal subject trajectory and cohort benchmark REST endpoints."""
+    # 1. Test Cohort Benchmarks
+    bench_res = client.get("/api/cohort/benchmarks")
+    assert bench_res.status_code == 200
+    b_data = bench_res.json()
+    assert b_data["status"] == "success"
+    assert "Clinical Screening" in b_data["benchmarks"]
+    assert "Talent Interview" in b_data["benchmarks"]
+
+    # 2. Test Subjects List
+    subj_res = client.get("/api/longitudinal/subjects")
+    assert subj_res.status_code == 200
+    s_data = subj_res.json()
+    assert s_data["status"] == "success"
+    assert "subjects" in s_data
+
+    # 3. Test Trajectory Query
+    traj_res = client.get("/api/longitudinal/SUBJ_NONEXISTENT?cohort=Clinical%20Screening")
+    assert traj_res.status_code == 200
+    t_data = traj_res.json()
+    assert t_data["status"] == "success"
+    assert t_data["profile"]["subject_id"] == "SUBJ_NONEXISTENT"
+    assert t_data["profile"]["total_sessions"] == 0
+
+
+
 
 
 

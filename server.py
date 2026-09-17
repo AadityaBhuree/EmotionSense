@@ -24,6 +24,7 @@ from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.diarizer import AcousticDiarizer
 from src.storage import SessionDatabase
+from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort_benchmarks
 
 
 # Initialize FastAPI App
@@ -439,6 +440,60 @@ def trigger_json_migration():
 def get_platform_statistics():
     """Returns platform-wide metrics: total sessions, samples, anomalies, and assessment types."""
     return {"status": "success", "stats": db.get_stats()}
+
+
+# ============================================================================
+# Phase 7: Longitudinal Trajectory & Cohort Analytics Endpoints
+# ============================================================================
+
+@app.get("/api/longitudinal/subjects", tags=["Longitudinal Analytics"])
+async def list_longitudinal_subjects():
+    """Returns list of distinct evaluated subjects, session counts, and date ranges."""
+    try:
+        subjects = db.list_distinct_subjects()
+        return {
+            "status": "success",
+            "count": len(subjects),
+            "subjects": subjects,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to list subjects: {str(exc)}")
+
+
+@app.get("/api/longitudinal/{subject_id}", tags=["Longitudinal Analytics"])
+async def get_subject_trajectory(subject_id: str, cohort: Optional[str] = None):
+    """Retrieves full longitudinal session trajectory and drift metrics for a subject."""
+    try:
+        points = db.get_subject_longitudinal_points(subject_id)
+        benchmarks = generate_synthetic_cohort_benchmarks()
+        cohort_obj = benchmarks.get(cohort) if cohort else None
+
+        analyzer = LongitudinalProfileAnalyzer()
+        profile = analyzer.analyze_profile(
+            subject_id=subject_id,
+            subject_name=subject_id,
+            history_points=points,
+            cohort=cohort_obj,
+        )
+        return {
+            "status": "success",
+            "profile": profile.to_dict(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Longitudinal analysis failed: {str(exc)}")
+
+
+@app.get("/api/cohort/benchmarks", tags=["Longitudinal Analytics"])
+async def get_cohort_benchmarks():
+    """Returns population normative cohort benchmarks for comparative evaluation."""
+    try:
+        benchmarks = generate_synthetic_cohort_benchmarks()
+        return {
+            "status": "success",
+            "benchmarks": {k: b.to_dict() for k, b in benchmarks.items()},
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch benchmarks: {str(exc)}")
 
 
 @app.websocket("/ws/stream-affect")
