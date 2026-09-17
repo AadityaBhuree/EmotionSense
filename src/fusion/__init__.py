@@ -9,6 +9,7 @@ from src.fusion.anomaly_detector import (
     AnomalyType,
 )
 from src.fusion.interaction_dynamics import DyadicInteractionAnalyzer
+from src.fusion.cross_modal_fusion import CrossModalAttentionFusion
 
 __all__ = [
     "AffectMetricsCalculator",
@@ -18,5 +19,7 @@ __all__ = [
     "AnomalySeverity",
     "AnomalyType",
     "DyadicInteractionAnalyzer",
+    "CrossModalAttentionFusion",
 ]
+
 
