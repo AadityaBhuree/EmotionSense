@@ -67,6 +67,8 @@ with ctrl_col1:
     stream_source = st.radio("Media Feed Source", ["Live Webcam / Camera", "Synthetic Live Stream Simulator"], horizontal=True)
     tracking_mode = st.radio("Tracking Paradigm", ["👤 Single Subject", "👥 Dyadic / Dual Subject"], horizontal=True)
     enable_mic = st.toggle("🎙️ Stream Microphone (Real-Time Audio Prosody)", value=True)
+    live_subj_id = st.text_input("Subject / Candidate ID", value="SUBJ_DEMO_01", help="Subject ID for longitudinal tracking & baseline deviation")
+    st.session_state.live_subject_id = live_subj_id
 
 with ctrl_col2:
     if not st.session_state.session_manager.is_recording:
@@ -559,6 +561,24 @@ with right_col:
         if current_state:
             render_affect_summary_badge(current_state)
             render_state_indicators(current_state)
+
+            # Phase 7: Real-Time Subject Longitudinal Baseline Deviation
+            active_subj_id = st.session_state.get("live_subject_id", "SUBJ_DEMO_01")
+            try:
+                hist_points = SessionManager.get_database().get_subject_longitudinal_points(active_subj_id)
+                if hist_points:
+                    base_val = float(np.mean([p.mean_valence for p in hist_points]))
+                    cur_val = current_state.affect.valence
+                    val_delta = cur_val - base_val
+                    delta_col = "#10b981" if val_delta >= 0 else "#ef4444"
+                    st.markdown(f"""
+                    <div class="es-panel" style="padding: 6px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                        <span>📈 <b>Historical Baseline ({active_subj_id}):</b> {base_val:+.2f}</span>
+                        <span>Live Drift: <b style="color: {delta_col};">{val_delta:+.2f}</b></span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            except Exception:
+                pass
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
