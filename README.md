@@ -67,6 +67,18 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Composite Dyadic Rapport Index (0–100)**: Multi-factor clinical rapport scoring combining valence synchrony, arousal concordance, conversational balance, dynamic mimicry, mutual gaze attentiveness, and turn-taking fluency.
 - **Clinical Dyadic PDF Dossier & Session Review**: Comprehensive multi-speaker assessment records with participant profiles, dominance donuts, synchrony metrics, and clinician audit blocks in Session History & PDF export.
 
+### 🧠 Deep Speech Emotion (SER) & Cross-Modal Attentive Fusion (Phase 6)
+- **Multi-Tier Deep Speech Emotion Recognition**: Hybrid architecture supporting Wav2Vec2 / HuBERT neural encoders, ONNX quantized runtime, and acoustic prosody heuristics.
+- **Cross-Modal Attentive Fusion (CMAF)**: 4-head multi-modal transformer projecting facial micro-expressions, acoustic prosody, and textual semantics into a shared 64-dimensional latent space.
+- **Modality Congruence & Masked Affect Detection**: Evaluates cross-modal harmony ($0-100$) and flags deceptive smiling with hostile/distressed verbal content (`MASKED_AFFECT`).
+
+### 📈 Longitudinal Profiling & Cohort Intelligence (Phase 7)
+- **Multi-Session Affective Trajectories**: Tracks individual emotional evolution over time with Ordinary Least-Squares (OLS) regression slopes ($m_V$).
+- **Affective Volatility & Stability Scoring**: Quantifies emotional dysregulation variance ($\mathcal{V}$) and stability indices ($0-100\%$).
+- **Acute Distress Recovery Rate ($\tau_{\text{recovery}}$)**: Calculates emotional resilience time constants after anomaly events.
+- **Population Cohort Benchmarking**: Normalizes individual trajectories against clinical and organizational cohort distributions via Gaussian CDF percentiles.
+- **Dedicated Longitudinal Studio (`6_📈_Longitudinal_Analytics.py`)**: Interactive subject scrubbing, regression waveforms, and polar volatility radar dials.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -347,6 +359,9 @@ ruff check .
 | `DELETE` | `/api/sessions/{id}` | Delete session and cascading samples from database |
 | `POST` | `/api/sessions/migrate` | Import legacy flat JSON sessions into SQLite |
 | `GET` | `/api/stats` | Platform-wide metrics, session counts, and assessment distributions |
+| `GET` | `/api/longitudinal/subjects` | List distinct evaluated subjects, session counts & historical date ranges |
+| `GET` | `/api/longitudinal/{subject_id}` | Retrieve subject longitudinal session points, OLS slopes, volatility & recovery |
+| `GET` | `/api/cohort/benchmarks` | Query population normative cohort benchmarks for comparative evaluation |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 
