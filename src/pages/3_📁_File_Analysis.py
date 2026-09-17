@@ -54,11 +54,32 @@ st.markdown("""
 
 uploaded_file = st.file_uploader("Select Media or Dataset File", type=["mp4", "avi", "mov", "wav", "mp3", "csv", "json", "txt"])
 
+# Phase 7: Longitudinal Subject Tagging & Baseline Integration
+meta_col1, meta_col2 = st.columns([1.5, 1.5])
+with meta_col1:
+    subj_tag = st.text_input("Subject / Candidate ID Tag", value="SUBJ_DEMO_01", help="Tag analyzed file with subject ID for longitudinal tracking")
+with meta_col2:
+    assessment_tag = st.selectbox("Assessment Classification", ["General", "Clinical Screening", "Talent Interview", "Wellness Tracking", "Academic Research"])
+
+try:
+    db = SessionManager.get_database()
+    prev_points = db.get_subject_longitudinal_points(subj_tag)
+    if prev_points:
+        base_val = float(sum(p.mean_valence for p in prev_points) / len(prev_points))
+        st.markdown(f"""
+        <div class="es-panel" style="padding: 6px 12px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>📈 <b>Historical Subject Baseline ({subj_tag}):</b> {len(prev_points)} past session(s) | Mean Valence: {base_val:+.2f}</span>
+            <span style="color: #38ef7d;">Linked to Longitudinal Studio</span>
+        </div>
+        """, unsafe_allow_html=True)
+except Exception:
+    pass
+
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
     file_ext = Path(uploaded_file.name).suffix.lower()
     
-    st.success(f"Loaded `{uploaded_file.name}` ({len(file_bytes) / 1024:.1f} KB)")
+    st.success(f"Loaded `{uploaded_file.name}` ({len(file_bytes) / 1024:.1f} KB) — Tagged to Subject: `{subj_tag}`")
 
     # 1. TEXT / CHAT TRANSCRIPT FILE ANALYSIS
     if file_ext in [".csv", ".json", ".txt"]:
