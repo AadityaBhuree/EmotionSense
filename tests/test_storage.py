@@ -240,3 +240,30 @@ def test_database_stats(temp_db):
     assert stats["total_samples"] == 300
     assert stats["average_duration_seconds"] == 90.0
     assert stats["assessment_types"][AssessmentType.CLINICAL_SCREENING.value] == 2
+
+
+def test_subject_longitudinal_queries(temp_db):
+    """Tests subject grouping and longitudinal point extraction."""
+    now = time.time()
+    temp_db.save_session(
+        {"session_id": "long_1", "start_time": now, "avg_valence": -0.2, "avg_arousal": 0.1, "dominant_emotion": "sadness"},
+        metadata={"subject_id": "SUBJ_99", "subject_name": "Marcus Kane", "assessment_type": "Clinical"}
+    )
+    temp_db.save_session(
+        {"session_id": "long_2", "start_time": now + 86400, "avg_valence": 0.3, "avg_arousal": 0.2, "dominant_emotion": "joy"},
+        metadata={"subject_id": "SUBJ_99", "subject_name": "Marcus Kane", "assessment_type": "Clinical"}
+    )
+
+    subjects = temp_db.list_distinct_subjects()
+    assert len(subjects) >= 1
+    subj_entry = next(s for s in subjects if s["subject_id"] == "SUBJ_99")
+    assert subj_entry["session_count"] == 2
+    assert subj_entry["subject_name"] == "Marcus Kane"
+
+    points = temp_db.get_subject_longitudinal_points("SUBJ_99")
+    assert len(points) == 2
+    assert points[0].session_id == "long_1"
+    assert points[0].mean_valence == -0.2
+    assert points[1].session_id == "long_2"
+    assert points[1].mean_valence == 0.3
+

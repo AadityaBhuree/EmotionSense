@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
 from config import DB_PATH, SESSIONS_DIR
-from src.core.types import SessionRecord
+from src.core.types import SessionRecord, LongitudinalSessionPoint
 from src.storage.models import AssessmentType, SessionMetadata, StoredSession
 
 logger = logging.getLogger("EmotionSense.Storage")
@@ -124,9 +124,9 @@ class SessionDatabase:
 
         samples_count = int(rec_dict.get("samples_count") or 0)
         avg_affect = rec_dict.get("average_affect") or {}
-        avg_v = float(avg_affect.get("valence") or 0.0)
-        avg_a = float(avg_affect.get("arousal") or 0.0)
-        avg_d = float(avg_affect.get("dominance") or 0.0)
+        avg_v = float(avg_affect.get("valence") if avg_affect.get("valence") is not None else rec_dict.get("avg_valence", 0.0))
+        avg_a = float(avg_affect.get("arousal") if avg_affect.get("arousal") is not None else rec_dict.get("avg_arousal", 0.0))
+        avg_d = float(avg_affect.get("dominance") if avg_affect.get("dominance") is not None else rec_dict.get("avg_dominance", 0.0))
 
         avg_eng = float(rec_dict.get("average_engagement") or 0.0)
         avg_fat = float(rec_dict.get("average_fatigue") or 0.0)
@@ -490,3 +490,78 @@ class SessionDatabase:
                 "assessment_types": type_counts,
                 "total_anomalies_recorded": total_anomalies or 0,
             }
+
+    def list_distinct_subjects(self) -> List[Dict[str, Any]]:
+        """Returns distinct evaluated subjects with session counts and date ranges."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    COALESCE(m.subject_id, 'UNKNOWN') as subject_id,
+                    COALESCE(m.subject_name, 'Anonymous Subject') as subject_name,
+                    COUNT(s.session_id) as session_count,
+                    MIN(s.start_time) as first_session_time,
+                    MAX(s.start_time) as latest_session_time
+                FROM sessions s
+                LEFT JOIN session_metadata m ON s.session_id = m.session_id
+                GROUP BY COALESCE(m.subject_id, 'UNKNOWN'), COALESCE(m.subject_name, 'Anonymous Subject')
+                ORDER BY latest_session_time DESC
+            """)
+            rows = cursor.fetchall()
+            return [
+                {
+                    "subject_id": r["subject_id"],
+                    "subject_name": r["subject_name"],
+                    "session_count": r["session_count"],
+                    "first_session_time": r["first_session_time"],
+                    "latest_session_time": r["latest_session_time"],
+                }
+                for r in rows
+            ]
+
+    def get_subject_longitudinal_points(self, subject_id: str) -> List[LongitudinalSessionPoint]:
+        """Retrieves chronological session points for a subject with anomaly counts."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    s.session_id,
+                    s.start_time,
+                    s.avg_valence,
+                    s.avg_arousal,
+                    s.avg_dominance,
+                    s.avg_engagement,
+                    s.avg_fatigue,
+                    s.avg_attention,
+                    s.dominant_emotion,
+                    COALESCE(m.assessment_type, 'General') as assessment_type,
+                    (SELECT COUNT(*) FROM session_anomalies a WHERE a.session_id = s.session_id) as anomaly_count
+                FROM sessions s
+                LEFT JOIN session_metadata m ON s.session_id = m.session_id
+                WHERE m.subject_id = ? OR m.subject_name = ?
+                ORDER BY s.start_time ASC
+            """, (subject_id, subject_id))
+            rows = cursor.fetchall()
+
+            points: List[LongitudinalSessionPoint] = []
+            for r in rows:
+                t = float(r["start_time"])
+                date_str = time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
+                points.append(
+                    LongitudinalSessionPoint(
+                        session_id=r["session_id"],
+                        timestamp=t,
+                        date_str=date_str,
+                        assessment_type=r["assessment_type"] or "General",
+                        dominant_emotion=r["dominant_emotion"] or "neutral",
+                        mean_valence=round(float(r["avg_valence"] or 0.0), 3),
+                        mean_arousal=round(float(r["avg_arousal"] or 0.0), 3),
+                        mean_dominance=round(float(r["avg_dominance"] or 0.0), 3),
+                        engagement_score=round(float(r["avg_engagement"] or 0.0), 1),
+                        attention_score=round(float(r["avg_attention"] or 0.0), 1),
+                        fatigue_score=round(float(r["avg_fatigue"] or 0.0), 1),
+                        anomaly_count=int(r["anomaly_count"] or 0),
+                        congruence_score=100.0,
+                    )
+                )
+            return points
