@@ -13,6 +13,10 @@ from src.core.types import (
     CrossModalAttentionWeights,
     ModalityCongruence,
     CrossModalFusionResult,
+    LongitudinalSessionPoint,
+    AffectiveDriftMetrics,
+    CohortBenchmark,
+    LongitudinalProfile,
 )
 
 __all__ = [
@@ -28,5 +32,9 @@ __all__ = [
     "CrossModalAttentionWeights",
     "ModalityCongruence",
     "CrossModalFusionResult",
+    "LongitudinalSessionPoint",
+    "AffectiveDriftMetrics",
+    "CohortBenchmark",
+    "LongitudinalProfile",
 ]
 

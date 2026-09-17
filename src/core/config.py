@@ -87,3 +87,23 @@ CONGRUENCE_THRESHOLDS = {
     "discord": 25.0,
 }
 
+# =====================================================================
+# Phase 7: Longitudinal Profiling & Cohort Analytics Configuration
+# =====================================================================
+
+LONGITUDINAL_CONFIG = {
+    "min_sessions_for_trend": 2,
+    "rolling_window_size": 5,
+    "recovery_threshold_sec": 30.0,
+    "volatility_decay": 0.85,
+    "cohort_sample_size_default": 250,
+}
+
+DRIFT_THRESHOLDS = {
+    "positive_progress_slope": 0.05,     # > +0.05 valence/session is positive clinical progress
+    "declining_slope": -0.05,           # < -0.05 valence/session is affective decline
+    "elevated_volatility": 0.25,        # Variance > 0.25 indicates emotional dysregulation
+    "high_stability_score": 75.0,       # Stability >= 75 indicates consistent baseline
+}
+
+

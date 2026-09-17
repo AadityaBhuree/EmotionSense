@@ -446,3 +446,81 @@ class CrossModalFusionResult:
         return res
 
 
+# =====================================================================
+# Phase 7: Longitudinal Affective Profiling & Clinical Drift Models
+# =====================================================================
+
+@dataclass
+class LongitudinalSessionPoint:
+    """Historical data point representing an individual evaluated session."""
+    session_id: str
+    timestamp: float
+    date_str: str
+    assessment_type: str = "General"
+    dominant_emotion: str = "neutral"
+    mean_valence: float = 0.0
+    mean_arousal: float = 0.0
+    mean_dominance: float = 0.0
+    engagement_score: float = 50.0
+    attention_score: float = 50.0
+    fatigue_score: float = 0.0
+    anomaly_count: int = 0
+    congruence_score: float = 100.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class AffectiveDriftMetrics:
+    """Quantitative affective drift, volatility, and longitudinal recovery metrics."""
+    valence_slope: float = 0.0                # OLS slope of valence progression per session
+    arousal_slope: float = 0.0                # OLS slope of arousal progression per session
+    volatility_index: float = 0.0             # Affective variance across sessions (0.0 to 1.0)
+    stability_score: float = 100.0            # Overall affective stability (0.0 to 100.0)
+    recovery_rate_sec: float = 15.0           # Mean time constant to return to baseline after distress
+    trajectory_status: str = "STABLE_BASELINE" # "PROGRESSING_POSITIVELY", "STABLE_BASELINE", "ELEVATED_VOLATILITY", "DECLINING_AFFECT"
+    recurrent_anomalies: List[str] = field(default_factory=list)
+    clinical_interpretation: str = "Patient emotional baseline remains stable across sessions."
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class CohortBenchmark:
+    """Normative cohort baseline metrics for comparative benchmarking."""
+    cohort_name: str
+    sample_size: int = 0
+    norm_mean_valence: float = 0.15
+    norm_std_valence: float = 0.25
+    norm_mean_arousal: float = 0.05
+    norm_std_arousal: float = 0.20
+    norm_volatility: float = 0.18
+    norm_stability_score: float = 78.5
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class LongitudinalProfile:
+    """Complete longitudinal profile tracking a subject across multi-session trajectories."""
+    subject_id: str
+    subject_name: str
+    total_sessions: int = 0
+    first_session_date: str = ""
+    latest_session_date: str = ""
+    history_points: List[LongitudinalSessionPoint] = field(default_factory=list)
+    drift_metrics: AffectiveDriftMetrics = field(default_factory=AffectiveDriftMetrics)
+    cohort_percentile: float = 50.0           # Relative to population cohort (0.0 to 100.0)
+    notes: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        res["history_points"] = [p.to_dict() for p in self.history_points]
+        res["drift_metrics"] = self.drift_metrics.to_dict()
+        return res
+
+
+
