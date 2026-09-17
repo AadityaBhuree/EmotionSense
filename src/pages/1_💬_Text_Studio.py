@@ -274,6 +274,27 @@ elif mode == "🗨️ Multi-turn Dialogue Transcript":
             st.markdown("<div class='es-section-title'>Conversational Mood & Energy Trajectory</div>", unsafe_allow_html=True)
             st.plotly_chart(render_conversation_flow_chart(summary.emotional_trajectory), use_container_width=True)
 
+            # Phase 7: Speaker Longitudinal Drift Comparison
+            try:
+                db = SessionManager.get_database()
+                for spk in summary.speakers:
+                    spk_pts = db.get_subject_longitudinal_points(spk)
+                    if spk_pts:
+                        spk_base_val = float(sum(p.mean_valence for p in spk_pts) / len(spk_pts))
+                        spk_turns = [t for t in summary.turns if t.speaker == spk]
+                        if spk_turns:
+                            cur_spk_val = float(sum(t.valence for t in spk_turns) / len(spk_turns))
+                            delta = cur_spk_val - spk_base_val
+                            col = "#10b981" if delta >= 0 else "#ef4444"
+                            st.markdown(f"""
+                            <div class="es-panel" style="padding: 6px 12px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📈 <b>{spk} Baseline ({len(spk_pts)} ses):</b> {spk_base_val:+.2f}</span>
+                                <span>Dialogue Drift: <b style="color: {col};">{delta:+.2f}</b></span>
+                            </div>
+                            """, unsafe_allow_html=True)
+            except Exception:
+                pass
+
             if summary.turning_points:
                 st.markdown("<div class='es-section-title'>⚡ Turning Points Detected</div>", unsafe_allow_html=True)
                 for tp in summary.turning_points:
