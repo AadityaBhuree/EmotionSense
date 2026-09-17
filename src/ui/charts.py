@@ -1,10 +1,11 @@
 """Plotly-based scientific interactive visualization & neuro-affective telemetry charts."""
 
+import numpy as np
 import plotly.graph_objects as go
 from typing import Dict, List, Any, Optional
 
 from config import EMOTION_COLORS
-from src.core.types import MultimodalEmotionState, AffectVector, FacialActionUnits
+from src.core.types import MultimodalEmotionState, AffectVector, FacialActionUnits, CohortBenchmark, LongitudinalProfile
 
 
 # Instrument Chart Styling Constants
@@ -640,3 +641,217 @@ def render_turn_taking_timeline(turns: List[Any]) -> go.Figure:
         yaxis=dict(gridcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)),
     )
     return fig
+
+
+# =====================================================================
+# Phase 7: Longitudinal Trajectory & Cohort Telemetry Charts
+# =====================================================================
+
+def render_longitudinal_trajectory_chart(profile: LongitudinalProfile) -> go.Figure:
+    """Renders a multi-session longitudinal progression chart with regression trendline."""
+    fig = go.Figure()
+    points = profile.history_points
+    if not points:
+        fig.update_layout(
+            title=dict(text="No Longitudinal Trajectory Data Available", font=dict(color=AXIS_COLOR, size=11, family=FONT_DISPLAY)),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor=CHART_BG,
+            height=280,
+        )
+        return fig
+
+    labels = [f"S{i+1}: {p.date_str.split()[0]}" for i, p in enumerate(points)]
+    valences = [p.mean_valence for p in points]
+    arousals = [p.mean_arousal for p in points]
+    engagements = [p.engagement_score / 100.0 for p in points]
+
+    # Neutral Reference Line
+    fig.add_hline(y=0.0, line_dash="dot", line_color="rgba(255, 255, 255, 0.15)", line_width=1)
+
+    # Shaded Clinical Recovery Target Band (Valence > 0.1)
+    fig.add_hrect(y0=0.1, y1=1.0, fillcolor="rgba(16, 185, 129, 0.05)", line_width=0, annotation_text="Euthymic Zone", annotation_position="top left", annotation_font_size=9, annotation_font_color="rgba(16, 185, 129, 0.4)")
+
+    # Valence Progression Trace
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=valences,
+        mode="lines+markers",
+        name="Valence",
+        line=dict(color="#00f2fe", width=3),
+        marker=dict(size=8, color="#00f2fe", line=dict(color="#0b0f19", width=2)),
+        hovertemplate="Session: %{x}<br>Valence: %{y:+.2f}<extra></extra>",
+    ))
+
+    # Arousal Trace
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=arousals,
+        mode="lines+markers",
+        name="Arousal",
+        line=dict(color="#f59e0b", width=2, dash="dot"),
+        marker=dict(size=6, color="#f59e0b"),
+        hovertemplate="Session: %{x}<br>Arousal: %{y:+.2f}<extra></extra>",
+    ))
+
+    # Engagement Level
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=engagements,
+        mode="lines",
+        name="Engagement",
+        line=dict(color="rgba(168, 85, 247, 0.6)", width=1.5),
+        hovertemplate="Engagement: %{y:.0%}<extra></extra>",
+    ))
+
+    # Linear Trendline if multiple points
+    if len(points) >= 2:
+        import numpy as np
+        x_indices = np.arange(len(points))
+        slope = profile.drift_metrics.valence_slope
+        intercept = float(np.mean(valences) - slope * np.mean(x_indices))
+        trend_y = [float(intercept + slope * i) for i in x_indices]
+        trend_color = "#10b981" if slope >= 0 else "#ef4444"
+        fig.add_trace(go.Scatter(
+            x=labels,
+            y=trend_y,
+            mode="lines",
+            name=f"Trend ({slope:+.3f}/ses)",
+            line=dict(color=trend_color, width=2, dash="dash"),
+            hoverinfo="name",
+        ))
+
+    status_badge = profile.drift_metrics.trajectory_status.replace("_", " ").title()
+    fig.update_layout(
+        title=dict(
+            text=f"Longitudinal Affective Trajectory — {profile.subject_name} [{status_badge}]",
+            font=dict(color="#f8fafc", size=11, family=FONT_DISPLAY),
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor=CHART_BG,
+        margin=dict(l=30, r=20, t=40, b=30),
+        height=300,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        xaxis=dict(gridcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)),
+        yaxis=dict(
+            title="Coordinate / Ratio",
+            range=[-1.05, 1.05],
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+    )
+    return fig
+
+
+def render_affective_volatility_radar(
+    profile: LongitudinalProfile,
+    cohort: Optional[CohortBenchmark] = None,
+) -> go.Figure:
+    """Renders polar radar comparing subject volatility/resilience against cohort benchmark."""
+    fig = go.Figure()
+    dimensions = [
+        "Affective Stability",
+        "Valence Concordance",
+        "Arousal Regulation",
+        "Recovery Resilience",
+        "Cognitive Focus",
+    ]
+
+    metrics = profile.drift_metrics
+    stability = float(metrics.stability_score)
+    # Scaled 0-100 metrics
+    val_concordance = float(max(0.0, min(100.0, 50.0 + (metrics.valence_slope * 250.0))))
+    arousal_reg = float(max(0.0, min(100.0, 100.0 - (metrics.volatility_index * 100.0))))
+    rec_resilience = float(max(0.0, min(100.0, 100.0 - ((metrics.recovery_rate_sec - 10.0) * 3.0))))
+    mean_att = float(np.mean([p.attention_score for p in profile.history_points])) if profile.history_points else 75.0
+
+    subj_values = [stability, val_concordance, arousal_reg, rec_resilience, mean_att]
+    # Close radar loop
+    radar_dims = dimensions + [dimensions[0]]
+    radar_subj = subj_values + [subj_values[0]]
+
+    # Subject Trace
+    fig.add_trace(go.Scatterpolar(
+        r=radar_subj,
+        theta=radar_dims,
+        fill='toself',
+        fillcolor='rgba(0, 242, 254, 0.15)',
+        line=dict(color='#00f2fe', width=2),
+        name=profile.subject_name or "Subject",
+    ))
+
+    # Cohort Trace
+    cohort_stability = cohort.norm_stability_score if cohort else 78.0
+    cohort_vals = [cohort_stability, 65.0, 75.0, 80.0, 72.0]
+    radar_cohort = cohort_vals + [cohort_vals[0]]
+
+    fig.add_trace(go.Scatterpolar(
+        r=radar_cohort,
+        theta=radar_dims,
+        fill='none',
+        line=dict(color='rgba(255, 255, 255, 0.3)', width=1.5, dash='dash'),
+        name=cohort.cohort_name if cohort else "Population Norm",
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            bgcolor='rgba(18, 22, 34, 0.4)',
+            radialaxis=dict(visible=True, range=[0, 100], gridcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=8, family=FONT_MONO)),
+            angularaxis=dict(gridcolor=GRID_COLOR, tickfont=dict(color="#f8fafc", size=9, family=FONT_DISPLAY)),
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=35, r=35, t=30, b=20),
+        height=280,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.15,
+            xanchor="center",
+            x=0.5,
+            font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+    )
+    return fig
+
+
+def render_longitudinal_recovery_gauge(
+    recovery_rate_sec: float,
+    stability_score: float,
+) -> go.Figure:
+    """Renders a semicircular indicator for longitudinal affective resilience and recovery."""
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=stability_score,
+        number=dict(suffix="%", font=dict(color="#f8fafc", size=24, family=FONT_DISPLAY)),
+        title=dict(
+            text=f"STABILITY INDEX (Recovery: {recovery_rate_sec:.1f}s)",
+            font=dict(color=AXIS_COLOR, size=10, family=FONT_MONO),
+        ),
+        gauge=dict(
+            axis=dict(range=[0, 100], tickwidth=1, tickcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=8, family=FONT_MONO)),
+            bar=dict(color="#10b981" if stability_score >= 75 else "#f59e0b" if stability_score >= 50 else "#ef4444", thickness=0.3),
+            bgcolor="rgba(255, 255, 255, 0.05)",
+            borderwidth=0,
+            steps=[
+                dict(range=[0, 50], color="rgba(239, 68, 68, 0.20)"),
+                dict(range=[50, 75], color="rgba(245, 158, 11, 0.20)"),
+                dict(range=[75, 100], color="rgba(16, 185, 129, 0.20)"),
+            ],
+        ),
+    ))
+
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=25, r=25, t=35, b=15),
+        height=200,
+    )
+    return fig
+
