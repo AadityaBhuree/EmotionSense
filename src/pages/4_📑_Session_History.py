@@ -13,7 +13,9 @@ from src.ui.charts import (
     render_affect_quadrant_chart,
     render_conversational_dominance_pie,
     render_rapport_gauge,
+    render_longitudinal_trajectory_chart,
 )
+from src.analytics import LongitudinalProfileAnalyzer
 from src.utils.session_manager import SessionManager
 from src.utils.report_generator import DiagnosticReportGenerator
 from src.utils.pdf_exporter import ClinicalPDFExporter
@@ -240,6 +242,32 @@ else:
         with dy_c2:
             dur_map = {"Participant A": c_bal * 50.0, "Participant B": max(0.0, 100.0 - c_bal * 50.0)}
             st.plotly_chart(render_conversational_dominance_pie(dur_map), use_container_width=True)
+
+    # Phase 7: Longitudinal Trajectory & Subject Historical Baseline
+    subj_id = getattr(metadata_obj, "subject_id", None) if metadata_obj else None
+    if subj_id and subj_id != "UNKNOWN":
+        hist_points = db.get_subject_longitudinal_points(subj_id)
+        if len(hist_points) >= 1:
+            st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+            with st.expander(f"📈 Subject Longitudinal Trajectory Profile ({len(hist_points)} Session(s))", expanded=True):
+                long_ana = LongitudinalProfileAnalyzer()
+                long_prof = long_ana.analyze_profile(
+                    subject_id=subj_id,
+                    subject_name=getattr(metadata_obj, "subject_name", "Subject") if metadata_obj else "Subject",
+                    history_points=hist_points,
+                )
+                lp1, lp2, lp3, lp4 = st.columns([1.5, 1, 1, 1])
+                with lp1:
+                    st.markdown(f"<b>Clinical Trajectory:</b> <span class='es-badge es-badge-accent'>{long_prof.drift_metrics.trajectory_status.replace('_', ' ').title()}</span>", unsafe_allow_html=True)
+                    st.caption(long_prof.drift_metrics.clinical_interpretation)
+                with lp2:
+                    st.metric("Valence Drift", f"{long_prof.drift_metrics.valence_slope:+.3f}/ses")
+                with lp3:
+                    st.metric("Affective Stability", f"{long_prof.drift_metrics.stability_score:.1f}%")
+                with lp4:
+                    st.metric("Recovery Rate", f"{long_prof.drift_metrics.recovery_rate_sec:.1f}s")
+
+                st.plotly_chart(render_longitudinal_trajectory_chart(long_prof), use_container_width=True)
 
     # Export Section
     st.markdown("<div class='es-section-title'>💾 Export Telemetry Dataset & Clinical Reports</div>", unsafe_allow_html=True)
