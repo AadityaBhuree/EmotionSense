@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Phase 7 Completed — Longitudinal Affective Profiling, Multi-Session Clinical Drift & Cohort Intelligence (132/132 Tests Passing)  
+> **Status:** Phase 8 Completed — Edge AI Acceleration, ONNX Runtime Engine, Dynamic INT8 Quantization & Sub-10ms Workstation (143/143 Tests Passing)  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -20,12 +20,14 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 5. **Multimodal Fusion**: Real-time Valence-Arousal-Dominance (VAD) coordinate mapping, Engagement Index, Fatigue Level, Attention Scores, and Affective Anomaly Sentinel detection.
 6. **Microservice API**: Production-ready asynchronous FastAPI REST microservice and bi-directional WebSocket streaming gateways.
 7. **Enterprise Persistence & Clinical Reporting**: Embedded SQLite storage engine with cascading metadata management, automated legacy JSON sync, and publication-quality Clinical PDF diagnostics via ReportLab.
+8. **Edge AI Acceleration & Quantization**: ONNX Runtime hardware provider routing (DirectML, CUDA, CoreML, WASM), dynamic INT8 post-training quantization, and sub-10ms edge latency profiling.
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
 - **Mental Health & Wellness Providers**: Longitudinal tracking of affective response patterns, hyper-arousal spikes, and valence crashes with formal clinical PDF records.
 - **Customer Experience & Sales Teams**: Real-time sentiment cues, conversational trajectory escalation alerts, and empathy guidance.
 - **Researchers & EdTech**: Monitoring student focus, cognitive overload, fatigue, and engagement levels during live sessions.
+- **Edge & Mobile Engineers**: On-device edge runtime profiling, INT8 model quantization, and zero-cloud deployment.
 
 ---
 
@@ -34,7 +36,9 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 | Domain | Technology / Library | Role & Rationale |
 | :--- | :--- | :--- |
 | **Framework & UI** | **Streamlit + Precision Neuro-Instrument CSS** | Reactive workstation with calibrated technical grid, Russell circumplex vector trails, and tactile telemetry consoles |
+| **Edge AI Acceleration** | **ONNX Runtime + NumPy Vectorization** | Multi-backend hardware provider abstraction (DirectML, CUDA, CoreML, CPU, WASM) and dynamic INT8 post-training quantization |
 | **Microservice Backend** | **FastAPI + Uvicorn + WebSockets + HTTPX** | Asynchronous high-throughput REST API and bi-directional streaming endpoints for telemetry, live speech, and session persistence |
+
 | **Real-Time Video/Audio Stream** | **streamlit-webrtc + PyAV (`av`) + WebRTC** | Low-latency bi-directional video and audio frame transformation and container demuxing |
 | **Computer Vision** | **MediaPipe + OpenCV + NumPy** | 468-point 3D Face Mesh, Facial Action Units (AU), and Micro-expression Classifier |
 | **Audio & Acoustics** | **Librosa + SoundFile + SciPy** | Acoustic prosody, fundamental frequency (F0 pitch), RMS energy, jitter & shimmer |
@@ -177,6 +181,18 @@ EmotionSense/
 │   │   ├── components.py              # Telemetry badges, tactile status dials, and gauges
 │   │   └── video_processor.py         # WebRTC VideoTransformer with landmark overlay
 │   ├── utils/
+│   ├── edge/
+│   │   ├── __init__.py                # Exported edge inference, quantizer, and benchmark suite
+│   │   ├── runtime.py                 # ONNXEdgeInferenceEngine with hardware provider routing & warm-up
+│   │   ├── quantizer.py               # ModelQuantizationOptimizer for MinMax INT8/FP16 compression
+│   │   └── benchmark.py               # EdgeBenchmarkSuite with P50/P95/P99 latency stress testing
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   ├── styles.py                  # Neuro-instrument CSS, glassmorphic HUD styling
+│   │   ├── charts.py                  # Plotly Russell Circumplex, AU spectrum, and radar charts
+│   │   ├── components.py              # Telemetry badges, tactile status dials, and gauges
+│   │   └── video_processor.py         # WebRTC VideoTransformer with landmark overlay
+│   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── logger.py                  # Structured application logging
 │   │   ├── session_manager.py         # Session recording, persistence & JSON export
@@ -189,7 +205,9 @@ EmotionSense/
 │       ├── 2_🎥_Live_Studio.py          # Real-time multimodal streaming studio
 │       ├── 3_📁_File_Analysis.py        # Offline video & audio file container analysis
 │       ├── 4_📑_Session_History.py      # Timeline scrubbing, SQLite persistence, metadata editor & PDF export
-│       └── 5_📐_Architecture.py         # System architecture & multimodal documentation
+│       ├── 5_📐_Architecture.py         # System architecture & multimodal documentation
+│       ├── 6_📈_Longitudinal_Analytics.py # Multi-session clinical drift & cohort intelligence
+│       └── 7_⚡_Edge_Studio.py           # Sub-10ms edge inference, ONNX routing & INT8 quantization
 ├── scripts/
 │   └── ws_stream_client.py            # CLI utility for real-time WebSocket telemetry testing
 └── tests/
@@ -207,6 +225,9 @@ EmotionSense/
     ├── test_report_generator.py       # Markdown and HTML clinical diagnostic report formatting
     ├── test_storage.py                # SQLite schema, CRUD, cascade delete, JSON migration & stats
     ├── test_pdf_exporter.py           # ReportLab compilation, magic bytes, filesystem save & empty sessions
+    ├── test_edge_runtime.py           # ONNX execution provider routing, device profiling & warm-up
+    ├── test_edge_quantizer.py         # Dynamic MinMax INT8 scaling, cosine similarity & compression
+    ├── test_ui_edge_charts.py         # Edge latency waterfall, quantization comparison & throughput gauges
     └── test_api_server.py             # FastAPI REST endpoints, session CRUD & WebSocket streaming
 ```
 
@@ -231,6 +252,9 @@ EmotionSense/
 | `DELETE` | `/api/sessions/{id}` | Delete session and cascading samples from database | None | `{"status": "success", "deleted_session_id": "..."}` |
 | `POST` | `/api/sessions/migrate` | Trigger migration of legacy JSON sessions to SQLite | None | `{"status": "success", "migrated_sessions_count": int}` |
 | `GET` | `/api/stats` | Retrieve platform-wide metrics and assessment type counts | None | `{"status": "success", "stats": {...}}` |
+| `GET` | `/api/edge/hardware` | Retrieve edge hardware profile & active execution providers | None | `{"status": "success", "profile": {...}}` |
+| `POST` | `/api/edge/benchmark` | Execute edge latency benchmark across iterations | `EdgeBenchmarkRequest` | `{"status": "success", "benchmark": {...}}` |
+| `POST` | `/api/edge/quantize` | Estimate model INT8 quantization compression & speedup | `EdgeQuantizeRequest` | `{"status": "success", "quantization": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -245,18 +269,20 @@ EmotionSense/
 
 ## 6. Verification & Quality Metrics
 
-All **132** unit, integration, persistence, dyadic, deep SER, cross-modal attention, and longitudinal tests pass cleanly across Python 3.10+:
+All **143** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, and edge runtime tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================ 132 passed in 46.50s =============================
+# ============================ 143 passed in 31.05s =============================
 ```
 
+- **Edge Runtime Suite (`test_edge_runtime.py`)**: Multi-provider execution routing (DirectML, CUDA, CPU, WASM), hardware profile introspection, warm-up pass timing, and fallback validation.
+- **Model Quantization Suite (`test_edge_quantizer.py`)**: Mathematical symmetric and asymmetric MinMax integer scaling, cosine similarity retention, and catalog compression verification.
+- **Edge UI Visualizations Suite (`test_ui_edge_charts.py`)**: P50/P95/P99 latency waterfall waveforms, FP32 vs INT8 memory comparison charts, and real-time throughput FPS dials.
 - **Longitudinal Analytics Suite (`test_longitudinal_analytics.py`)**: OLS valence progression slopes, affective volatility indices, recovery rate time constants, and normative cohort percentile mapping.
 - **Longitudinal UI Charts Suite (`test_ui_longitudinal_charts.py`)**: Trajectory regression waveforms, cohort volatility radar polar chart, and recovery time gauge.
 - **Deep Speech Emotion Suite (`test_deep_ser.py`)**: Multi-tier neural/ONNX execution, wav2vec2 feature extraction, and acoustic fallback.
 - **Cross-Modal Attention Suite (`test_cross_modal_fusion.py`)**: Multi-head cross-attention projections, modality congruence scores, and masked affect detection.
-
 - **Multi-Face Tracking Suite (`test_multi_face_tracker.py`)**: Persistent spatial centroid tracking, IoU matching, multi-face FACS Action Units, disappearance grace periods, and HUD corner overlay rendering.
 - **Acoustic Diarization Suite (`test_diarizer.py`)**: Short-time energy VAD segmentation, spectral + MFCC embeddings, multi-speaker clustering, turn merging, speaking duration, conversational dominance ratio, and interruption detection.
 - **Dyadic Interaction Dynamics Suite (`test_interaction_dynamics.py`)**: Temporal grid interpolation, Pearson valence/arousal cross-correlation, lagged facial smile mimicry (0.5s–2.5s), turn transition latency, mutual attentiveness, and Dyadic Rapport Index scoring.
@@ -273,5 +299,6 @@ pytest -v
 - **Multimodal Fusion (`test_fusion.py`)**: Temporal alignment, attention penalty weighting, continuous 3D VAD mapping.
 - **Sentinel Anomaly Suite (`test_anomaly_detector.py`)**: Valence crash, hyper-arousal spikes, sustained distress, cognitive fatigue overload.
 - **Reporting Suite (`test_report_generator.py`)**: Clinical Markdown and responsive HTML diagnostic generation.
-- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes, full session persistence lifecycle, dyadic interaction analysis endpoint, audio diarization endpoint, and bidirectional WebSocket affect & speech streaming.
+- **API Server Suite (`test_api_server.py`)**: FastAPI REST routes, edge hardware/benchmark/quantize endpoints, full session persistence lifecycle, dyadic interaction analysis endpoint, audio diarization endpoint, and bidirectional WebSocket affect & speech streaming.
 - **Static Code Analysis (`ruff check .`)**: Zero linting or formatting errors across entire repository.
+

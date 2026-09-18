@@ -327,16 +327,16 @@ docker compose logs -f
 
 ## 🧪 Running Tests & Quality Verification
 
-Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, and FastAPI microservice pipelines using `pytest` and `ruff`:
+Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, longitudinal profiling, and edge acceleration pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (109 tests across 19 modules)
+# Execute automated test suite (143 tests across 22 modules)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 109 unit, integration, persistence, and dyadic telemetry tests run with 100% pass rate across Python 3.10+.*
+*All 143 unit, integration, persistence, dyadic telemetry, longitudinal profiling, and edge acceleration tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -362,8 +362,12 @@ ruff check .
 | `GET` | `/api/longitudinal/subjects` | List distinct evaluated subjects, session counts & historical date ranges |
 | `GET` | `/api/longitudinal/{subject_id}` | Retrieve subject longitudinal session points, OLS slopes, volatility & recovery |
 | `GET` | `/api/cohort/benchmarks` | Query population normative cohort benchmarks for comparative evaluation |
+| `GET` | `/api/edge/hardware` | Retrieve edge hardware profile & active execution providers |
+| `POST` | `/api/edge/benchmark` | Execute edge latency benchmark across iterations with P50/P95/P99 percentiles |
+| `POST` | `/api/edge/quantize` | Estimate model INT8 quantization compression & speedup |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
+
 
 ### Real-Time WebSocket Streaming Client CLI
 

@@ -297,7 +297,8 @@ class CrossModalAttentionFusion:
         context = np.dot(attn_matrix, V)  # Shape (3, embed_dim)
 
         # Weighted combination of contextualized representations
-        fused_latent = (norm_v * context[0]) + (norm_a * context[1]) + (norm_t * context[2])
+        _fused_latent = (norm_v * context[0]) + (norm_a * context[1]) + (norm_t * context[2])
+
 
         # 5. Output Head: Cross-Modal Attention Weighted Probability Fusion
         fused_probs: Dict[str, float] = {}
