@@ -106,4 +106,39 @@ DRIFT_THRESHOLDS = {
     "high_stability_score": 75.0,       # Stability >= 75 indicates consistent baseline
 }
 
+# =====================================================================
+# Phase 8: Edge AI Acceleration & Quantization Configuration
+# =====================================================================
+
+EDGE_RUNTIME_CONFIG = {
+    "latency_sla_ms": {
+        "audio_ser": 8.0,
+        "text_nlp": 12.0,
+        "vision_mesh": 15.0,
+        "cross_modal_cmaf": 20.0,
+        "end_to_end": 35.0,
+    },
+    "provider_priority": [
+        "CUDAExecutionProvider",
+        "DmlExecutionProvider",
+        "CoreMLExecutionProvider",
+        "CPUExecutionProvider",
+    ],
+    "default_iterations": 30,
+    "warmup_runs": 3,
+    "quantization_compression": {
+        "FP32": 1.0,
+        "FP16": 2.0,
+        "INT8": 3.9,
+        "Dynamic_INT8": 3.6,
+    },
+    "quantization_speedup": {
+        "FP32": 1.0,
+        "FP16": 1.45,
+        "INT8": 2.55,
+        "Dynamic_INT8": 2.30,
+    },
+}
+
+
 

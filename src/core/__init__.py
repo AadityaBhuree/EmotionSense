@@ -17,6 +17,15 @@ from src.core.types import (
     AffectiveDriftMetrics,
     CohortBenchmark,
     LongitudinalProfile,
+    EdgeExecutionProvider,
+    QuantizationPrecision,
+    EdgeDeviceProfile,
+    InferenceBenchmarkResult,
+    ModelQuantizationSummary,
+    EdgeModelManifest,
+)
+from src.core.config import (
+    EDGE_RUNTIME_CONFIG,
 )
 
 __all__ = [
@@ -36,5 +45,13 @@ __all__ = [
     "AffectiveDriftMetrics",
     "CohortBenchmark",
     "LongitudinalProfile",
+    "EdgeExecutionProvider",
+    "QuantizationPrecision",
+    "EdgeDeviceProfile",
+    "InferenceBenchmarkResult",
+    "ModelQuantizationSummary",
+    "EdgeModelManifest",
+    "EDGE_RUNTIME_CONFIG",
 ]
+
 

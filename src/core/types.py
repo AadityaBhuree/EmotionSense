@@ -523,4 +523,98 @@ class LongitudinalProfile:
         return res
 
 
+# =====================================================================
+# Phase 8: Edge AI Acceleration, ONNX Runtime & Quantization Models
+# =====================================================================
+
+class EdgeExecutionProvider(str, Enum):
+    """Supported hardware acceleration providers for edge runtime inference."""
+    CPU = "CPUExecutionProvider"
+    CUDA = "CUDAExecutionProvider"
+    DIRECTML = "DmlExecutionProvider"
+    COREML = "CoreMLExecutionProvider"
+    WASM = "WasmExecutionProvider"
+
+
+class QuantizationPrecision(str, Enum):
+    """Quantization precision formats for edge model compression."""
+    FP32 = "FP32"
+    FP16 = "FP16"
+    INT8 = "INT8"
+    DYNAMIC_INT8 = "Dynamic_INT8"
+
+
+@dataclass
+class EdgeDeviceProfile:
+    """Hardware capability profile and detected accelerators for edge deployment."""
+    device_name: str = "Host Edge CPU"
+    provider: str = "CPUExecutionProvider"
+    has_gpu_acceleration: bool = False
+    total_ram_mb: float = 8192.0
+    available_threads: int = 4
+    supported_providers: List[str] = field(default_factory=lambda: ["CPUExecutionProvider"])
+    power_profile: str = "Standard"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class InferenceBenchmarkResult:
+    """Detailed latency, throughput, and jitter telemetry from a benchmark run."""
+    model_name: str
+    precision: str = "FP32"
+    provider: str = "CPUExecutionProvider"
+    iterations: int = 50
+    mean_latency_ms: float = 0.0
+    p50_latency_ms: float = 0.0
+    p95_latency_ms: float = 0.0
+    p99_latency_ms: float = 0.0
+    min_latency_ms: float = 0.0
+    max_latency_ms: float = 0.0
+    fps_throughput: float = 0.0
+    memory_rss_mb: float = 0.0
+    sla_compliant: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ModelQuantizationSummary:
+    """Quantization statistics, memory reduction, and accuracy preservation metrics."""
+    model_name: str
+    original_precision: str = "FP32"
+    quantized_precision: str = "INT8"
+    original_size_mb: float = 0.0
+    quantized_size_mb: float = 0.0
+    compression_ratio: float = 1.0
+    speedup_factor: float = 1.0
+    estimated_latency_ms: float = 0.0
+    accuracy_preservation_pct: float = 99.0
+    quantization_method: str = "Dynamic MinMax Affine"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class EdgeModelManifest:
+    """Deployment manifest containing edge hardware profile, models, and benchmarks."""
+    manifest_id: str
+    timestamp: float
+    device_profile: EdgeDeviceProfile
+    models: List[ModelQuantizationSummary] = field(default_factory=list)
+    benchmarks: List[InferenceBenchmarkResult] = field(default_factory=list)
+    target_environment: str = "Edge/Embedded"
+
+    def to_dict(self) -> Dict[str, Any]:
+        res = asdict(self)
+        res["device_profile"] = self.device_profile.to_dict()
+        res["models"] = [m.to_dict() for m in self.models]
+        res["benchmarks"] = [b.to_dict() for b in self.benchmarks]
+        return res
+
+
+
 
