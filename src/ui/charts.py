@@ -855,3 +855,219 @@ def render_longitudinal_recovery_gauge(
     )
     return fig
 
+
+# =====================================================================
+# Phase 8: Edge AI Acceleration & Latency Telemetry Visualizations
+# =====================================================================
+
+def render_edge_latency_waterfall(
+    benchmarks: List[Any],
+) -> go.Figure:
+    """Renders grouped bar telemetry comparing P50, P95, and P99 latencies against SLA limits."""
+    model_names = []
+    p50_vals = []
+    p95_vals = []
+    p99_vals = []
+
+    for b in benchmarks:
+        name = getattr(b, "model_name", b.get("model_name", "model") if isinstance(b, dict) else "model")
+        p50 = getattr(b, "p50_latency_ms", b.get("p50_latency_ms", 0.0) if isinstance(b, dict) else 0.0)
+        p95 = getattr(b, "p95_latency_ms", b.get("p95_latency_ms", 0.0) if isinstance(b, dict) else 0.0)
+        p99 = getattr(b, "p99_latency_ms", b.get("p99_latency_ms", 0.0) if isinstance(b, dict) else 0.0)
+
+        # Friendly label
+        clean_name = name.replace("_", " ").title()
+        model_names.append(clean_name)
+        p50_vals.append(p50)
+        p95_vals.append(p95)
+        p99_vals.append(p99)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name="P50 (Median)",
+        x=model_names,
+        y=p50_vals,
+        marker_color="#3b82f6",
+        text=[f"{v:.1f}ms" for v in p50_vals],
+        textposition="auto",
+        textfont=dict(color="#f8fafc", size=9, family=FONT_MONO),
+    ))
+
+    fig.add_trace(go.Bar(
+        name="P95 Latency",
+        x=model_names,
+        y=p95_vals,
+        marker_color="#0ea5e9",
+        text=[f"{v:.1f}ms" for v in p95_vals],
+        textposition="auto",
+        textfont=dict(color="#f8fafc", size=9, family=FONT_MONO),
+    ))
+
+    fig.add_trace(go.Bar(
+        name="P99 Tail Latency",
+        x=model_names,
+        y=p99_vals,
+        marker_color="#f59e0b",
+        text=[f"{v:.1f}ms" for v in p99_vals],
+        textposition="auto",
+        textfont=dict(color="#f8fafc", size=9, family=FONT_MONO),
+    ))
+
+    # Add 20ms Edge Real-Time SLA threshold line
+    fig.add_hline(
+        y=20.0,
+        line_dash="dot",
+        line_color="#ef4444",
+        annotation_text="Edge 20ms SLA Limit",
+        annotation_position="top right",
+        annotation_font=dict(color="#ef4444", size=9, family=FONT_MONO),
+    )
+
+    fig.update_layout(
+        barmode="group",
+        title=dict(
+            text="EDGE INFERENCE LATENCY DISTRIBUTION (P50 / P95 / P99)",
+            font=dict(color="#f8fafc", size=11, family=FONT_DISPLAY),
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color="#f8fafc", size=10, family=FONT_DISPLAY),
+        ),
+        yaxis=dict(
+            title=dict(text="Latency (ms)", font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)),
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        margin=dict(l=20, r=20, t=45, b=20),
+        height=280,
+    )
+    return fig
+
+
+def render_quantization_comparison_chart(
+    summaries: List[Any],
+) -> go.Figure:
+    """Renders dual-axis bar comparison showing original vs quantized memory footprint and speedup factor."""
+    names = []
+    orig_mb = []
+    quant_mb = []
+    speedups = []
+
+    for s in summaries:
+        name = getattr(s, "model_name", s.get("model_name", "model") if isinstance(s, dict) else "model")
+        o_mb = getattr(s, "original_size_mb", s.get("original_size_mb", 0.0) if isinstance(s, dict) else 0.0)
+        q_mb = getattr(s, "quantized_size_mb", s.get("quantized_size_mb", 0.0) if isinstance(s, dict) else 0.0)
+        spd = getattr(s, "speedup_factor", s.get("speedup_factor", 1.0) if isinstance(s, dict) else 1.0)
+
+        names.append(name)
+        orig_mb.append(o_mb)
+        quant_mb.append(q_mb)
+        speedups.append(spd)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name="Baseline FP32 (MB)",
+        x=names,
+        y=orig_mb,
+        marker_color="rgba(148, 163, 184, 0.4)",
+        text=[f"{v:.1f} MB" for v in orig_mb],
+        textposition="auto",
+        textfont=dict(color="#f8fafc", size=9, family=FONT_MONO),
+    ))
+
+    fig.add_trace(go.Bar(
+        name="Quantized INT8 (MB)",
+        x=names,
+        y=quant_mb,
+        marker_color="#10b981",
+        text=[f"{v:.1f} MB" for v in quant_mb],
+        textposition="auto",
+        textfont=dict(color="#f8fafc", size=9, family=FONT_MONO),
+    ))
+
+    fig.update_layout(
+        barmode="group",
+        title=dict(
+            text="MODEL MEMORY FOOTPRINT COMPRESSION (FP32 vs INT8)",
+            font=dict(color="#f8fafc", size=11, family=FONT_DISPLAY),
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color="#f8fafc", size=10, family=FONT_DISPLAY),
+        ),
+        yaxis=dict(
+            title=dict(text="Size on Disk / RAM (MB)", font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO)),
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        margin=dict(l=20, r=20, t=45, b=20),
+        height=280,
+    )
+    return fig
+
+
+def render_edge_throughput_gauge(
+    fps: float,
+    target_fps: float = 60.0,
+) -> go.Figure:
+    """Renders a precision gauge indicating real-time frame processing throughput."""
+    val = float(max(0.0, fps))
+    color = "#10b981" if val >= 30.0 else "#f59e0b" if val >= 15.0 else "#ef4444"
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=val,
+        number=dict(suffix=" FPS", font=dict(color="#f8fafc", size=24, family=FONT_DISPLAY)),
+        title=dict(
+            text=f"EDGE INFERENCE THROUGHPUT (Target: {target_fps:.0f} FPS)",
+            font=dict(color=AXIS_COLOR, size=10, family=FONT_MONO),
+        ),
+        gauge=dict(
+            axis=dict(range=[0, max(120, target_fps * 1.5)], tickwidth=1, tickcolor=GRID_COLOR, tickfont=dict(color=AXIS_COLOR, size=8, family=FONT_MONO)),
+            bar=dict(color=color, thickness=0.3),
+            bgcolor="rgba(255, 255, 255, 0.05)",
+            borderwidth=0,
+            steps=[
+                dict(range=[0, 15], color="rgba(239, 68, 68, 0.20)"),
+                dict(range=[15, 30], color="rgba(245, 158, 11, 0.20)"),
+                dict(range=[30, 120], color="rgba(16, 185, 129, 0.20)"),
+            ],
+            threshold=dict(
+                line=dict(color="#3b82f6", width=3),
+                thickness=0.8,
+                value=target_fps,
+            ),
+        ),
+    ))
+
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=25, r=25, t=35, b=15),
+        height=200,
+    )
+    return fig
+
+

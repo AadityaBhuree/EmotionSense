@@ -389,3 +389,98 @@ def render_participant_badge(
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+# =====================================================================
+# Phase 8: Edge AI Acceleration Telemetry Components
+# =====================================================================
+
+def render_edge_device_card(profile: Any):
+    """Renders a sleek hardware diagnostic card displaying active execution provider and capabilities."""
+    dev_name = getattr(profile, "device_name", "Host Edge CPU")
+    provider = getattr(profile, "provider", "CPUExecutionProvider")
+    has_gpu = getattr(profile, "has_gpu_acceleration", False)
+    threads = getattr(profile, "available_threads", 4)
+    ram = getattr(profile, "total_ram_mb", 8192.0)
+    power = getattr(profile, "power_profile", "Balanced Edge")
+
+    accel_badge = '<span class="es-pill es-pill-active" style="padding: 2px 7px; font-size: 0.7rem;">GPU ACCELERATED</span>' if has_gpu else '<span class="es-pill" style="padding: 2px 7px; font-size: 0.7rem; background: rgba(148, 163, 184, 0.2); color: #cbd5e1;">CPU THREADED</span>'
+
+    st.markdown(f"""
+    <div style="
+        background: var(--surface-raised);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; font-family: 'JetBrains Mono', monospace;">
+                ⚡ {dev_name}
+            </div>
+            {accel_badge}
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 0.5rem;">
+            <div>
+                <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase;">Active Provider</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #3b82f6; font-family: 'JetBrains Mono', monospace;">{provider}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase;">CPU Concurrency</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #10b981; font-family: 'JetBrains Mono', monospace;">{threads} Threads</div>
+            </div>
+            <div>
+                <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase;">Memory Capacity</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #e2e8f0; font-family: 'JetBrains Mono', monospace;">{ram / 1024:.1f} GB RAM</div>
+            </div>
+            <div>
+                <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase;">Power Profile</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: #f59e0b; font-family: 'JetBrains Mono', monospace;">{power}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_benchmark_summary_card(res: Any):
+    """Renders a telemetry badge for benchmark result with P50/P95 and throughput."""
+    name = getattr(res, "model_name", "model").replace("_", " ").title()
+    provider = getattr(res, "provider", "CPUExecutionProvider")
+    prec = getattr(res, "precision", "FP32")
+    p50 = getattr(res, "p50_latency_ms", 0.0)
+    p95 = getattr(res, "p95_latency_ms", 0.0)
+    fps = getattr(res, "fps_throughput", 0.0)
+    sla = getattr(res, "sla_compliant", True)
+
+    sla_badge = '<span style="color: #10b981; font-weight: 700;">● SLA PASS</span>' if sla else '<span style="color: #ef4444; font-weight: 700;">▲ SLA BREACH</span>'
+
+    st.markdown(f"""
+    <div style="
+        background: rgba(18, 22, 34, 0.6);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    ">
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">
+                {name} <span class="es-pill" style="font-size: 0.68rem; padding: 1px 5px;">{prec}</span>
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin-top: 3px;">
+                Provider: {provider} | Throughput: <span style="color: #3b82f6;">{fps:.1f} FPS</span>
+            </div>
+        </div>
+        <div style="text-align: right; font-family: 'JetBrains Mono', monospace;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #f8fafc;">
+                P50: {p50:.1f}ms | P95: {p95:.1f}ms
+            </div>
+            <div style="font-size: 0.7rem; margin-top: 2px;">
+                {sla_badge}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
