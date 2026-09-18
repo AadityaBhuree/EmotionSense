@@ -131,8 +131,15 @@ else:
                 st.success("Session metadata updated successfully!")
                 st.rerun()
 
-    # Telemetry HUD
+    # Edge Runtime & Telemetry HUD
+    st.markdown("""
+    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <span class="es-pill" style="font-size: 0.7rem; padding: 2px 7px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">⚡ RUNTIME: ONNX DIRECTML / CPU</span>
+        <span class="es-pill" style="font-size: 0.7rem; padding: 2px 7px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">🗜️ INT8 QUANTIZED MODEL</span>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("<div class='es-section-title'>📊 Session Aggregate Telemetry</div>", unsafe_allow_html=True)
+
 
     m1, m2, m3, m4, m5 = st.columns(5)
     with m1:

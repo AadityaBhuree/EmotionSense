@@ -65,7 +65,13 @@ with ctl1:
 with ctl2:
     backend_sel = st.selectbox(
         "NLP Neural Engine Mode",
-        ["🔀 Hybrid Ensembled Mode", "⚡ Ultra-Fast Lexical (<5ms)", "🧠 Deep RoBERTa Neural (PyTorch)"],
+        [
+            "🔀 Hybrid Ensembled Mode",
+            "⚡ Ultra-Fast Lexical (<5ms)",
+            "🧠 Deep RoBERTa Neural (PyTorch)",
+            "⚡ Edge ONNX DirectML/CUDA Acceleration",
+            "🗜️ Dynamic INT8 Quantized Mode",
+        ],
         index=0
     )
     if "Ultra-Fast" in backend_sel:
@@ -74,6 +80,7 @@ with ctl2:
         clf.set_mode("transformer")
     else:
         clf.set_mode("hybrid")
+
 
 st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
 

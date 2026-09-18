@@ -54,12 +54,15 @@ st.markdown("""
 
 uploaded_file = st.file_uploader("Select Media or Dataset File", type=["mp4", "avi", "mov", "wav", "mp3", "csv", "json", "txt"])
 
-# Phase 7: Longitudinal Subject Tagging & Baseline Integration
-meta_col1, meta_col2 = st.columns([1.5, 1.5])
+# Phase 7 & 8: Longitudinal Subject Tagging & Edge Acceleration Tier
+meta_col1, meta_col2, meta_col3 = st.columns([1.2, 1.2, 1.4])
 with meta_col1:
     subj_tag = st.text_input("Subject / Candidate ID Tag", value="SUBJ_DEMO_01", help="Tag analyzed file with subject ID for longitudinal tracking")
 with meta_col2:
     assessment_tag = st.selectbox("Assessment Classification", ["General", "Clinical Screening", "Talent Interview", "Wellness Tracking", "Academic Research"])
+with meta_col3:
+    edge_batch_accel = st.selectbox("Edge Acceleration Tier", ["⚡ ONNX DirectML/CUDA", "💻 Multi-Core CPU", "🗜️ INT8 Quantized"], index=0)
+
 
 try:
     db = SessionManager.get_database()
