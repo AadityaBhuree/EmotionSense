@@ -25,6 +25,9 @@ from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.diarizer import AcousticDiarizer
 from src.storage import SessionDatabase
 from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort_benchmarks
+from src.edge.runtime import ONNXEdgeInferenceEngine
+from src.edge.quantizer import ModelQuantizationOptimizer
+from src.edge.benchmark import EdgeBenchmarkSuite
 
 
 # Initialize FastAPI App
@@ -50,12 +53,28 @@ classifier = HybridEmotionClassifier(mode="hybrid")
 conversation_analyzer = ConversationAffectAnalyzer(classifier)
 speech_transcriber = LiveSpeechTranscriber(classifier.lexical_clf)
 db = SessionDatabase()
+edge_engine = ONNXEdgeInferenceEngine()
+edge_quantizer = ModelQuantizationOptimizer()
+edge_bench_suite = EdgeBenchmarkSuite(engine=edge_engine, quantizer=edge_quantizer)
 
 
 # Request & Response Schemas
 class SingleTextRequest(BaseModel):
     text: str = Field(..., description="Message text to analyze", json_schema_extra={"example": "I am so happy and excited for our product launch! 🎉"})
     mode: Optional[str] = Field("hybrid", description="Inference mode: lexical, transformer, or hybrid")
+
+
+class EdgeBenchmarkRequest(BaseModel):
+    model_name: Optional[str] = Field("vision_mesh", description="Model to benchmark: vision_mesh, audio_ser, text_nlp, cross_modal_cmaf")
+    provider: Optional[str] = Field(None, description="Execution provider: CPUExecutionProvider, CUDAExecutionProvider, DmlExecutionProvider")
+    precision: Optional[str] = Field("INT8", description="Precision: FP32, FP16, INT8, Dynamic_INT8")
+    iterations: Optional[int] = Field(20, description="Iterations for latency stress testing")
+
+
+class EdgeQuantizeRequest(BaseModel):
+    model_name: str = Field("vision_mesh", description="Model to quantize")
+    target_precision: Optional[str] = Field("INT8", description="Target precision: FP16, INT8, Dynamic_INT8")
+
 
 
 class DialogueTranscriptRequest(BaseModel):
@@ -496,7 +515,41 @@ async def get_cohort_benchmarks():
         raise HTTPException(status_code=500, detail=f"Failed to fetch benchmarks: {str(exc)}")
 
 
+# =====================================================================
+# Phase 8: Edge AI Acceleration & Quantization Endpoints
+# =====================================================================
+
+@app.get("/api/edge/hardware", tags=["Edge Acceleration"])
+async def get_edge_hardware():
+    """Returns detected hardware specifications, CPU threads, RAM, and active ONNX execution providers."""
+    profile = edge_engine.get_device_profile()
+    return {"status": "success", "profile": profile.to_dict()}
+
+
+@app.post("/api/edge/benchmark", tags=["Edge Acceleration"])
+async def benchmark_edge_model(req: EdgeBenchmarkRequest):
+    """Executes latency stress testing across iterations, calculating P50/P95/P99 percentiles and FPS throughput."""
+    res = edge_bench_suite.run_benchmark(
+        model_name=req.model_name or "vision_mesh",
+        provider=req.provider,
+        precision=req.precision or "INT8",
+        iterations=req.iterations or 20,
+    )
+    return {"status": "success", "benchmark": res.to_dict()}
+
+
+@app.post("/api/edge/quantize", tags=["Edge Acceleration"])
+async def quantize_edge_model(req: EdgeQuantizeRequest):
+    """Computes dynamic post-training quantization metrics, size reduction ratios, and accuracy retention."""
+    summary = edge_quantizer.optimize_model(
+        model_name=req.model_name,
+        target_precision=req.target_precision or "INT8",
+    )
+    return {"status": "success", "quantization": summary.to_dict()}
+
+
 @app.websocket("/ws/stream-affect")
+
 async def websocket_affect_stream(websocket: WebSocket):
     """Real-time bidirectional WebSocket stream for interactive typing affect decoding."""
     await websocket.accept()
