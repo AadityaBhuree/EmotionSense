@@ -338,6 +338,46 @@ def test_longitudinal_endpoints(client):
     assert t_data["profile"]["total_sessions"] == 0
 
 
+def test_api_edge_endpoints(client):
+    # 1. Test Hardware Profile Endpoint
+    hw_res = client.get("/api/edge/hardware")
+    assert hw_res.status_code == 200
+    hw_data = hw_res.json()
+    assert hw_data["status"] == "success"
+    assert "profile" in hw_data
+    assert "provider" in hw_data["profile"]
+
+    # 2. Test Benchmark Endpoint
+    bench_res = client.post(
+        "/api/edge/benchmark",
+        json={
+            "model_name": "vision_mesh",
+            "precision": "INT8",
+            "iterations": 10,
+        }
+    )
+    assert bench_res.status_code == 200
+    b_data = bench_res.json()
+    assert b_data["status"] == "success"
+    assert b_data["benchmark"]["model_name"] == "vision_mesh"
+    assert b_data["benchmark"]["mean_latency_ms"] > 0.0
+
+    # 3. Test Quantization Estimation Endpoint
+    quant_res = client.post(
+        "/api/edge/quantize",
+        json={
+            "model_name": "audio_ser",
+            "target_precision": "INT8",
+        }
+    )
+    assert quant_res.status_code == 200
+    q_data = quant_res.json()
+    assert q_data["status"] == "success"
+    assert q_data["quantization"]["compression_ratio"] > 1.0
+    assert q_data["quantization"]["quantized_size_mb"] < q_data["quantization"]["original_size_mb"]
+
+
+
 
 
 

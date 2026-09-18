@@ -49,10 +49,9 @@ class EdgeBenchmarkSuite:
         dummy_input = np.random.randn(1, 128).astype(np.float32)
 
         for _ in range(iterations):
-            t0 = time.perf_counter()
-            _ = self.engine.run_synthetic_inference(model_name, dummy_input, precision=precision)
-            elapsed_ms = (time.perf_counter() - t0) * 1000.0
-            latencies.append(elapsed_ms)
+            inf_res = self.engine.run_synthetic_inference(model_name, dummy_input, precision=precision)
+            latencies.append(inf_res["latency_ms"])
+
 
         lat_arr = np.array(latencies)
         mean_lat = float(np.mean(lat_arr))

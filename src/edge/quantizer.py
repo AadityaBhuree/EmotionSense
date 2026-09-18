@@ -84,9 +84,11 @@ class ModelQuantizationOptimizer:
             zero_point = int(np.round(-val_min / scale)) + qmin
 
         # Quantize
-        q_arr = np.clip(np.round(arr / scale) + zero_point, qmin, qmax).astype(np.int8 if bits == 8 else np.int32)
+        target_dtype = np.int8 if (bits == 8 and symmetric) else (np.uint8 if bits == 8 else np.int32)
+        q_arr = np.clip(np.round(arr / scale) + zero_point, qmin, qmax).astype(target_dtype)
         # Dequantize
         deq_arr = (q_arr.astype(np.float32) - zero_point) * scale
+
 
         # Error metrics
         mse = float(np.mean((arr - deq_arr) ** 2))
