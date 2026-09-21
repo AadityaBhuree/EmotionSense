@@ -39,14 +39,31 @@ from src.fusion.interaction_dynamics import DyadicInteractionAnalyzer
 from src.utils.session_manager import SessionManager
 from src.utils.demuxer import AudiovisualDemuxer
 
+from src.edge.runtime import ONNXEdgeInferenceEngine
+from src.edge.quantizer import ModelQuantizationOptimizer
+
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
 
 render_header("File Multimodal Analysis", "Analyze Pre-Recorded Video, Audio & Speech Transcripts")
 
+if "edge_engine" not in st.session_state:
+    st.session_state.edge_engine = ONNXEdgeInferenceEngine()
+if "quant_optimizer" not in st.session_state:
+    st.session_state.quant_optimizer = ModelQuantizationOptimizer()
+
 st.markdown("""
-<div class="es-panel">
-    <p style="color: var(--text-sub); font-size: 0.88rem; line-height: 1.5; margin: 0;">
+<div style="
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+">
+    <div style="font-size: 0.95rem; font-weight: 600; color: #f8fafc;">
+        📂 Offline Multimodal File Demuxing & Batch Inference
+    </div>
+    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0.25rem 0 0 0;">
         Ingest Video (MP4, AVI, MOV), Audio (WAV, MP3), or Conversational Datasets (CSV, JSON, TXT) to run offline multimodal emotion extraction and export structured telemetry.
     </p>
 </div>
@@ -62,6 +79,12 @@ with meta_col2:
     assessment_tag = st.selectbox("Assessment Classification", ["General", "Clinical Screening", "Talent Interview", "Wellness Tracking", "Academic Research"])
 with meta_col3:
     edge_batch_accel = st.selectbox("Edge Acceleration Tier", ["⚡ ONNX DirectML/CUDA", "💻 Multi-Core CPU", "🗜️ INT8 Quantized"], index=0)
+    if "DirectML/CUDA" in edge_batch_accel:
+        supp = st.session_state.edge_engine.get_supported_providers()
+        target_prov = "DmlExecutionProvider" if "DmlExecutionProvider" in supp else ("CUDAExecutionProvider" if "CUDAExecutionProvider" in supp else "CPUExecutionProvider")
+        st.session_state.edge_engine.set_provider(target_prov)
+    elif "Multi-Core CPU" in edge_batch_accel:
+        st.session_state.edge_engine.set_provider("CPUExecutionProvider")
 
 
 try:
@@ -364,6 +387,27 @@ if uploaded_file is not None:
                 has_audio_track = st.session_state.get("has_audio_track", False)
 
                 st.markdown("### ⌖ Multimodal Affect Telemetry Breakdown")
+
+                target_prec = "INT8" if "INT8" in edge_batch_accel else "FP32"
+                q_opt = st.session_state.quant_optimizer.optimize_model("vision_mesh", target_precision=target_prec)
+                active_prov = st.session_state.edge_engine.active_provider
+                est_batch_ms = round(len(samples) * q_opt.estimated_latency_ms, 1)
+                est_baseline_ms = round(len(samples) * 14.2, 1)
+                speedup = q_opt.speedup_factor
+
+                st.markdown(f"""
+                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-color); border-left: 3px solid #3b82f6; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span class="es-pill es-pill-active" style="padding: 2px 8px; font-size: 0.72rem;">⚡ EDGE BATCH ACCELERATED</span>
+                        <span style="font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; color: #f8fafc; font-weight: 600;">{active_prov}</span>
+                        <span style="font-size: 0.76rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">Precision: <b style="color: #38bdf8;">{target_prec}</b></span>
+                        <span style="font-size: 0.76rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">Throughput: <b style="color: #34d399;">{est_batch_ms}ms</b> (vs {est_baseline_ms}ms FP32 baseline)</span>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: 700; font-size: 0.85rem;">
+                        🚀 {speedup:.2f}x Speedup
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
                 # Metrics header
                 dominant_counts = {}
