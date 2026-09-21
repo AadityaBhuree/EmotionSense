@@ -22,6 +22,9 @@ from src.utils.pdf_exporter import ClinicalPDFExporter
 from src.storage import AssessmentType, SessionMetadata
 from src.fusion.anomaly_detector import AffectiveAnomalyDetector
 from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
+from src.edge.runtime import ONNXEdgeInferenceEngine
+from src.edge.quantizer import ModelQuantizationOptimizer
+from src.ui.components import render_edge_device_card
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -131,13 +134,34 @@ else:
                 st.success("Session metadata updated successfully!")
                 st.rerun()
 
-    # Edge Runtime & Telemetry HUD
-    st.markdown("""
-    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-        <span class="es-pill" style="font-size: 0.7rem; padding: 2px 7px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">⚡ RUNTIME: ONNX DIRECTML / CPU</span>
-        <span class="es-pill" style="font-size: 0.7rem; padding: 2px 7px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">🗜️ INT8 QUANTIZED MODEL</span>
+    if "edge_engine" not in st.session_state:
+        st.session_state.edge_engine = ONNXEdgeInferenceEngine()
+    if "quant_optimizer" not in st.session_state:
+        st.session_state.quant_optimizer = ModelQuantizationOptimizer()
+
+    # Edge Execution & Hardware Telemetry Audit
+    st.markdown("<div class='es-section-title'>⚡ Edge Execution & Hardware Telemetry Audit</div>", unsafe_allow_html=True)
+    with st.expander("🛠️ Host Hardware Profile & Execution Provider Diagnostics", expanded=False):
+        render_edge_device_card(st.session_state.edge_engine.get_device_profile())
+
+    edge_prof = st.session_state.edge_engine.get_device_profile()
+    q_opt_vision = st.session_state.quant_optimizer.optimize_model("vision_mesh", target_precision="INT8")
+    sample_cnt = session_data.get('samples_count', 0)
+    est_inference_time_ms = round(sample_cnt * q_opt_vision.estimated_latency_ms, 1)
+
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-color); border-left: 3px solid #10b981; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span class="es-pill es-pill-active" style="font-size: 0.72rem; padding: 2px 8px;">⚡ ONNX {edge_prof.provider.replace('ExecutionProvider', '')}</span>
+            <span style="font-size: 0.78rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">INT8 Footprint: <b style="color: #34d399;">{q_opt_vision.quantized_size_mb} MB</b> (Saved {q_opt_vision.original_size_mb - q_opt_vision.quantized_size_mb:.1f} MB RAM)</span>
+            <span style="font-size: 0.78rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace;">Est. Compute Time: <b style="color: #38bdf8;">{est_inference_time_ms} ms</b></span>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: 700; font-size: 0.85rem;">
+            🚀 {q_opt_vision.speedup_factor:.2f}x Acceleration
+        </div>
     </div>
     """, unsafe_allow_html=True)
+
     st.markdown("<div class='es-section-title'>📊 Session Aggregate Telemetry</div>", unsafe_allow_html=True)
 
 
