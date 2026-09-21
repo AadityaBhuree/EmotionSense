@@ -4,8 +4,10 @@ import streamlit as st
 import pandas as pd
 
 from src.ui.styles import inject_modern_styles
-from src.ui.components import render_header
+from src.ui.components import render_header, render_edge_device_card
 from src.core.config import EMOTION_VAD_COORDINATES
+from src.edge.runtime import ONNXEdgeInferenceEngine
+from src.edge.quantizer import ModelQuantizationOptimizer
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
@@ -388,6 +390,27 @@ with tab12:
     | **Face Mesh AU** | MediaPipe 468 3D | 34.0 ms | 13.8 ms | **2.46x** | `< 15.0 ms` |
     | **Cross-Modal CMAF** | Attentive Cross-Fusion | 42.0 ms | 17.5 ms | **2.40x** | `< 20.0 ms` |
     """)
+
+    st.markdown("#### 🔍 Active Host Hardware Introspection")
+    edge_eng = ONNXEdgeInferenceEngine()
+    quant_opt = ModelQuantizationOptimizer()
+    render_edge_device_card(edge_eng.get_device_profile())
+
+    st.markdown("#### 🗜️ Multimodal Catalog Model Quantization Matrix")
+    cat_rows = []
+    for m_key, m_val in quant_opt.MODEL_CATALOG.items():
+        summary_int8 = quant_opt.optimize_model(m_key, target_precision="INT8")
+        cat_rows.append({
+            "Multimodal Engine": m_val["name"],
+            "FP32 Baseline (MB)": f"{m_val['base_size_mb']:.1f} MB",
+            "INT8 Quantized (MB)": f"{summary_int8.quantized_size_mb:.1f} MB",
+            "Compression": f"{summary_int8.compression_ratio}x",
+            "FP32 Latency": f"{m_val['base_latency_ms']:.1f} ms",
+            "INT8 Latency": f"{summary_int8.estimated_latency_ms:.1f} ms",
+            "Speedup": f"{summary_int8.speedup_factor:.2f}x",
+            "Accuracy Retention": f"{summary_int8.accuracy_preservation_pct:.1f}%",
+        })
+    st.dataframe(pd.DataFrame(cat_rows), use_container_width=True)
 
 
 
