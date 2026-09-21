@@ -45,6 +45,8 @@ from src.ui.video_processor import (
     MultimodalVideoProcessor,
 )
 
+from src.edge.runtime import ONNXEdgeInferenceEngine
+
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
 inject_modern_styles()
@@ -60,6 +62,8 @@ if "face_detector" not in st.session_state:
     st.session_state.face_detector = FaceMeshDetector()
 if "emotion_classifier" not in st.session_state:
     st.session_state.emotion_classifier = FacialEmotionClassifier()
+if "edge_engine" not in st.session_state:
+    st.session_state.edge_engine = ONNXEdgeInferenceEngine()
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -70,6 +74,10 @@ with ctrl_col1:
     live_subj_id = st.text_input("Subject / Candidate ID", value="SUBJ_DEMO_01", help="Subject ID for longitudinal tracking & baseline deviation")
     st.session_state.live_subject_id = live_subj_id
     edge_accel = st.toggle("⚡ Edge ONNX Hardware Acceleration", value=True)
+    if edge_accel:
+        provs = st.session_state.edge_engine.get_supported_providers()
+        chosen_prov = st.selectbox("Hardware Execution Provider", provs, index=0, help="Select edge hardware execution provider")
+        st.session_state.edge_engine.set_provider(chosen_prov)
 
 with ctrl_col2:
     if not st.session_state.session_manager.is_recording:
@@ -101,10 +109,23 @@ with ctrl_col3:
     </div>
     """, unsafe_allow_html=True)
     if edge_accel:
-        st.markdown("""
-        <div style="margin-top: 4px;">
-            <span class="es-pill es-pill-active" style="padding: 1px 6px; font-size: 0.68rem;">⚡ EDGE ONNX ACTIVE</span>
-            <span style="font-size: 0.72rem; color: #3b82f6; font-family: 'JetBrains Mono', monospace; margin-left: 6px;">Pipeline: &lt;14.2ms</span>
+        edge_metric = st.session_state.edge_engine.run_synthetic_inference("vision_mesh")
+        lat_val = edge_metric.get("latency_ms", 6.2)
+        prov_chip = edge_metric.get("provider", "CPUExecutionProvider").replace("ExecutionProvider", "")
+        fps_budget = round(1000.0 / max(lat_val, 0.5), 1)
+        sla_pass = lat_val <= 16.6
+        sla_col = "#10b981" if sla_pass else ("#f59e0b" if lat_val <= 33.3 else "#ef4444")
+        sla_badge = "60 FPS SLA PASS" if sla_pass else ("30 FPS PASS" if lat_val <= 33.3 else "SLA BREACH")
+
+        st.markdown(f"""
+        <div style="margin-top: 6px; padding: 5px 8px; background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-color); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="es-pill es-pill-active" style="padding: 1px 6px; font-size: 0.65rem;">⚡ {prov_chip}</span>
+                <span style="font-size: 0.76rem; color: #3b82f6; font-family: 'JetBrains Mono', monospace; font-weight: 700;">{lat_val:.1f}ms</span>
+            </div>
+            <div style="font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; color: {sla_col}; margin-top: 2px;">
+                ● {sla_badge} ({fps_budget:.0f} FPS)
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -494,6 +515,15 @@ with left_col:
 # Telemetry Charts & Affect Dimension
 with right_col:
     st.markdown("#### ⚡ Real-Time Telemetry Rack")
+
+    if edge_accel:
+        prof = st.session_state.edge_engine.get_device_profile()
+        st.markdown(f"""
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace;">
+            <span>⚡ <b>EDGE RUNTIME:</b> <span style="color: #38bdf8;">{prof.provider}</span> ({prof.available_threads} concurrency)</span>
+            <span style="color: #10b981;"><b>{prof.power_profile}</b></span>
+        </div>
+        """, unsafe_allow_html=True)
 
     if is_dyadic_mode and "live_dyadic_metrics" in st.session_state:
         metrics = st.session_state.live_dyadic_metrics
