@@ -21,6 +21,7 @@ from src.ui.charts import (
     render_quantization_comparison_chart,
     render_edge_throughput_gauge,
 )
+from src.agent import LLMProviderFactory, LLMProviderConfig
 
 st.set_page_config(
     page_title="Edge Acceleration Studio | EmotionSense",
@@ -88,10 +89,11 @@ with st.sidebar:
     """)
 
 # Main Studio Tabs
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "🚀 Latency Benchmark & Stress Test",
     "🗜️ Model Quantization & Compression",
     "📦 Edge Manifest & Export",
+    "🤖 Edge SLM & Agent Profiling",
 ])
 
 with tab1:
@@ -215,3 +217,42 @@ with tab3:
         )
 
         st.code(manifest_json, language="json")
+
+with tab4:
+    st.markdown("#### 🤖 Local Edge SLM & Clinical Reasoner Profiling")
+    st.caption("Benchmark on-device Small Language Models (SLM) for zero-cloud data sovereignty, latency, and tokens-per-second throughput.")
+
+    slm_col1, slm_col2 = st.columns([1.5, 3.5])
+    with slm_col1:
+        target_slm = st.selectbox(
+            "Target Local Engine",
+            ["rule_based", "ollama"],
+            format_func=lambda x: "🛡️ Rule-Based Expert (0ms / Deterministic)" if x == "rule_based" else "🦙 Ollama Local Daemon (LLaMA 3.2 / Mistral)",
+            key="edge_slm_sel"
+        )
+        test_slm_btn = st.button("⚡ Profile SLM Generation", use_container_width=True, type="primary")
+
+    if test_slm_btn:
+        t0 = time.perf_counter()
+        prov = LLMProviderFactory.get_provider(LLMProviderConfig(provider_name=target_slm))
+        res_text = prov.generate("Evaluate clinical risk for session with minor valence dips")
+        dt_ms = (time.perf_counter() - t0) * 1000.0
+
+        with slm_col2:
+            st.markdown(f"**Engine Active:** `{prov.provider_name}` (`{prov.model_name}`)")
+            slm_m1, slm_m2, slm_m3 = st.columns(3)
+            with slm_m1:
+                render_metric_card("Inference Latency", f"{dt_ms:.1f} ms", delta="Sub-10ms Compliant" if dt_ms < 10 else "Local SLM")
+            with slm_m2:
+                tok_estimate = len(res_text.split()) * 1.3
+                tps = (tok_estimate / (dt_ms / 1000.0)) if dt_ms > 0 else 999.0
+                render_metric_card("Throughput", f"{min(tps, 500.0):.1f} tok/s", delta="Generation Speed")
+            with slm_m3:
+                render_metric_card("Data Sovereignty", "100% On-Device", delta="Zero Cloud Exfiltration")
+
+            st.markdown(f"""
+            <div class="es-panel" style="margin-top: 10px; font-size: 0.85rem; border-left: 3px solid #10b981;">
+                <b>Raw Output Payload Preview:</b><br/>
+                <code style="color: #cbd5e1; font-size: 0.78rem;">{res_text[:280]}...</code>
+            </div>
+            """, unsafe_allow_html=True)
