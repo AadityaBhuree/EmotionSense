@@ -9,12 +9,14 @@ from src.core.config import EMOTION_VAD_COORDINATES
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 
+from src.agent import ClinicalReasoningAgent, LLMProviderConfig
+
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -27,6 +29,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.t
     "👥 Multi-Speaker Diarization & Dyadic Synchrony",
     "📈 Longitudinal Profiling & Cohort Dynamics",
     "⚡ Edge Acceleration & INT8 Quantization",
+    "🤖 Agentic Reasoning & Clinical Copilot",
 ])
 
 
@@ -411,6 +414,99 @@ with tab12:
             "Accuracy Retention": f"{summary_int8.accuracy_preservation_pct:.1f}%",
         })
     st.dataframe(pd.DataFrame(cat_rows), use_container_width=True)
+
+with tab13:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">Phase 9: Multimodal Agentic Reasoning & Clinical Copilot Architecture</div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            EmotionSense Phase 9 bridges raw sensor telemetry and clinical decision-making. By applying token-efficient timeline compression,
+            Chain-of-Thought (CoT) diagnostic synthesis, and pluggable local/cloud LLM routing, the platform generates formal diagnostic dossiers
+            and powers an interactive, in-studio clinical copilot.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Agentic Reasoning Pipeline & Telemetry Compression
+
+    The agent transforms high-frequency multimodal time-series ($\approx 30$ FPS $\times$ 8 probabilities $\times$ 3D VAD) into high-density clinical landmarks:
+    - **Temporal Landmark Filtering**: Detecting velocity inflections where $\Delta \text{Valence} \le -0.40$ or $\Delta \text{Arousal} \ge +0.50$.
+    - **Affective Volatility & Statistical Summary**: Mean, min, max, and rolling standard deviation $\sigma_V, \sigma_A$ across the session.
+    - **Cross-Modal Incongruence Scoring**: Flags discrepancies between facial action units and vocal pitch prosody.
+
+    ```
+    Raw Video/Audio/Text (30 FPS)
+               │
+               ▼
+    Multimodal Fusion Engine (VAD, FACS, Prosody)
+               │
+               ▼
+    Temporal Compression & Anomaly Sentinel
+               │
+               ▼
+    Chain-of-Thought Prompt Formulation
+               │
+      ┌────────┴───────────────────────────┐
+      │ Pluggable Provider Routing Layer   │
+      │ ├── RuleBasedExpert (0ms, Offline) │
+      │ ├── Ollama (Local LLaMA 3.2 SLM)   │
+      │ ├── OpenAI / vLLM API Gateway      │
+      │ └── Google Gemini 1.5 Flash        │
+      └────────┬───────────────────────────┘
+               │
+               ▼
+    Structured DiagnosticSynthesis (Pydantic)
+      ├── Executive Clinical Summary
+      ├── Risk Assessment (MINIMAL .. ACUTE_CRISIS)
+      ├── Affective Observations (Facial, Acoustic, Semantic)
+      ├── Actionable Interventions & Urgency
+      └── In-Studio Interactive Copilot Q&A
+    ```
+
+    #### 2. Pluggable Reasoning Provider Strategy
+    1. **`RuleBasedExpertProvider`**: Zero-dependency deterministic offline synthesis. Executes instantaneously with guaranteed schema compliance.
+    2. **`OllamaProvider`**: On-device Small Language Model (SLM) inference via local HTTP daemon (e.g. `llama3.2:3b`, `mistral`, `phi-3`), preserving 100% data sovereignty.
+    3. **`OpenAICompatibleProvider`**: High-throughput vLLM, DeepSeek, or OpenAI endpoint integration for enterprise hospital networks.
+    4. **`GeminiProvider`**: Native Google GenAI integration with high-speed multi-modal reasoning.
+    """)
+
+    st.markdown("#### 🧪 Interactive Agentic Diagnostic Synthesizer")
+    sim_col1, sim_col2 = st.columns([1.5, 3.5])
+    with sim_col1:
+        test_prov = st.selectbox(
+            "Test Provider Engine",
+            ["rule_based", "ollama", "openai", "gemini"],
+            format_func=lambda x: {
+                "rule_based": "🛡️ Rule-Based Expert",
+                "ollama": "🦙 Ollama Local SLM",
+                "openai": "⚡ OpenAI API",
+                "gemini": "✨ Google Gemini",
+            }.get(x, x),
+            key="arch_test_prov"
+        )
+        test_synth_btn = st.button("⚡ Test Agent Synthesis", use_container_width=True)
+
+    if test_synth_btn:
+        with st.spinner("Synthesizing diagnostic evaluation..."):
+            cfg = LLMProviderConfig(provider_name=test_prov)
+            agent = ClinicalReasoningAgent(provider_config=cfg)
+            sample_session = {
+                "session_id": "arch_spec_session",
+                "candidate_id": "Architecture Specimen",
+                "assessment_type": "Stress Resilience Protocol",
+                "timeline_samples": [
+                    {"valence": 0.35, "arousal": 0.15, "timestamp_sec": 1.0},
+                    {"valence": -0.45, "arousal": 0.65, "timestamp_sec": 15.0},
+                    {"valence": 0.20, "arousal": 0.10, "timestamp_sec": 30.0},
+                ],
+                "anomalies": [{"timestamp_sec": 15.0, "anomaly_type": "valence_crash"}],
+            }
+            res = agent.synthesize_session(sample_session)
+            with sim_col2:
+                st.markdown(f"**Generated Assessment ({res.provider_used} / `{res.model_name}`)**")
+                st.info(res.executive_summary)
+                st.caption(f"Risk Tier: **{res.risk_assessment.risk_level.value}** (Score: {res.risk_assessment.overall_score:.1f}) • Concerns: {', '.join(res.risk_assessment.primary_concerns)}")
 
 
 
