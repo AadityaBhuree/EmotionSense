@@ -18,6 +18,7 @@ from src.ui.charts import (
 from src.ui.components import render_header
 from src.ui.styles import inject_modern_styles
 from src.utils.session_manager import SessionManager
+from src.agent import ClinicalReasoningAgent, LLMProviderConfig
 
 st.set_page_config(
     page_title="Longitudinal Analytics | EmotionSense",
@@ -269,6 +270,54 @@ with tab_table:
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
     else:
         st.info("No session points available for tabular inspection.")
+
+# Phase 9: Agentic Trajectory Prognosis & Cohort Prognostic Evaluation
+st.markdown("<div class='es-section-title'>🤖 Agentic Trajectory Prognosis & Clinical Forecasting</div>", unsafe_allow_html=True)
+prog_c1, prog_c2 = st.columns([2, 4])
+with prog_c1:
+    l_agent_prov = st.selectbox(
+        "🧠 Prognostic Reasoning Engine",
+        ["rule_based", "ollama", "openai", "gemini"],
+        format_func=lambda x: {
+            "rule_based": "🛡️ Rule-Based Expert (Offline)",
+            "ollama": "🦙 Ollama Local SLM",
+            "openai": "⚡ OpenAI API",
+            "gemini": "✨ Google Gemini",
+        }.get(x, x),
+        key="long_agent_prov"
+    )
+    gen_prog_btn = st.button("⚡ Forecast Clinical Trajectory", use_container_width=True, type="primary")
+
+prog_key = f"prog_{selected_sid}_{l_agent_prov}"
+if gen_prog_btn or prog_key in st.session_state:
+    if gen_prog_btn or prog_key not in st.session_state:
+        cfg = LLMProviderConfig(provider_name=l_agent_prov)
+        agent = ClinicalReasoningAgent(provider_config=cfg)
+        sim_pts = [
+            {"valence": p.mean_valence, "arousal": p.mean_arousal, "timestamp_sec": float(i * 10)}
+            for i, p in enumerate(points)
+        ]
+        s_data = {
+            "session_id": f"longitudinal_{selected_sid}",
+            "candidate_id": selected_sid,
+            "assessment_type": f"Longitudinal Prognosis ({len(points)} sessions)",
+            "timeline_samples": sim_pts,
+            "anomalies": [{"anomaly_type": "progression_checkpoint", "timestamp_sec": 0.0}] if profile.volatility_index > 0.25 else [],
+        }
+        st.session_state[prog_key] = agent.synthesize_session(s_data)
+
+    prognosis_synth = st.session_state[prog_key]
+    with prog_c2:
+        st.markdown(f"**Longitudinal Prognosis** ({prognosis_synth.provider_used} / `{prognosis_synth.model_name}`)")
+        st.info(f"**Prognosis:** {prognosis_synth.prognosis}\n\n**Executive Synthesis:** {prognosis_synth.executive_summary}")
+
+    p_cols = st.columns(3)
+    with p_cols[0]:
+        st.metric("Longitudinal Risk Tier", prognosis_synth.risk_assessment.risk_level.value, delta=f"Score: {prognosis_synth.risk_assessment.overall_score:.1f}/100")
+    with p_cols[1]:
+        st.metric("Trajectory Drift Slope", f"{profile.drift_slope:+.3f}", delta="OLS Valence / Session")
+    with p_cols[2]:
+        st.metric("Normative Stability", f"{profile.stability_score:.1f}%", delta="Cohort Relative")
 
 # 5. Clinical Export Toolbar
 st.markdown("---")
