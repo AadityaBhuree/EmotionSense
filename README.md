@@ -79,6 +79,13 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Population Cohort Benchmarking**: Normalizes individual trajectories against clinical and organizational cohort distributions via Gaussian CDF percentiles.
 - **Dedicated Longitudinal Studio (`6_📈_Longitudinal_Analytics.py`)**: Interactive subject scrubbing, regression waveforms, and polar volatility radar dials.
 
+### 🤖 Multimodal Agentic Reasoning & Clinical Copilot (Phase 9)
+- **Chain-of-Thought (CoT) Diagnostic Synthesis**: Analyzes multi-modal telemetry landmarks (inflection points, anomalies, variance) to produce structured executive clinical summaries, risk stratification scores, and actionable therapeutic interventions.
+- **Pluggable Multi-Provider Architecture**: Supports 100% offline `RuleBasedExpert` (0ms, zero cloud exfiltration), `Ollama` local SLMs (LLaMA 3.2 3B, Mistral 7B), `OpenAI / vLLM` endpoints, and `Google Gemini 1.5 Flash`.
+- **In-Studio Interactive Copilot Q&A**: Real-time conversational interface in Session History (`4_📑_Session_History.py`) and Text Studio (`1_💬_Text_Studio.py`) allowing clinicians to ask deep diagnostic questions about emotional inflection points.
+- **Live Distress Triage Sentinel**: Proactively surfaces acute valence crash alerts and cognitive fatigue warnings with real-time clinician action hints in Live Studio (`2_🎥_Live_Studio.py`).
+- **REST & Microservice Endpoints**: `/api/agent/providers`, `/api/agent/synthesize`, and `/api/agent/chat` exposing high-performance automated synthesis to enterprise clients.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
