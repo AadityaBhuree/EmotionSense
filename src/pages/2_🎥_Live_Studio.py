@@ -46,6 +46,7 @@ from src.ui.video_processor import (
 )
 
 from src.edge.runtime import ONNXEdgeInferenceEngine
+from src.agent import ClinicalReasoningAgent
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -599,6 +600,30 @@ with right_col:
         if current_state:
             render_affect_summary_badge(current_state)
             render_state_indicators(current_state)
+
+            # Phase 9: AI Live Clinical Distress Triage & Copilot Alerts
+            live_agent = ClinicalReasoningAgent()
+            triage_info = live_agent.triage_live_state(
+                {
+                    "valence": current_state.affect.valence,
+                    "arousal": current_state.affect.arousal,
+                    "dominance": current_state.affect.dominance,
+                    "dominant_emotion": current_state.dominant_emotion,
+                    "timestamp_sec": time.time(),
+                },
+                st.session_state.stream_context.fusion_engine.get_recent_history(),
+            )
+
+            if triage_info["triage_status"] == "ELEVATED_DISTRESS":
+                st.error(f"🚨 **AI Clinical Copilot Alert:** {triage_info['alert_message']}\n\n💡 **Action Hint:** {triage_info['action_hint']}")
+            elif triage_info["triage_status"] == "COGNITIVE_FATIGUE":
+                st.warning(f"⚠️ **AI Copilot Notice:** {triage_info['alert_message']}\n\n💡 **Action Hint:** {triage_info['action_hint']}")
+            else:
+                st.markdown(f"""
+                <div class="es-panel" style="padding: 6px 12px; margin-bottom: 8px; border-left: 3px solid #10b981; font-size: 0.82rem;">
+                    🤖 <b>AI Clinical Copilot Triage:</b> <span style="color:#10b981;">STABLE</span> — {triage_info['alert_message']}
+                </div>
+                """, unsafe_allow_html=True)
 
             # Phase 7: Real-Time Subject Longitudinal Baseline Deviation
             active_subj_id = st.session_state.get("live_subject_id", "SUBJ_DEMO_01")
