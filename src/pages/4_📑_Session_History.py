@@ -25,6 +25,12 @@ from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.ui.components import render_edge_device_card
+from src.agent import (
+    ClinicalReasoningAgent,
+    ClinicalChatCopilot,
+    ChatCopilotQuery,
+    LLMProviderConfig,
+)
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -384,6 +390,100 @@ else:
                 mime="text/csv",
                 use_container_width=True
             )
+
+    # Phase 9: AI Clinical Copilot & Automated Diagnostic Synthesis
+    st.markdown("<div class='es-section-title'>🤖 AI Clinical Copilot & Diagnostic Synthesis</div>", unsafe_allow_html=True)
+
+    agent_cols = st.columns([1.5, 3.5])
+    with agent_cols[0]:
+        agent_provider = st.selectbox(
+            "🧠 Reasoning Engine Provider",
+            ["rule_based", "ollama", "openai", "gemini"],
+            format_func=lambda x: {
+                "rule_based": "🛡️ Rule-Based Expert (Offline / 0ms)",
+                "ollama": "🦙 Ollama (Local LLM LLaMA/Mistral)",
+                "openai": "⚡ OpenAI / vLLM API",
+                "gemini": "✨ Google Gemini 1.5 Flash",
+            }.get(x, x),
+            key="p4_agent_provider"
+        )
+        synthesize_btn = st.button("⚡ Synthesize Clinical Assessment", use_container_width=True, type="primary")
+
+    synth_key = f"synth_{selected_id}_{agent_provider}"
+    if synthesize_btn or synth_key in st.session_state:
+        if synthesize_btn:
+            with st.spinner("Executing Chain-of-Thought Multimodal Affective Synthesis..."):
+                cfg = LLMProviderConfig(provider_name=agent_provider)
+                agent = ClinicalReasoningAgent(provider_config=cfg)
+                st.session_state[synth_key] = agent.synthesize_session(session_data)
+
+        synthesis = st.session_state[synth_key]
+
+        with agent_cols[1]:
+            st.markdown(f"**Executive Clinical Summary** ({synthesis.provider_used} / `{synthesis.model_name}`)")
+            st.info(synthesis.executive_summary)
+
+        # Risk Stratification Cards
+        r_cols = st.columns(4)
+        risk = synthesis.risk_assessment
+        with r_cols[0]:
+            render_metric_card("Risk Tier", risk.risk_level.value, delta=f"Score: {risk.overall_score:.1f}/100")
+        with r_cols[1]:
+            render_metric_card("Distress Index", f"{risk.distress_index:.2f}", delta="Autonomic arousal")
+        with r_cols[2]:
+            render_metric_card("Fatigue Index", f"{risk.fatigue_index:.2f}", delta="Cognitive exhaustion")
+        with r_cols[3]:
+            render_metric_card("Volatility", f"{risk.volatility_index:.2f}", delta="Affect trajectory drift")
+
+        # Observations & Interventions Tabs
+        t1, t2, t3 = st.tabs(["🔬 Clinical Observations", "📋 Recommended Interventions", "💬 Copilot Q&A Console"])
+        with t1:
+            obs_data = [
+                {
+                    "Domain": o.domain.capitalize(),
+                    "Objective Finding": o.finding,
+                    "Clinical Significance": o.clinical_significance,
+                    "Confidence": f"{int(o.confidence * 100)}%",
+                }
+                for o in synthesis.observations
+            ]
+            st.dataframe(pd.DataFrame(obs_data), use_container_width=True)
+
+        with t2:
+            int_data = [
+                {
+                    "Recommended Action": i.action,
+                    "Urgency": i.urgency.value,
+                    "Clinical Rationale": i.rationale,
+                    "Contraindications": i.contraindications or "None",
+                }
+                for i in synthesis.interventions
+            ]
+            st.dataframe(pd.DataFrame(int_data), use_container_width=True)
+
+        with t3:
+            st.caption("Ask questions about this session's affective telemetry, anomalies, or turning points:")
+            q_cols = st.columns([4, 1])
+            with q_cols[0]:
+                user_q = st.text_input("Clinician Query", placeholder="e.g. Why did arousal surge? What are primary risks?", key=f"q_{selected_id}")
+            with q_cols[1]:
+                st.write("")
+                st.write("")
+                ask_btn = st.button("Ask Copilot", use_container_width=True)
+
+            if user_q and (ask_btn or f"chat_{selected_id}_{user_q}" in st.session_state):
+                chat_k = f"chat_{selected_id}_{user_q}"
+                if ask_btn or chat_k not in st.session_state:
+                    with st.spinner("Copilot analyzing session telemetry..."):
+                        cfg = LLMProviderConfig(provider_name=agent_provider)
+                        copilot = ClinicalChatCopilot(provider_config=cfg)
+                        q_obj = ChatCopilotQuery(session_id=selected_id, question=user_q)
+                        st.session_state[chat_k] = copilot.query(q_obj, session_context=session_data)
+
+                c_resp = st.session_state[chat_k]
+                st.markdown(f"**Copilot Answer:** {c_resp.answer}")
+                if c_resp.suggested_followups:
+                    st.caption("Suggested follow-up inquiries: " + " • ".join(c_resp.suggested_followups))
 
     # Multi-Session Comparative Benchmarking
     if len(db_sessions) > 1:
