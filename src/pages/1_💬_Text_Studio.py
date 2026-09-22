@@ -27,6 +27,7 @@ from src.utils.session_manager import SessionManager
 
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
+from src.agent import ClinicalChatCopilot, ChatCopilotQuery, LLMProviderConfig
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -276,6 +277,43 @@ if mode == "📝 Single Message & Live Salience":
             for r in replies:
                 st.markdown(f'<div style="background: var(--surface-raised); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; margin-bottom: 5px; font-size: 0.82rem; color: #e2e8f0; border-left: 2px solid #3b82f6; font-family: \'JetBrains Mono\', monospace;">💬 {r}</div>', unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # Phase 9: AI Linguistic Affect Reasoning & Intent Analysis
+        st.markdown("<div class='es-section-title' style='margin-top: 1rem;'>🤖 AI Linguistic Affect Reasoning & Intent Analysis</div>", unsafe_allow_html=True)
+        c1, c2 = st.columns([2, 4])
+        with c1:
+            txt_agent_provider = st.selectbox(
+                "🧠 Agent Provider",
+                ["rule_based", "ollama", "openai", "gemini"],
+                format_func=lambda x: {
+                    "rule_based": "🛡️ Rule-Based Expert (Offline)",
+                    "ollama": "🦙 Ollama Local SLM",
+                    "openai": "⚡ OpenAI API",
+                    "gemini": "✨ Google Gemini",
+                }.get(x, x),
+                key="txt_agent_prov"
+            )
+            analyze_intent_btn = st.button("⚡ Reason Semantic Intent", use_container_width=True, type="primary")
+
+        intent_k = f"intent_{text_input}_{txt_agent_provider}"
+        if analyze_intent_btn or intent_k in st.session_state:
+            if analyze_intent_btn or intent_k not in st.session_state:
+                cfg = LLMProviderConfig(provider_name=txt_agent_provider)
+                copilot = ClinicalChatCopilot(provider_config=cfg)
+                q = ChatCopilotQuery(
+                    session_id="text_stream",
+                    question=f"Analyze linguistic vulnerability, communicative intent, and affective subtext of: '{text_input}'"
+                )
+                st.session_state[intent_k] = copilot.query(q, session_context={"timeline_samples": [{"valence": res.affect.valence, "arousal": res.affect.arousal}]})
+
+            intent_resp = st.session_state[intent_k]
+            with c2:
+                st.markdown(f"""
+                <div class="es-panel" style="border-left: 3px solid #3b82f6; padding: 12px 16px;">
+                    <span style="font-size: 0.85rem; color: #94a3b8;">🧠 <b>Linguistic Affect Reasoning:</b></span><br/>
+                    <div style="font-size: 0.9rem; color: #f1f5f9; margin-top: 4px;">{intent_resp.answer}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 
 elif mode == "🗨️ Multi-turn Dialogue Transcript":
