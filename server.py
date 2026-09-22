@@ -28,6 +28,7 @@ from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.edge.benchmark import EdgeBenchmarkSuite
+from src.agent import ClinicalReasoningAgent, ClinicalChatCopilot, ChatCopilotQuery, LLMProviderConfig
 
 
 # Initialize FastAPI App
@@ -56,6 +57,8 @@ db = SessionDatabase()
 edge_engine = ONNXEdgeInferenceEngine()
 edge_quantizer = ModelQuantizationOptimizer()
 edge_bench_suite = EdgeBenchmarkSuite(engine=edge_engine, quantizer=edge_quantizer)
+clinical_agent = ClinicalReasoningAgent()
+chat_copilot = ClinicalChatCopilot()
 
 
 # Request & Response Schemas
@@ -74,6 +77,22 @@ class EdgeBenchmarkRequest(BaseModel):
 class EdgeQuantizeRequest(BaseModel):
     model_name: str = Field("vision_mesh", description="Model to quantize")
     target_precision: Optional[str] = Field("INT8", description="Target precision: FP16, INT8, Dynamic_INT8")
+
+
+class AgentSynthesizeRequest(BaseModel):
+    session_id: Optional[str] = Field("sess_api_default", description="Session identifier")
+    subject_id: Optional[str] = Field("Anonymous", description="Candidate or patient identifier")
+    assessment_type: Optional[str] = Field("General Assessment", description="Assessment type")
+    timeline_samples: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Timeline samples")
+    anomalies: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Anomalies detected")
+    provider_name: Optional[str] = Field("rule_based", description="LLM provider: rule_based, ollama, openai, gemini")
+
+
+class AgentChatRequest(BaseModel):
+    session_id: str = Field(..., description="Session identifier")
+    question: str = Field(..., description="Clinician question")
+    history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Chat history")
+    provider_name: Optional[str] = Field("rule_based", description="LLM provider: rule_based, ollama, openai, gemini")
 
 
 
@@ -546,6 +565,53 @@ async def quantize_edge_model(req: EdgeQuantizeRequest):
         target_precision=req.target_precision or "INT8",
     )
     return {"status": "success", "quantization": summary.to_dict()}
+
+
+@app.get("/api/agent/providers", tags=["Agentic Reasoning"])
+async def get_agent_providers():
+    """Returns supported LLM/SLM reasoning providers and active default."""
+    return {
+        "status": "success",
+        "providers": ["rule_based", "ollama", "openai", "gemini"],
+        "active_default": "rule_based",
+    }
+
+
+@app.post("/api/agent/synthesize", tags=["Agentic Reasoning"])
+async def synthesize_session_diagnostics(req: AgentSynthesizeRequest):
+    """Executes Chain-of-Thought clinical diagnostic synthesis across multimodal session telemetry."""
+    session_data = {
+        "session_id": req.session_id,
+        "candidate_id": req.subject_id,
+        "assessment_type": req.assessment_type,
+        "timeline_samples": req.timeline_samples or [],
+        "anomalies": req.anomalies or [],
+    }
+    config = LLMProviderConfig(provider_name=req.provider_name or "rule_based")
+    agent = ClinicalReasoningAgent(provider_config=config)
+    synthesis = agent.synthesize_session(session_data)
+    return {"status": "success", "synthesis": synthesis.model_dump()}
+
+
+@app.post("/api/agent/chat", tags=["Agentic Reasoning"])
+async def chat_clinical_copilot(req: AgentChatRequest):
+    """Answers clinician queries grounded in multimodal session telemetry."""
+    config = LLMProviderConfig(provider_name=req.provider_name or "rule_based")
+    copilot = ClinicalChatCopilot(provider_config=config)
+    query = ChatCopilotQuery(
+        session_id=req.session_id,
+        question=req.question,
+    )
+    ctx = {"session_id": req.session_id}
+    stored = db.get_session(req.session_id)
+    if stored:
+        ctx["timeline_samples"] = stored.get("timeline_samples", [])
+        ctx["anomalies"] = stored.get("anomalies", [])
+        ctx["candidate_id"] = stored.get("candidate_id", "Anonymous")
+        ctx["assessment_type"] = stored.get("assessment_type", "Assessment")
+
+    resp = copilot.query(query, session_context=ctx)
+    return {"status": "success", "response": resp.model_dump()}
 
 
 @app.websocket("/ws/stream-affect")

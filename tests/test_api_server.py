@@ -377,6 +377,53 @@ def test_api_edge_endpoints(client):
     assert q_data["quantization"]["quantized_size_mb"] < q_data["quantization"]["original_size_mb"]
 
 
+def test_agent_api_endpoints(client):
+    """Test Phase 9 agentic endpoints: providers, diagnostic synthesis, and chat copilot."""
+    # 1. Providers endpoint
+    p_res = client.get("/api/agent/providers")
+    assert p_res.status_code == 200
+    p_data = p_res.json()
+    assert p_data["status"] == "success"
+    assert "rule_based" in p_data["providers"]
+    assert "ollama" in p_data["providers"]
+
+    # 2. Synthesize endpoint
+    synth_res = client.post(
+        "/api/agent/synthesize",
+        json={
+            "session_id": "sess_api_test_01",
+            "subject_id": "TestSubject",
+            "assessment_type": "Clinical Screening",
+            "timeline_samples": [
+                {"valence": 0.2, "arousal": 0.1, "timestamp_sec": 1.0},
+                {"valence": -0.5, "arousal": 0.7, "timestamp_sec": 2.0},
+            ],
+            "anomalies": [{"timestamp_sec": 2.0, "anomaly_type": "valence_crash"}],
+            "provider_name": "rule_based",
+        }
+    )
+    assert synth_res.status_code == 200
+    s_data = synth_res.json()
+    assert s_data["status"] == "success"
+    assert s_data["synthesis"]["session_id"] == "sess_api_test_01"
+    assert "risk_assessment" in s_data["synthesis"]
+
+    # 3. Chat copilot endpoint
+    chat_res = client.post(
+        "/api/agent/chat",
+        json={
+            "session_id": "sess_api_test_01",
+            "question": "Why did the candidate display elevated stress?",
+            "provider_name": "rule_based",
+        }
+    )
+    assert chat_res.status_code == 200
+    c_data = chat_res.json()
+    assert c_data["status"] == "success"
+    assert len(c_data["response"]["answer"]) > 10
+    assert len(c_data["response"]["suggested_followups"]) > 0
+
+
 
 
 
