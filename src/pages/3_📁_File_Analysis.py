@@ -41,6 +41,7 @@ from src.utils.demuxer import AudiovisualDemuxer
 
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
+from src.agent import ClinicalReasoningAgent, LLMProviderConfig
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -452,6 +453,56 @@ if uploaded_file is not None:
                     last_affect = samples[-1].affect if samples else AffectVector()
                     history_affects = [s.affect for s in samples]
                     st.plotly_chart(render_affect_quadrant_chart(last_affect, history_affects=history_affects), use_container_width=True)
+
+                # Phase 9: AI Multimodal Diagnostic Synthesis & Candidate Evaluation
+                st.markdown("<div class='es-section-title'>🤖 AI Diagnostic Synthesis & Candidate Evaluation</div>", unsafe_allow_html=True)
+                syn_c1, syn_c2 = st.columns([2, 4])
+                with syn_c1:
+                    f_agent_prov = st.selectbox(
+                        "🧠 Agent Reasoner",
+                        ["rule_based", "ollama", "openai", "gemini"],
+                        format_func=lambda x: {
+                            "rule_based": "🛡️ Rule-Based Expert (Offline)",
+                            "ollama": "🦙 Ollama Local SLM",
+                            "openai": "⚡ OpenAI API",
+                            "gemini": "✨ Google Gemini",
+                        }.get(x, x),
+                        key="file_agent_prov"
+                    )
+                    gen_file_synth_btn = st.button("⚡ Generate Diagnostic Evaluation", use_container_width=True, type="primary")
+
+                f_synth_key = "file_synth_active"
+                if gen_file_synth_btn or f_synth_key in st.session_state:
+                    if gen_file_synth_btn or f_synth_key not in st.session_state:
+                        cfg = LLMProviderConfig(provider_name=f_agent_prov)
+                        agent = ClinicalReasoningAgent(provider_config=cfg)
+                        mock_pts = [
+                            {"valence": s.affect.valence, "arousal": s.affect.arousal, "dominance": s.affect.dominance, "dominant_emotion": s.dominant_emotion, "timestamp_sec": float(i)}
+                            for i, s in enumerate(samples)
+                        ]
+                        s_data = {
+                            "session_id": "file_analysis_session",
+                            "candidate_id": "File Analysis Subject",
+                            "assessment_type": "Multimodal File Evaluation",
+                            "timeline_samples": mock_pts,
+                            "anomalies": [],
+                        }
+                        st.session_state[f_synth_key] = agent.synthesize_session(s_data)
+
+                    f_synth = st.session_state[f_synth_key]
+                    with syn_c2:
+                        st.markdown(f"**Executive Diagnostic Assessment** ({f_synth.provider_used} / `{f_synth.model_name}`)")
+                        st.info(f_synth.executive_summary)
+
+                    rf_cols = st.columns(4)
+                    with rf_cols[0]:
+                        render_metric_card("Risk Tier", f_synth.risk_assessment.risk_level.value, delta=f"Score: {f_synth.risk_assessment.overall_score:.1f}/100")
+                    with rf_cols[1]:
+                        render_metric_card("Distress", f"{f_synth.risk_assessment.distress_index:.2f}", delta="Autonomic level")
+                    with rf_cols[2]:
+                        render_metric_card("Fatigue", f"{f_synth.risk_assessment.fatigue_index:.2f}", delta="Cognitive load")
+                    with rf_cols[3]:
+                        render_metric_card("Volatility", f"{f_synth.risk_assessment.volatility_index:.2f}", delta="Affect drift")
 
                 # Save session option
                 if "file_session_record" in st.session_state:
