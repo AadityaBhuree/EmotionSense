@@ -10,13 +10,19 @@ from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 
 from src.agent import ClinicalReasoningAgent, LLMProviderConfig
+from src.analytics.biometrics import BiometricEngine
+from src.core.biometric_models import PulseMeasurement, HRVMetrics, RespirationMetrics
+from src.ui.biometric_charts import (
+    render_autonomic_stress_gauge,
+    render_autonomic_balance_bar,
+)
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -30,6 +36,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
     "📈 Longitudinal Profiling & Cohort Dynamics",
     "⚡ Edge Acceleration & INT8 Quantization",
     "🤖 Agentic Reasoning & Clinical Copilot",
+    "🫀 Remote Biometrics & Autonomic Telemetry",
 ])
 
 
@@ -507,6 +514,65 @@ with tab13:
                 st.markdown(f"**Generated Assessment ({res.provider_used} / `{res.model_name}`)**")
                 st.info(res.executive_summary)
                 st.caption(f"Risk Tier: **{res.risk_assessment.risk_level.value}** (Score: {res.risk_assessment.overall_score:.1f}) • Concerns: {', '.join(res.risk_assessment.primary_concerns)}")
+
+
+with tab14:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            🫀 Phase 10: Remote Biometrics, Optical rPPG & Autonomic Stress Telemetry
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Extracts contact-free cardiac and autonomic nervous system biomarkers (Pulse BPM, HRV RMSSD, Respiration RPM, and Baevsky Stress Index) from facial skin capillary bed micro-absorptions without wearable hardware.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Mathematical Formulation: Plane-Orthogonal-to-Skin (POS)
+    Given mean skin region-of-interest (ROI) temporal intensities $C(t) = [R(t), G(t), B(t)]^T$ normalized by temporal mean $\mu_C$:
+
+    $$r(t) = \frac{R(t)}{\mu_R}, \quad g(t) = \frac{G(t)}{\mu_G}, \quad b(t) = \frac{B(t)}{\mu_B}$$
+
+    The chrominance projection planes defined by Wang et al. (IEEE TBME 2017):
+
+    $$S_1(t) = 3 r(t) - 2 g(t)$$
+    $$S_2(t) = 1.5 r(t) + g(t) - 1.5 b(t)$$
+
+    With dynamic projection ratio $\alpha = \frac{\sigma(S_1)}{\sigma(S_2)}$:
+
+    $$\text{BVP}(t) = S_1(t) - \alpha S_2(t)$$
+
+    A forward-backward 2nd-order Butterworth bandpass filter ($0.75\,\text{Hz} - 3.0\,\text{Hz}$) filters motion noise outside the $45 - 180\,\text{BPM}$ physiological cardiac window.
+
+    #### 2. Clinical Heart Rate Variability (HRV) & Autonomic Metrics
+    From extracted inter-beat intervals $RR = \{rr_1, rr_2, \dots, rr_N\}$:
+    - **SDNN**: Standard deviation of all NN intervals: $\text{SDNN} = \sqrt{\frac{1}{N-1}\sum_{i=1}^N (rr_i - \overline{rr})^2}$
+    - **RMSSD**: Root mean square of successive differences (parasympathetic vagal tone):
+      $$\text{RMSSD} = \sqrt{\frac{1}{N-1}\sum_{i=1}^{N-1} (rr_{i+1} - rr_i)^2}$$
+    - **Baevsky's Stress Index (SI)**: Quantifies sympathetic regulatory strain:
+      $$\text{SI} = \frac{\text{AMo}}{2 \times \text{Mo} \times \text{MxDMn}}$$
+      where $\text{Mo}$ is mode of intervals, $\text{AMo}$ is amplitude of mode (%), and $\text{MxDMn} = \max(RR) - \min(RR)$.
+    """)
+
+    st.markdown("#### 🧪 Interactive Autonomic Stress Simulator")
+    sim_b1, sim_b2 = st.columns([1.5, 3.5])
+    with sim_b1:
+        test_bpm = st.slider("Pulse Rate (BPM)", 50, 150, 82)
+        test_rmssd = st.slider("HRV RMSSD (ms)", 10, 80, 32)
+        test_si = st.slider("Baevsky Stress Index", 20, 500, 120)
+        test_val = st.slider("Valence", -1.0, 1.0, -0.3)
+        test_aro = st.slider("Arousal", 0.0, 1.0, 0.6)
+
+    test_pulse = PulseMeasurement(bpm=float(test_bpm), signal_quality_snr=15.0)
+    test_hrv = HRVMetrics(rmssd_ms=float(test_rmssd), baevsky_stress_index=float(test_si))
+    test_resp = RespirationMetrics(rpm=16.0)
+    calc_stress = BiometricEngine.compute_autonomic_stress(test_pulse, test_hrv, test_resp, valence=test_val, arousal=test_aro)
+
+    with sim_b2:
+        st.markdown(f"**Autonomic Classification:** `{calc_stress.classification.upper()}` (Score: **{calc_stress.stress_index:.2f}**)")
+        st.plotly_chart(render_autonomic_stress_gauge(calc_stress, height=200), use_container_width=True)
+        st.plotly_chart(render_autonomic_balance_bar(calc_stress, height=75), use_container_width=True)
 
 
 
