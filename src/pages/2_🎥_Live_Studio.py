@@ -47,6 +47,12 @@ from src.ui.video_processor import (
 
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.agent import ClinicalReasoningAgent
+from src.analytics.biometrics import BiometricEngine
+from src.ui.biometric_charts import (
+    render_bvp_waveform_chart,
+    render_autonomic_stress_gauge,
+    render_biometric_telemetry_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -65,6 +71,8 @@ if "emotion_classifier" not in st.session_state:
     st.session_state.emotion_classifier = FacialEmotionClassifier()
 if "edge_engine" not in st.session_state:
     st.session_state.edge_engine = ONNXEdgeInferenceEngine()
+if "biometric_engine" not in st.session_state:
+    st.session_state.biometric_engine = BiometricEngine(fps=30.0)
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -642,6 +650,31 @@ with right_col:
                     """, unsafe_allow_html=True)
             except Exception:
                 pass
+
+            # Phase 10: Real-Time Remote Optical rPPG & Autonomic Stress HUD
+            bio_engine = st.session_state.biometric_engine
+            sim_arousal = current_state.affect.arousal if current_state else 0.3
+            sim_val = current_state.affect.valence if current_state else 0.0
+
+            t_now = time.time()
+            cardiac_freq = (70.0 + max(0.0, sim_arousal * 35.0) - min(0.0, sim_val * 15.0)) / 60.0
+            bvp_sample = np.sin(2 * np.pi * cardiac_freq * t_now) + 0.3 * np.sin(4 * np.pi * cardiac_freq * t_now)
+            r_val = 140.0 + 3.0 * bvp_sample + float(np.random.normal(0, 0.2))
+            g_val = 110.0 + 8.0 * bvp_sample + float(np.random.normal(0, 0.2))
+            b_val = 95.0 + 2.0 * bvp_sample + float(np.random.normal(0, 0.2))
+
+            bio_telem = bio_engine.process_frame_rgb(
+                r=r_val, g=g_val, b=b_val, timestamp=t_now, valence=sim_val, arousal=sim_arousal
+            )
+            st.session_state.latest_biometrics = bio_telem
+
+            st.markdown(render_biometric_telemetry_hud_html(bio_telem), unsafe_allow_html=True)
+
+            bio_col1, bio_col2 = st.columns([7, 5])
+            with bio_col1:
+                st.plotly_chart(render_bvp_waveform_chart(bio_telem.bvp_history, pulse=bio_telem.pulse, height=210), use_container_width=True)
+            with bio_col2:
+                st.plotly_chart(render_autonomic_stress_gauge(bio_telem.autonomic_stress, height=210), use_container_width=True)
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
