@@ -28,6 +28,9 @@ from src.utils.session_manager import SessionManager
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.agent import ClinicalChatCopilot, ChatCopilotQuery, LLMProviderConfig
+from src.core.biometric_models import PulseMeasurement, HRVMetrics, RespirationMetrics
+from src.analytics.biometrics import BiometricEngine
+from src.ui.biometric_charts import render_autonomic_stress_gauge, render_autonomic_balance_bar
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -314,6 +317,41 @@ if mode == "📝 Single Message & Live Salience":
                     <div style="font-size: 0.9rem; color: #f1f5f9; margin-top: 4px;">{intent_resp.answer}</div>
                 </div>
                 """, unsafe_allow_html=True)
+
+        # Phase 10: Somatosensory Stress Estimation & Lexical-Physiological Alignment HUD
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>🫀 Somatosensory Stress & Lexical-Physiological Alignment</div>", unsafe_allow_html=True)
+
+        est_pulse_bpm = 70.0 + max(0.0, res.affect.arousal * 35.0) - min(0.0, res.affect.valence * 15.0)
+        est_rmssd = max(15.0, 55.0 - (res.affect.arousal * 25.0) + (res.affect.valence * 15.0))
+        est_rpm = 14.0 + max(0.0, res.affect.arousal * 8.0)
+        est_si = max(40.0, 75.0 + (res.affect.arousal * 120.0) - (res.affect.valence * 60.0))
+
+        bio_pulse = PulseMeasurement(bpm=round(est_pulse_bpm, 1), signal_quality_snr=15.0)
+        bio_hrv = HRVMetrics(rmssd_ms=round(est_rmssd, 1), baevsky_stress_index=round(est_si, 1))
+        bio_resp = RespirationMetrics(rpm=round(est_rpm, 1))
+        soma_stress = BiometricEngine.compute_autonomic_stress(
+            bio_pulse, bio_hrv, bio_resp, valence=res.affect.valence, arousal=res.affect.arousal
+        )
+
+        b1, b2 = st.columns([5, 7])
+        with b1:
+            st.plotly_chart(render_autonomic_stress_gauge(soma_stress, height=220), use_container_width=True)
+        with b2:
+            st.markdown(f"""
+            <div class="es-panel" style="padding: 14px 18px; height: 100%;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #94a3b8; margin-bottom: 8px;">
+                    ESTIMATED AUTONOMIC SOMATIC PROJECTION
+                </div>
+                <div style="display: flex; gap: 18px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <div><span style="font-size: 0.72rem; color: #94a3b8;">EST. PULSE:</span> <b style="color:#10b981; font-family:'JetBrains Mono', monospace;">{est_pulse_bpm:.0f} BPM</b></div>
+                    <div><span style="font-size: 0.72rem; color: #94a3b8;">EST. HRV RMSSD:</span> <b style="color:#38bdf8; font-family:'JetBrains Mono', monospace;">{est_rmssd:.0f} ms</b></div>
+                    <div><span style="font-size: 0.72rem; color: #94a3b8;">EST. RESPIRATION:</span> <b style="color:#a78bfa; font-family:'JetBrains Mono', monospace;">{est_rpm:.0f} RPM</b></div>
+                </div>
+                <div style="font-size: 0.76rem; color: #cbd5e1; margin-bottom: 8px;">Autonomic Tone Distribution:</div>
+            """, unsafe_allow_html=True)
+            st.plotly_chart(render_autonomic_balance_bar(soma_stress, height=75), use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 elif mode == "🗨️ Multi-turn Dialogue Transcript":
