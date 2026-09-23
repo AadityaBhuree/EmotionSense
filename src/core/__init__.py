@@ -28,6 +28,15 @@ from src.core.config import (
     EDGE_RUNTIME_CONFIG,
 )
 
+from src.core.biometric_models import (
+    StressClassification,
+    PulseMeasurement,
+    HRVMetrics,
+    RespirationMetrics,
+    AutonomicStressRecord,
+    BiometricTelemetry,
+)
+
 __all__ = [
     "EmotionCategory",
     "FacialActionUnits",
@@ -52,6 +61,12 @@ __all__ = [
     "ModelQuantizationSummary",
     "EdgeModelManifest",
     "EDGE_RUNTIME_CONFIG",
+    "StressClassification",
+    "PulseMeasurement",
+    "HRVMetrics",
+    "RespirationMetrics",
+    "AutonomicStressRecord",
+    "BiometricTelemetry",
 ]
 
 
