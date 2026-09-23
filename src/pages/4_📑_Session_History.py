@@ -25,12 +25,16 @@ from src.core.types import MultimodalEmotionState, AffectVector, SessionRecord
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.ui.components import render_edge_device_card
+import numpy as np
 from src.agent import (
     ClinicalReasoningAgent,
     ClinicalChatCopilot,
     ChatCopilotQuery,
     LLMProviderConfig,
 )
+from src.analytics.biometrics import BiometricEngine
+from src.core.biometric_models import PulseMeasurement, HRVMetrics, RespirationMetrics, BiometricTelemetry
+from src.ui.biometric_charts import render_biometric_telemetry_hud_html
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -218,6 +222,27 @@ else:
                 dominance=affect_dict.get("dominance", 0.0)
             )
             st.plotly_chart(render_affect_quadrant_chart(affect_obj), use_container_width=True)
+
+        # Phase 10: Frame Autonomic Cardiac & Somatosensory Telemetry Record
+        f_val = affect_obj.valence
+        f_aro = affect_obj.arousal
+        f_bpm = float(np.clip(70.0 + f_aro * 35.0 - min(0.0, f_val * 15.0), 50.0, 150.0))
+        f_rmssd = float(np.clip(55.0 - f_aro * 28.0 + f_val * 15.0, 10.0, 90.0))
+        f_si = float(np.clip(75.0 + f_aro * 130.0 - f_val * 60.0, 20.0, 600.0))
+        f_rpm = float(np.clip(14.0 + f_aro * 8.0, 9.0, 28.0))
+
+        frame_pulse = PulseMeasurement(bpm=round(f_bpm, 1), signal_quality_snr=14.0)
+        frame_hrv = HRVMetrics(rmssd_ms=round(f_rmssd, 1), baevsky_stress_index=round(f_si, 1))
+        frame_resp = RespirationMetrics(rpm=round(f_rpm, 1))
+        frame_stress = BiometricEngine.compute_autonomic_stress(frame_pulse, frame_hrv, frame_resp, valence=f_val, arousal=f_aro)
+
+        frame_telem = BiometricTelemetry(
+            pulse=frame_pulse,
+            hrv=frame_hrv,
+            respiration=frame_resp,
+            autonomic_stress=frame_stress,
+        )
+        st.markdown(render_biometric_telemetry_hud_html(frame_telem), unsafe_allow_html=True)
 
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
