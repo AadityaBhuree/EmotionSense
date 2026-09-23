@@ -424,6 +424,62 @@ def test_agent_api_endpoints(client):
     assert len(c_data["response"]["suggested_followups"]) > 0
 
 
+def test_biometric_api_endpoints(client):
+    """Test Phase 10 remote biometric REST endpoints."""
+    # 1. Status endpoint
+    status_res = client.get("/api/biometrics/status")
+    assert status_res.status_code == 200
+    st_data = status_res.json()
+    assert st_data["status"] == "online"
+    assert "Plane-Orthogonal-to-Skin (POS)" in st_data["algorithms"]
+    assert "RMSSD" in st_data["hrv_metrics"]
+
+    # 2. Stress computation endpoint
+    stress_res = client.post(
+        "/api/biometrics/stress",
+        json={
+            "bpm": 82.0,
+            "rmssd_ms": 32.0,
+            "baevsky_si": 110.0,
+            "rpm": 16.0,
+            "valence": -0.2,
+            "arousal": 0.4,
+            "vocal_jitter": 0.02,
+        }
+    )
+    assert stress_res.status_code == 200
+    s_data = stress_res.json()
+    assert s_data["status"] == "success"
+    assert "stress" in s_data
+    assert 0.0 <= s_data["stress"]["stress_index"] <= 1.0
+    assert "classification" in s_data["stress"]
+    assert "sympathetic_tone" in s_data["stress"]
+
+    # 3. rPPG extraction endpoint
+    from src.analytics.biometrics import BiometricEngine
+    _, rgb_matrix = BiometricEngine.generate_synthetic_bvp_stream(
+        duration_sec=3.0, fps=30.0, bpm=72.0, noise_level=0.01
+    )
+    rppg_res = client.post(
+        "/api/biometrics/rppg",
+        json={
+            "rgb_samples": rgb_matrix.tolist(),
+            "fps": 30.0,
+            "valence": 0.1,
+            "arousal": 0.2,
+        }
+    )
+    assert rppg_res.status_code == 200
+    r_data = rppg_res.json()
+    assert r_data["status"] == "success"
+    telem = r_data["telemetry"]
+    assert "pulse" in telem
+    assert "hrv" in telem
+    assert "respiration" in telem
+    assert "autonomic_stress" in telem
+    assert 45.0 <= telem["pulse"]["bpm"] <= 180.0
+
+
 
 
 

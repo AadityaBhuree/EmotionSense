@@ -24,11 +24,18 @@ from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.diarizer import AcousticDiarizer
 from src.storage import SessionDatabase
-from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort_benchmarks
+from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort_benchmarks, BiometricEngine
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.edge.benchmark import EdgeBenchmarkSuite
 from src.agent import ClinicalReasoningAgent, ClinicalChatCopilot, ChatCopilotQuery, LLMProviderConfig
+from src.core.biometric_models import (
+    StressClassification,
+    PulseMeasurement,
+    HRVMetrics,
+    RespirationMetrics,
+    BiometricTelemetry,
+)
 
 
 # Initialize FastAPI App
@@ -59,6 +66,7 @@ edge_quantizer = ModelQuantizationOptimizer()
 edge_bench_suite = EdgeBenchmarkSuite(engine=edge_engine, quantizer=edge_quantizer)
 clinical_agent = ClinicalReasoningAgent()
 chat_copilot = ClinicalChatCopilot()
+biometric_engine = BiometricEngine(fps=30.0)
 
 
 # Request & Response Schemas
@@ -93,6 +101,24 @@ class AgentChatRequest(BaseModel):
     question: str = Field(..., description="Clinician question")
     history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Chat history")
     provider_name: Optional[str] = Field("rule_based", description="LLM provider: rule_based, ollama, openai, gemini")
+
+
+class BiometricExtractRequest(BaseModel):
+    rgb_samples: List[List[float]] = Field(..., description="List of [R, G, B] mean skin intensities")
+    fps: Optional[float] = Field(30.0, description="Camera video frame rate")
+    valence: Optional[float] = Field(0.0, description="Affective valence (-1.0 to 1.0)")
+    arousal: Optional[float] = Field(0.0, description="Affective arousal (0.0 to 1.0)")
+    vocal_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
+
+
+class BiometricStressRequest(BaseModel):
+    bpm: float = Field(72.0, description="Heart rate in BPM")
+    rmssd_ms: float = Field(42.0, description="HRV RMSSD in ms")
+    baevsky_si: float = Field(85.0, description="Baevsky Stress Index")
+    rpm: float = Field(15.0, description="Respiration rate in RPM")
+    valence: Optional[float] = Field(0.0, description="Affective valence (-1.0 to 1.0)")
+    arousal: Optional[float] = Field(0.0, description="Affective arousal (0.0 to 1.0)")
+    vocal_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
 
 
 
@@ -612,6 +638,61 @@ async def chat_clinical_copilot(req: AgentChatRequest):
 
     resp = copilot.query(query, session_context=ctx)
     return {"status": "success", "response": resp.model_dump()}
+
+
+@app.post("/api/biometrics/rppg", tags=["Remote Biometrics"])
+async def extract_rppg_telemetry(req: BiometricExtractRequest):
+    """Extract contact-free optical pulse, HRV, respiration, and autonomic stress from RGB stream."""
+    engine = BiometricEngine(fps=req.fps or 30.0)
+    for sample in req.rgb_samples:
+        if len(sample) >= 3:
+            engine.add_rgb_sample(sample[0], sample[1], sample[2])
+
+    bvp = engine.extract_pos_bvp()
+    pulse = engine.compute_pulse_from_bvp(bvp)
+    rr_intervals = engine.extract_rr_intervals(bvp)
+    hrv = engine.compute_hrv_metrics(rr_intervals)
+    respiration = engine.estimate_respiration_rate(bvp, rr_intervals)
+    stress = engine.compute_autonomic_stress(
+        pulse, hrv, respiration, req.valence or 0.0, req.arousal or 0.0, req.vocal_jitter or 0.02
+    )
+    bvp_history = [float(x) for x in bvp[-120:]] if len(bvp) > 0 else []
+
+    telemetry = BiometricTelemetry(
+        timestamp=time.time(),
+        pulse=pulse,
+        hrv=hrv,
+        respiration=respiration,
+        autonomic_stress=stress,
+        bvp_history=bvp_history,
+        rr_intervals_ms=rr_intervals,
+        roi_detected=True,
+    )
+    return {"status": "success", "telemetry": telemetry.to_dict()}
+
+
+@app.post("/api/biometrics/stress", tags=["Remote Biometrics"])
+async def compute_biometric_stress(req: BiometricStressRequest):
+    """Compute autonomic stress classification and sympathetic/parasympathetic tone."""
+    pulse = PulseMeasurement(bpm=req.bpm)
+    hrv = HRVMetrics(rmssd_ms=req.rmssd_ms, baevsky_stress_index=req.baevsky_si)
+    resp = RespirationMetrics(rpm=req.rpm)
+    stress = BiometricEngine.compute_autonomic_stress(
+        pulse, hrv, resp, req.valence or 0.0, req.arousal or 0.0, req.vocal_jitter or 0.02
+    )
+    return {"status": "success", "stress": stress.to_dict()}
+
+
+@app.get("/api/biometrics/status", tags=["Remote Biometrics"])
+async def get_biometric_status():
+    """Retrieve biometric engine status, sampling configuration, and supported algorithms."""
+    return {
+        "status": "online",
+        "algorithms": ["Plane-Orthogonal-to-Skin (POS)", "Chrominance (CHROM)", "Respiratory Sinus Arrhythmia (RSA)"],
+        "default_fps": 30.0,
+        "hrv_metrics": ["SDNN", "RMSSD", "pNN50", "Baevsky_Stress_Index", "HRV_Vitality_Score"],
+        "autonomic_classifications": [c.value for c in StressClassification],
+    }
 
 
 @app.websocket("/ws/stream-affect")
