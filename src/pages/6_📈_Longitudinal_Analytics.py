@@ -27,10 +27,23 @@ from src.ui.charts import (
     render_longitudinal_recovery_gauge,
     render_longitudinal_trajectory_chart,
 )
-from src.ui.components import render_header
 from src.ui.styles import inject_modern_styles
+from src.ui.components import render_header
 from src.utils.session_manager import SessionManager
+import plotly.graph_objects as go
 from src.agent import ClinicalReasoningAgent, LLMProviderConfig
+from src.core.cognitive_models import (
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
+    OculomotorSnapshot,
+)
+from src.analytics.oculometrics import OculomotorEngine
+from src.ui.cognitive_charts import (
+    render_cognitive_workload_gauge,
+    render_nasa_tlx_radar,
+    render_oculomotor_hud_html,
+)
 
 st.set_page_config(
     page_title="Longitudinal Analytics | EmotionSense",
@@ -245,10 +258,41 @@ for i, p in enumerate(points):
         "stress_obj": stress_m,
     })
 
-tab_traj, tab_radar, tab_bio, tab_table = st.tabs([
+cog_sessions = []
+for i, p in enumerate(points):
+    c_val = p.mean_valence
+    c_aro = p.mean_arousal
+    c_fatigue = float(np.clip(0.15 + (1.0 - c_val) * 0.15, 0.05, 0.85))
+    c_pupil = float(np.clip(3.4 + c_aro * 1.5 + (1.0 - c_val) * 0.4, 2.2, 6.8))
+    c_pir = float(np.clip((c_pupil - 3.2) / 3.2, -0.3, 0.85))
+    c_ear = float(np.clip(0.31 - c_fatigue * 0.12, 0.14, 0.38))
+    c_perclos = float(np.clip(c_fatigue * 0.5 + max(0.0, 0.22 - c_ear) * 1.4, 0.0, 0.8))
+    c_blink_rate = float(np.clip(16.0 + c_aro * 8.0 - c_fatigue * 6.0, 5.0, 42.0))
+    c_fix_ratio = float(np.clip(0.76 - c_aro * 0.22, 0.25, 0.92))
+
+    p_m = PupillometryMetrics(mean_pupil_diameter_mm=round(c_pupil, 2), pupil_iris_ratio=round(c_pir, 3), cpr_amplitude=round(c_pir * 0.6, 3))
+    b_m = BlinkDynamics(blink_rate_bpm=round(c_blink_rate, 1), mean_ear=round(c_ear, 3), perclos_score=round(c_perclos, 3), drowsiness_detected=bool(c_perclos > 0.35))
+    g_m = GazeTelemetry(fixation_duration_ms=round(270.0 * c_fix_ratio, 1), saccade_velocity_deg_s=round(125.0 + c_aro * 170.0, 1), fixation_to_saccade_ratio=round(c_fix_ratio, 2), scanpath_entropy=round(1.2 + c_aro * 0.7, 2))
+    s_snap = OculomotorSnapshot(pupillometry=p_m, blink=b_m, gaze=g_m)
+    w_idx = OculomotorEngine.compute_cognitive_workload(s_snap, task_type="Clinical Longitudinal Review", valence=c_val, arousal=c_aro, engagement=0.65)
+    cog_sessions.append({
+        "label": f"Ses {i+1} ({p.date_str[:10]})",
+        "date_str": p.date_str,
+        "workload_score": round(w_idx.overall_workload_index, 3),
+        "workload_pct": round(w_idx.overall_workload_index * 100.0, 1),
+        "tier": w_idx.workload_tier.value,
+        "pupil_dia": round(c_pupil, 2),
+        "pir": round(c_pir, 3),
+        "perclos": round(c_perclos, 3),
+        "snapshot": s_snap,
+        "workload_obj": w_idx,
+    })
+
+tab_traj, tab_radar, tab_bio, tab_cog, tab_table = st.tabs([
     "📈 Trajectory Trendline",
     "🎯 Cohort Volatility Radar",
     "🫀 Physiological & Allostatic Drift",
+    "🧠 Cognitive Workload & Burnout Drift",
     "📑 Session Ledger & Micro-Inspection",
 ])
 
@@ -350,11 +394,94 @@ with tab_bio:
     else:
         st.info("No biometric sessions recorded for this subject profile.")
 
+with tab_cog:
+    if cog_sessions:
+        cog_top1, cog_top2, cog_top3, cog_top4 = st.columns(4)
+        latest_cog = cog_sessions[-1]
+        first_cog = cog_sessions[0]
+        delta_workload = latest_cog["workload_score"] - first_cog["workload_score"]
+
+        with cog_top1:
+            st.metric(
+                "Latest Cognitive Workload",
+                f"{latest_cog['workload_score']:.2f}",
+                delta=f"{delta_workload:+.2f} vs Ses 1",
+                delta_color="inverse",
+                help="Composite NASA-TLX Overload Index (0.0 to 1.0)",
+            )
+        with cog_top2:
+            st.metric(
+                "Workload Tier",
+                latest_cog["tier"].upper(),
+                delta="Normal Operating Band" if latest_cog["workload_score"] < 0.65 else "Overload Alert",
+                delta_color="normal" if latest_cog["workload_score"] < 0.65 else "inverse",
+            )
+        with cog_top3:
+            st.metric(
+                "Pupil Dilation (PIR)",
+                f"{latest_cog['pir']:+.3f}",
+                help="Pupil-to-Iris Ratio shift indicative of mental effort",
+            )
+        with cog_top4:
+            st.metric(
+                "PERCLOS Drowsiness",
+                f"{latest_cog['perclos'] * 100:.1f}%",
+                help="Percentage of eye closure time over timeline",
+            )
+
+        st.markdown(render_oculomotor_hud_html(latest_cog["snapshot"], latest_cog["workload_obj"]), unsafe_allow_html=True)
+
+        c_left, c_right = st.columns([2.4, 1.2])
+        with c_left:
+            fig_cog_drift = go.Figure()
+            fig_cog_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in cog_sessions],
+                y=[s["workload_score"] for s in cog_sessions],
+                name="Workload Index (0-1)",
+                line=dict(color="#ec4899", width=3),
+                mode="lines+markers",
+            ))
+            fig_cog_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in cog_sessions],
+                y=[s["perclos"] for s in cog_sessions],
+                name="PERCLOS Drowsiness",
+                line=dict(color="#f59e0b", width=2, dash="dash"),
+                mode="lines+markers",
+            ))
+            fig_cog_drift.add_hline(y=0.65, line_dash="dot", line_color="#ef4444", annotation_text="Overload Threshold (0.65)")
+            fig_cog_drift.update_layout(
+                title="Multi-Session Cognitive Workload & Drowsiness Drift",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,23,42,0.6)",
+                font=dict(color="#e2e8f0"),
+                margin=dict(l=30, r=30, t=40, b=30),
+                height=320,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(range=[0.0, 1.0], gridcolor="rgba(255,255,255,0.08)"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            )
+            st.plotly_chart(fig_cog_drift, use_container_width=True)
+        with c_right:
+            st.plotly_chart(render_cognitive_workload_gauge(latest_cog["workload_obj"], height=190), use_container_width=True)
+            st.plotly_chart(render_nasa_tlx_radar(latest_cog["workload_obj"].nasa_tlx, height=190), use_container_width=True)
+
+            burnout_risk = "Elevated Chronic Fatigue Risk" if latest_cog["workload_score"] > 0.65 and delta_workload > 0.1 else "Cognitive Fatigue Well-Regulated"
+            st.markdown(f"""
+            <div class="es-panel" style="font-size: 0.8rem; line-height: 1.45; color: #cbd5e1; margin-top: 6px;">
+                <b style="color: #f8fafc;">Cognitive Burnout Evaluation:</b><br>
+                Status: <span style="color: {'#ef4444' if 'Risk' in burnout_risk else '#10b981'}; font-weight: 600;">{burnout_risk}</span><br>
+                Multi-Session Workload Drift: <b>{delta_workload:+.3f}</b>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No cognitive sessions recorded for this subject profile.")
+
 with tab_table:
     if points:
         table_rows = []
         for i, p in enumerate(points):
             b_info = bio_sessions[i] if i < len(bio_sessions) else {}
+            c_info = cog_sessions[i] if i < len(cog_sessions) else {}
             table_rows.append({
                 "Session": f"Session {i+1}",
                 "Date": p.date_str,
@@ -363,6 +490,8 @@ with tab_table:
                 "Arousal": f"{p.mean_arousal:+.2f}",
                 "RHR (BPM)": f"{b_info.get('rhr_bpm', '--')}",
                 "HRV RMSSD": f"{b_info.get('rmssd_ms', '--')} ms",
+                "Cognitive Workload": f"{c_info.get('workload_pct', '--')}%",
+                "Workload Tier": c_info.get('tier', 'N/A').upper(),
                 "Allostatic Stress": f"{b_info.get('stress_pct', '--')}%",
                 "Autonomic State": b_info.get('classification', 'N/A'),
                 "Anomalies": p.anomaly_count,
