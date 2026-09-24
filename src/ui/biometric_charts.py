@@ -381,3 +381,105 @@ def render_biometric_telemetry_hud_html(telemetry: BiometricTelemetry) -> str:
         </div>
     </div>
     """
+
+
+def render_longitudinal_biometric_drift_chart(
+    sessions: List[dict],
+    height: int = 280,
+) -> go.Figure:
+    """Renders longitudinal Resting Heart Rate (RHR), HRV RMSSD, and Allostatic Stress drift."""
+    fig = go.Figure()
+
+    if not sessions:
+        fig.add_annotation(
+            text="NO LONGITUDINAL BIOMETRIC DATA LOGGED",
+            xref="paper", yref="paper", x=0.5, y=0.5,
+            showarrow=False,
+            font=dict(color=AXIS_COLOR, size=11, family=FONT_MONO)
+        )
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor=CHART_BG,
+            height=height,
+        )
+        return fig
+
+    labels = [s.get("label", f"Ses {i+1}") for i, s in enumerate(sessions)]
+    rhr = [s.get("rhr_bpm", 72.0) for s in sessions]
+    rmssd = [s.get("rmssd_ms", 42.0) for s in sessions]
+    stress_pct = [s.get("stress_pct", s.get("allostatic_stress", 0.3) * 100.0) for s in sessions]
+
+    # Trace 1: Resting Heart Rate (RHR BPM)
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=rhr,
+        mode='lines+markers',
+        name='Resting HR (BPM)',
+        line=dict(color='#10b981', width=2.5),
+        marker=dict(size=7, color='#34d399', symbol='circle'),
+        hovertemplate='%{x}<br>Resting HR: %{y:.1f} BPM<extra></extra>',
+    ))
+
+    # Trace 2: HRV RMSSD (ms - Vagal Tone)
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=rmssd,
+        mode='lines+markers',
+        name='HRV RMSSD (ms)',
+        line=dict(color='#38bdf8', width=2.5, dash='dash'),
+        marker=dict(size=7, color='#7dd3fc', symbol='diamond'),
+        hovertemplate='%{x}<br>HRV RMSSD: %{y:.1f} ms<extra></extra>',
+    ))
+
+    # Trace 3: Allostatic Stress Load (Secondary Y-axis)
+    fig.add_trace(go.Scatter(
+        x=labels,
+        y=stress_pct,
+        mode='lines+markers',
+        name='Allostatic Stress (%)',
+        yaxis='y2',
+        line=dict(color='#f59e0b', width=2),
+        marker=dict(size=6, color='#fbbf24', symbol='square'),
+        fill='tozeroy',
+        fillcolor='rgba(245, 158, 11, 0.08)',
+        hovertemplate='%{x}<br>Allostatic Stress: %{y:.1f}%<extra></extra>',
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>LONGITUDINAL PHYSIOLOGICAL & STRESS DRIFT</b> &nbsp;<span style='color:#38bdf8; font-size:11px; font-family:" + FONT_MONO + ";'>RHR (BPM) • HRV RMSSD (ms) • Allostatic Load (%)</span>",
+            font=dict(size=12, color='#f1f5f9', family=FONT_DISPLAY),
+            x=0.02, y=0.96
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor=CHART_BG,
+        margin=dict(l=40, r=45, t=40, b=25),
+        height=height,
+        xaxis=dict(
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color=AXIS_COLOR, size=9, family=FONT_MONO),
+        ),
+        yaxis=dict(
+            title=dict(text="BPM / RMSSD (ms)", font=dict(color='#34d399', size=10, family=FONT_DISPLAY)),
+            gridcolor=GRID_COLOR,
+            tickfont=dict(color='#34d399', size=9, family=FONT_MONO),
+        ),
+        yaxis2=dict(
+            title=dict(text="Allostatic Stress (%)", font=dict(color='#fbbf24', size=10, family=FONT_DISPLAY)),
+            overlaying='y',
+            side='right',
+            range=[0, 100],
+            showgrid=False,
+            tickfont=dict(color='#fbbf24', size=9, family=FONT_MONO),
+        ),
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=0.98,
+            font=dict(color='#e2e8f0', size=10, family=FONT_DISPLAY),
+        ),
+    )
+    return fig
+

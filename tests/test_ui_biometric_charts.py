@@ -15,6 +15,7 @@ from src.ui.biometric_charts import (
     render_autonomic_stress_gauge,
     render_autonomic_balance_bar,
     render_biometric_telemetry_hud_html,
+    render_longitudinal_biometric_drift_chart,
 )
 
 
@@ -78,3 +79,19 @@ def test_render_biometric_telemetry_hud_html():
     assert "38.4 ms" in html
     assert "OPTIMAL_ALERTNESS" in html
     assert "AUTONOMIC BIOMETRICS" in html
+
+
+def test_render_longitudinal_biometric_drift_chart():
+    data = [
+        {"label": "Ses 1", "rhr_bpm": 84.0, "rmssd_ms": 28.0, "allostatic_stress": 0.58},
+        {"label": "Ses 2", "rhr_bpm": 79.5, "rmssd_ms": 34.0, "allostatic_stress": 0.44},
+        {"label": "Ses 3", "rhr_bpm": 73.0, "rmssd_ms": 42.0, "allostatic_stress": 0.31},
+    ]
+    fig = render_longitudinal_biometric_drift_chart(data)
+    assert isinstance(fig, go.Figure)
+    assert len(fig.data) == 3
+    assert "LONGITUDINAL PHYSIOLOGICAL" in fig.layout.title.text
+
+    fig_empty = render_longitudinal_biometric_drift_chart([])
+    assert isinstance(fig_empty, go.Figure)
+
