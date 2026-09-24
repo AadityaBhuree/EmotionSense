@@ -31,6 +31,8 @@ from src.agent import ClinicalChatCopilot, ChatCopilotQuery, LLMProviderConfig
 from src.core.biometric_models import PulseMeasurement, HRVMetrics, RespirationMetrics
 from src.analytics.biometrics import BiometricEngine
 from src.ui.biometric_charts import render_autonomic_stress_gauge, render_autonomic_balance_bar
+from src.core.cognitive_models import NASATLXDimensions, CognitiveWorkloadRecord, WorkloadTier
+from src.ui.cognitive_charts import render_cognitive_workload_gauge, render_nasa_tlx_radar
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -352,6 +354,58 @@ if mode == "📝 Single Message & Live Salience":
             """, unsafe_allow_html=True)
             st.plotly_chart(render_autonomic_balance_bar(soma_stress, height=75), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # Phase 11: Cognitive Linguistic Complexity & Mental Workload Estimator
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>🧠 Cognitive Linguistic Complexity & Mental Workload</div>", unsafe_allow_html=True)
+
+        words = [w for w in text_input.split() if w.strip()]
+        total_words = max(1, len(words))
+        content_words = [w for w in words if len(w) > 3]
+        lexical_density = (len(content_words) / total_words) * 100.0
+        sentences = [s for s in text_input.replace("!", ".").replace("?", ".").split(".") if s.strip()]
+        avg_sentence_len = total_words / max(1, len(sentences))
+
+        # Cognitive demand estimation
+        mental_demand = float(min(99.0, max(10.0, lexical_density * 0.8 + avg_sentence_len * 2.5)))
+        temporal_demand = float(min(95.0, max(10.0, 30.0 + res.affect.arousal * 50.0)))
+        effort = float(min(98.0, max(15.0, mental_demand * 0.6 + temporal_demand * 0.4)))
+        frustration = float(min(95.0, max(5.0, 20.0 - (res.affect.valence * 40.0) + (res.affect.arousal * 30.0))))
+
+        cog_workload_idx = min(0.98, max(0.05, (mental_demand + effort) / 200.0))
+        tier_val = (
+            WorkloadTier.COGNITIVE_OVERLOAD.value if cog_workload_idx > 0.80
+            else WorkloadTier.HIGH_EFFORT.value if cog_workload_idx > 0.60
+            else WorkloadTier.OPTIMAL_ENGAGEMENT.value if cog_workload_idx > 0.25
+            else WorkloadTier.LOW_LOAD.value
+        )
+        text_workload = CognitiveWorkloadRecord(
+            workload_index=round(cog_workload_idx, 3),
+            tier=tier_val,
+            nasa_tlx=NASATLXDimensions(
+                mental_demand=round(mental_demand, 1),
+                temporal_demand=round(temporal_demand, 1),
+                effort=round(effort, 1),
+                frustration=round(frustration, 1),
+            ),
+            mental_exhaustion_risk=round(cog_workload_idx * 0.7, 3),
+            contributing_factors=["Lexical Density" if lexical_density > 60 else "Syntactic Conciseness", "Affective Arousal Load"],
+        )
+
+        cw1, cw2 = st.columns([5, 7])
+        with cw1:
+            st.plotly_chart(render_cognitive_workload_gauge(text_workload, height=220), use_container_width=True)
+        with cw2:
+            st.plotly_chart(render_nasa_tlx_radar(text_workload.nasa_tlx, height=220), use_container_width=True)
+
+        st.markdown(f"""
+        <div class="es-panel" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>Lexical Density: <b style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">{lexical_density:.1f}%</b></div>
+            <div>Avg Syntactic Depth: <b style="color: #10b981; font-family: 'JetBrains Mono', monospace;">{avg_sentence_len:.1f} wds/sent</b></div>
+            <div>Predicted NASA-TLX Effort: <b style="color: #f59e0b; font-family: 'JetBrains Mono', monospace;">{effort:.0f}/100</b></div>
+            <div>Cognitive Exhaustion Risk: <b style="color: {'#ef4444' if text_workload.mental_exhaustion_risk > 0.6 else '#38bdf8'}; font-family: 'JetBrains Mono', monospace;">{text_workload.mental_exhaustion_risk * 100:.0f}%</b></div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 elif mode == "🗨️ Multi-turn Dialogue Transcript":
