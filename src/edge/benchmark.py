@@ -188,11 +188,8 @@ class EdgeBenchmarkSuite:
             PupillometryMetrics,
             BlinkDynamics,
             GazeTelemetry,
-            OculomotorSnapshot,
         )
         from src.analytics.oculometrics import OculomotorEngine
-
-        engine = OculomotorEngine()
 
         latencies = []
         for i in range(iterations):
