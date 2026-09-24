@@ -16,13 +16,25 @@ from src.ui.biometric_charts import (
     render_autonomic_stress_gauge,
     render_autonomic_balance_bar,
 )
+from src.core.cognitive_models import (
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
+    OculomotorSnapshot,
+)
+from src.analytics.oculometrics import OculomotorEngine
+from src.ui.cognitive_charts import (
+    render_cognitive_workload_gauge,
+    render_nasa_tlx_radar,
+    render_oculomotor_hud_html,
+)
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -37,6 +49,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
     "⚡ Edge Acceleration & INT8 Quantization",
     "🤖 Agentic Reasoning & Clinical Copilot",
     "🫀 Remote Biometrics & Autonomic Telemetry",
+    "🧠 Cognitive Workload & Oculomotor Telemetry",
 ])
 
 
@@ -573,6 +586,103 @@ with tab14:
         st.markdown(f"**Autonomic Classification:** `{calc_stress.classification.upper()}` (Score: **{calc_stress.stress_index:.2f}**)")
         st.plotly_chart(render_autonomic_stress_gauge(calc_stress, height=200), use_container_width=True)
         st.plotly_chart(render_autonomic_balance_bar(calc_stress, height=75), use_container_width=True)
+
+
+with tab15:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            🧠 Phase 11: Cognitive Workload, Oculomotor Telemetry & Pupillometric Neurometrics
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Real-time, contact-free cognitive workload assessment leveraging MediaPipe iris pupillometry (Cognitive Pupillary Response), Eye Aspect Ratio (EAR) blink kinematics, PERCLOS drowsiness tracking, 3D gaze velocity/fixation discrimination (I-VT algorithm), and a 6-factor multi-sensor NASA-TLX Mental Overload Index.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Pupil-to-Iris Ratio (PIR) & Cognitive Pupillary Response (CPR)
+    Under constant ambient lux, pupil dilation directly tracks noradrenergic activity from the *Locus Coeruleus* (LC-NE system) responding to cognitive task demand:
+
+    $$\text{PIR}(t) = \frac{d_{\text{pupil}}(t)}{d_{\text{iris}}(t)}$$
+
+    $$\Delta \text{CPR}(t) = \frac{\text{PIR}(t) - \overline{\text{PIR}}_{\text{baseline}}}{\overline{\text{PIR}}_{\text{baseline}}}$$
+
+    Where $d_{\text{pupil}}$ and $d_{\text{iris}}$ are calculated via Euclidean distance across MediaPipe FaceMesh iris boundary landmarks (468–477).
+
+    #### 2. Eye Aspect Ratio (EAR) & PERCLOS Drowsiness Kinematics
+    Blink dynamics and fatigue metrics derived from 6 eyelid landmarks:
+
+    $$\text{EAR} = \frac{\|p_2 - p_6\| + \|p_3 - p_5\|}{2 \cdot \|p_1 - p_4\|}$$
+
+    $$\text{PERCLOS} = \frac{1}{N}\sum_{i=1}^N \mathbb{I}(\text{EAR}_i < \text{EAR}_{\text{closed}})$$
+
+    Where $\text{EAR}_{\text{closed}} \approx 0.20$. PERCLOS $> 0.35$ or blink frequency $< 6\,\text{BPM}$ indicates severe cognitive fatigue and impending microsleep.
+
+    #### 3. 3D Gaze Velocity & I-VT Fixation Discrimination
+    Gaze angular velocity ($^\circ/\text{s}$) determines oculomotor focus vs. exploratory search:
+
+    $$v_{\text{gaze}}(t) = \frac{\|\mathbf{g}(t) - \mathbf{g}(t-\Delta t)\|}{\Delta t}$$
+
+    $$\text{State}(t) = \begin{cases} \text{Saccade}, & \text{if } v_{\text{gaze}}(t) \ge v_{\text{thresh}} \ (100^\circ/\text{s}) \\ \text{Fixation}, & \text{otherwise} \end{cases}$$
+
+    High cognitive load exhibits elongated fixations ($> 300\,\text{ms}$) with compressed scanpaths and low entropy.
+
+    #### 4. Multi-Sensor NASA-TLX Overload Index Fusion
+    The composite Cognitive Workload Index $C_{\text{workload}} \in [0.0, 1.0]$ is computed as:
+
+    $$C_{\text{workload}} = 0.30 \cdot \Delta \text{CPR}_{\text{norm}} + 0.20 \cdot \text{PERCLOS} + 0.15 \cdot (1 - \text{Ratio}_{\text{fix/sacc}}) + 0.20 \cdot \text{Arousal} + 0.15 \cdot \text{Lexical}_{\text{complexity}}$$
+    """)
+
+    st.markdown("#### 🧪 Interactive Cognitive Workload & NASA-TLX Simulator")
+    sim_c1, sim_c2 = st.columns([1.5, 3.5])
+    with sim_c1:
+        test_pupil_dia = st.slider("Pupil Diameter (mm)", 2.0, 7.5, 4.5, step=0.1)
+        test_cpr = st.slider("CPR Amplitude", -0.3, 0.8, 0.25, step=0.05)
+        test_ear = st.slider("Eye Aspect Ratio (EAR)", 0.12, 0.40, 0.28, step=0.01)
+        test_perclos = st.slider("PERCLOS Score", 0.0, 1.0, 0.15, step=0.02)
+        test_blink_rate = st.slider("Blink Rate (BPM)", 5.0, 45.0, 18.0, step=1.0)
+        test_saccade_vel = st.slider("Saccade Velocity (°/s)", 40.0, 500.0, 180.0, step=10.0)
+        test_task = st.selectbox("Task Context", ["Clinical Diagnostic Review", "High-Stress Simulation", "Relaxed Baseline", "Air Traffic Control"])
+
+    test_pupil = PupillometryMetrics(
+        mean_pupil_diameter_mm=float(test_pupil_dia),
+        pupil_iris_ratio=round(test_pupil_dia / 11.7, 3),
+        cpr_amplitude=float(test_cpr),
+    )
+    test_blink = BlinkDynamics(
+        blink_rate_bpm=float(test_blink_rate),
+        mean_ear=float(test_ear),
+        perclos_score=float(test_perclos),
+        drowsiness_detected=bool(test_perclos > 0.35 or test_ear < 0.20),
+    )
+    test_gaze = GazeTelemetry(
+        fixation_duration_ms=260.0,
+        saccade_velocity_deg_s=float(test_saccade_vel),
+        fixation_to_saccade_ratio=0.72,
+        scanpath_entropy=1.45,
+    )
+    test_snapshot = OculomotorSnapshot(
+        pupillometry=test_pupil,
+        blink=test_blink,
+        gaze=test_gaze,
+    )
+    test_wl = OculomotorEngine.compute_cognitive_workload(
+        test_snapshot,
+        task_type=test_task,
+        arousal=0.55,
+        valence=0.10,
+        engagement=0.70,
+    )
+
+    with sim_c2:
+        st.markdown(render_oculomotor_hud_html(test_snapshot, test_wl), unsafe_allow_html=True)
+        g1, g2 = st.columns([1, 1])
+        with g1:
+            st.plotly_chart(render_cognitive_workload_gauge(test_wl, height=220), use_container_width=True)
+        with g2:
+            st.plotly_chart(render_nasa_tlx_radar(test_wl.nasa_tlx, height=220), use_container_width=True)
+
 
 
 
