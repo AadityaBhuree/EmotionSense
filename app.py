@@ -72,6 +72,8 @@ with st.sidebar:
     - **Dialogue Flow**: `Trajectory + Escalation`
     - **Vision Engine**: `MediaPipe 468 Mesh`
     - **Audio Engine**: `Acoustic Prosody F0`
+    - **Biometrics (rPPG)**: `Optical POS (BPM/HRV)` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
+    - **Autonomic Stress**: `Baevsky SI + Vagal Tone`
     """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -81,15 +83,40 @@ with st.sidebar:
 # Main Workstation Console Header
 render_header("EmotionSense Workstation", "Multimodal Affective Intelligence & Real-Time Emotion Decoder")
 
+# Phase 10 Biometrics Banner
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(56, 189, 248, 0.08)); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px 18px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.6rem;">🫀</span>
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <span>Phase 10 Remote Biometric & Physiological Telemetry Active</span>
+                <span class="es-badge es-badge-green" style="font-size: 0.65rem;">rPPG READY</span>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                Contact-Free Optical Pulse (BPM) • Heart Rate Variability (HRV RMSSD) • Respiratory Sinus Arrhythmia (RPM) • Autonomic Stress Index
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <span class="es-badge es-badge-accent">POS Chrominance</span>
+        <span class="es-badge es-badge-cyan">Sub-6ms SLA</span>
+        <span class="es-badge es-badge-green">100% Zero-Cloud</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # Key Platform Telemetry Metrics
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     render_metric_card("Affect Taxonomy", "8 Core + 8 Nuance", delta="Plutchik/Ekman", color="#3b82f6", subtext="Calibrated Spectrum")
 with c2:
     render_metric_card("Coordinate Space", "3D VAD", delta="Russell Circumplex", color="#0ea5e9", subtext="Valence • Arousal • Dominance")
 with c3:
-    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#10b981", subtext="Trajectory Tracking")
+    render_metric_card("Optical rPPG", "Pulse & HRV", delta="Plane-Orthogonal", color="#10b981", subtext="Remote Capillary BVP")
 with c4:
+    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
+with c5:
     render_metric_card("Inference Latency", "< 4.8 ms", delta="Zero-Lag Local", color="#f59e0b", subtext="Hardware Optimized")
 
 st.markdown("<div style='margin-bottom: 0.85rem;'></div>", unsafe_allow_html=True)
