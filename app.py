@@ -74,6 +74,8 @@ with st.sidebar:
     - **Audio Engine**: `Acoustic Prosody F0`
     - **Biometrics (rPPG)**: `Optical POS (BPM/HRV)` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     - **Autonomic Stress**: `Baevsky SI + Vagal Tone`
+    - **Oculometrics**: `Iris CPR + PERCLOS` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
+    - **Cognitive Workload**: `NASA-TLX Multi-Factor`
     """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -82,6 +84,29 @@ with st.sidebar:
 
 # Main Workstation Console Header
 render_header("EmotionSense Workstation", "Multimodal Affective Intelligence & Real-Time Emotion Decoder")
+
+# Phase 11 Cognitive Neurometrics Banner
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(139, 92, 246, 0.08)); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 12px; padding: 12px 18px; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.6rem;">🧠</span>
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <span>Phase 11 Cognitive Workload & Oculomotor Telemetry Active</span>
+                <span class="es-badge es-badge-accent" style="font-size: 0.65rem;">NEUROMETRICS READY</span>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                Cognitive Pupillary Response (CPR) • Eye Aspect Ratio (EAR) • PERCLOS Drowsiness • 3D Gaze Fixation/Saccades • NASA-TLX Overload Index
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <span class="es-badge es-badge-accent">Iris Landmarks 468-477</span>
+        <span class="es-badge es-badge-cyan">I-VT Velocity</span>
+        <span class="es-badge es-badge-green">NASA-TLX 6-Factor</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Phase 10 Biometrics Banner
 st.markdown("""
@@ -107,7 +132,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Key Platform Telemetry Metrics
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     render_metric_card("Affect Taxonomy", "8 Core + 8 Nuance", delta="Plutchik/Ekman", color="#3b82f6", subtext="Calibrated Spectrum")
 with c2:
@@ -115,8 +140,10 @@ with c2:
 with c3:
     render_metric_card("Optical rPPG", "Pulse & HRV", delta="Plane-Orthogonal", color="#10b981", subtext="Remote Capillary BVP")
 with c4:
-    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
+    render_metric_card("Cognitive Load", "NASA-TLX", delta="Pupillometry CPR", color="#ec4899", subtext="PIR & Gaze Fixation")
 with c5:
+    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
+with c6:
     render_metric_card("Inference Latency", "< 4.8 ms", delta="Zero-Lag Local", color="#f59e0b", subtext="Hardware Optimized")
 
 st.markdown("<div style='margin-bottom: 0.85rem;'></div>", unsafe_allow_html=True)
