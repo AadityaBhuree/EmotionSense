@@ -86,6 +86,15 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Live Distress Triage Sentinel**: Proactively surfaces acute valence crash alerts and cognitive fatigue warnings with real-time clinician action hints in Live Studio (`2_🎥_Live_Studio.py`).
 - **REST & Microservice Endpoints**: `/api/agent/providers`, `/api/agent/synthesize`, and `/api/agent/chat` exposing high-performance automated synthesis to enterprise clients.
 
+### 🫀 Remote Biometric & Physiological Telemetry (Phase 10)
+- **Contact-Free Optical rPPG (POS / CHROM)**: Real-time Blood Volume Pulse (BVP) extraction from facial skin capillary bed micro-absorptions via Plane-Orthogonal-to-Skin (Wang et al., IEEE TBME) without wearable devices.
+- **Precision Cardiac Metrics & SNR**: Spectral FFT peak analysis combined with time-domain systolic peak detection and signal-to-noise ratio (SNR dB) filtering for robust pulse tracking (BPM).
+- **Clinical Heart Rate Variability (HRV)**: Time-domain SDNN, RMSSD (parasympathetic vagal tone), pNN50, and composite vitality scoring.
+- **Baevsky Stress Index & Autonomic Balance**: Quantifies sympathetic regulatory strain ($SI = \frac{AMo}{2 \times Mo \times MxDMn}$) and autonomic balance ratio (Sympathetic vs Parasympathetic).
+- **Respiratory Sinus Arrhythmia (RSA)**: Contact-free respiration rate (RPM) derived from cardiac pulse amplitude and frequency modulation.
+- **Autonomic Multimodal Stress Fusion**: Unified late fusion combining physiological strain with affective state (Valence, Arousal, vocal jitter).
+- **Zero-Cloud Optical Privacy & Edge SLA**: Sub-6ms pipeline latency, ephemeral RGB reduction in volatile cache, 100% on-device compute.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -337,13 +346,13 @@ docker compose logs -f
 Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, longitudinal profiling, and edge acceleration pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (143 tests across 22 modules)
+# Execute automated test suite (173 tests across 24 modules)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 143 unit, integration, persistence, dyadic telemetry, longitudinal profiling, and edge acceleration tests run with 100% pass rate across Python 3.10+.*
+*All 173 unit, integration, persistence, dyadic telemetry, longitudinal profiling, edge acceleration, agentic reasoning, and biometric rPPG tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -372,6 +381,9 @@ ruff check .
 | `GET` | `/api/edge/hardware` | Retrieve edge hardware profile & active execution providers |
 | `POST` | `/api/edge/benchmark` | Execute edge latency benchmark across iterations with P50/P95/P99 percentiles |
 | `POST` | `/api/edge/quantize` | Estimate model INT8 quantization compression & speedup |
+| `POST` | `/api/biometrics/rppg` | Compute pulse and HRV from raw RGB frame series or base64 video |
+| `POST` | `/api/biometrics/stress` | Compute unified autonomic stress index from physiological + VAD parameters |
+| `GET` | `/api/biometrics/config` | Retrieve optical filtering parameters and hardware latency SLA specs |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 

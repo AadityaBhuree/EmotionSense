@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Phase 9 Completed — Multimodal Agentic Reasoning, Clinical Copilot, Pluggable LLM/SLM Providers & 100% Studio Integration (151/151 Tests Passing)  
+> **Status:** Phase 10 Completed — Remote Biometric & Physiological Telemetry (rPPG Pulse, HRV, Respiration & Autonomic Stress Index) (173/173 Tests Passing)  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -22,6 +22,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 7. **Enterprise Persistence & Clinical Reporting**: Embedded SQLite storage engine with cascading metadata management, automated legacy JSON sync, and publication-quality Clinical PDF diagnostics via ReportLab.
 8. **Edge AI Acceleration & Quantization**: ONNX Runtime hardware provider routing (DirectML, CUDA, CoreML, WASM), dynamic INT8 post-training quantization, and sub-10ms edge latency profiling.
 9. **Multimodal Agentic Reasoning & Clinical Copilot**: Pluggable LLM/SLM reasoning engine (RuleBasedExpert 0ms, Ollama local LLaMA 3.2, OpenAI/vLLM, Google Gemini), token-budget compressed telemetry, Chain-of-Thought (CoT) diagnostic synthesis, and an interactive in-studio clinical copilot.
+10. **Remote Biometric & Physiological Telemetry (rPPG)**: Contact-free optical photoplethysmography via Plane-Orthogonal-to-Skin (POS) and CHROM algorithms, extracting instantaneous pulse (BPM), Heart Rate Variability (SDNN, RMSSD, pNN50), Baevsky Stress Index, Respiration Rate (RPM via RSA), and unified Autonomic Stress Index without wearable hardware.
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
@@ -256,6 +257,9 @@ EmotionSense/
 | `GET` | `/api/edge/hardware` | Retrieve edge hardware profile & active execution providers | None | `{"status": "success", "profile": {...}}` |
 | `POST` | `/api/edge/benchmark` | Execute edge latency benchmark across iterations | `EdgeBenchmarkRequest` | `{"status": "success", "benchmark": {...}}` |
 | `POST` | `/api/edge/quantize` | Estimate model INT8 quantization compression & speedup | `EdgeQuantizeRequest` | `{"status": "success", "quantization": {...}}` |
+| `POST` | `/api/biometrics/rppg` | Compute pulse and HRV from raw RGB frame series | `RPPGRequest` (`rgb_series`, `fps`) | `{"status": "success", "telemetry": {...}}` |
+| `POST` | `/api/biometrics/stress` | Compute unified autonomic stress index from parameters | `StressRequest` (`pulse`, `hrv`, `respiration`, `valence`, `arousal`) | `{"status": "success", "stress": {...}}` |
+| `GET` | `/api/biometrics/config` | Retrieve optical filtering and hardware SLA configuration | None | `{"status": "success", "config": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -270,13 +274,15 @@ EmotionSense/
 
 ## 6. Verification & Quality Metrics
 
-All **151** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, and agentic copilot tests pass cleanly across Python 3.10+:
+All **173** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, and biometric rPPG tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================ 151 passed in 18.18s =============================
+# ============================ 173 passed in 15.53s =============================
 ```
 
+- **Remote Biometrics Suite (`test_biometrics.py`)**: Plane-Orthogonal-to-Skin (POS) chroma extraction, Butterworth 2nd-order bandpass filtering, FFT spectral and time-domain peak detection, HRV (SDNN, RMSSD, pNN50, Baevsky Stress Index), Respiration Sinus Arrhythmia (RSA), and multi-sensor Autonomic Stress late fusion.
+- **Biometric UI Visualizations Suite (`test_ui_biometric_charts.py`)**: Real-time BVP photoplethysmogram waveforms, systolic peak markers, HRV Poincaré ($RR_n \text{ vs } RR_{n+1}$) scatter plots, semicircular autonomic stress tachometer gauges, sympathetic/parasympathetic tone balance bars, and longitudinal multi-session RHR/RMSSD drift charts.
 - **Clinical Agent Reasoning Suite (`test_clinical_agent.py`)**: Chain-of-Thought prompt synthesis, timeline compression, turning point detection, live distress triage, multi-turn copilot Q&A, and graceful fallback.
 - **Agent Microservice API Suite (`test_api_server.py`)**: `/api/agent/providers`, `/api/agent/synthesize`, and `/api/agent/chat` validation.
 - **Edge Runtime Suite (`test_edge_runtime.py`)**: Multi-provider execution routing (DirectML, CUDA, CPU, WASM), hardware profile introspection, warm-up pass timing, and fallback validation.

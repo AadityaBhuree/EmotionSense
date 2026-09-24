@@ -340,7 +340,7 @@ with tab5:
         st.plotly_chart(fig_rppg_bar, use_container_width=True)
 
         # Zero-Cloud Privacy Guarantee Checklist
-        st.markdown(f"""
+        st.markdown("""
         <div class="es-panel" style="border-left: 3px solid #10b981; margin-top: 10px; font-size: 0.85rem; line-height: 1.5;">
             <b style="color: #f8fafc;">🛡️ Zero-Cloud Optical Privacy & Hardware Compliance Architecture</b><br>
             • <b>Ephemeral RGB Scalar Reduction:</b> Video frames are immediately reduced to average 3-channel skin scalar values ($\mu_R, \mu_G, \mu_B$) within volatile CPU L1/L2 cache; zero raw pixels are persisted.<br>
