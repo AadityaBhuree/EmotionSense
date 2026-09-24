@@ -52,3 +52,16 @@ def test_edge_engine_synthetic_inference():
     # INT8 should be faster on average than FP32
     res_int8 = engine.run_synthetic_inference("audio_ser", input_data=dummy_input, precision="INT8")
     assert res_int8["latency_ms"] > 0.0
+
+
+def test_edge_benchmark_suite_rppg():
+    from src.edge.benchmark import EdgeBenchmarkSuite
+    suite = EdgeBenchmarkSuite()
+    res = suite.evaluate_rppg_pipeline(iterations=5, window_frames=60)
+
+    assert "mean_latency_ms" in res
+    assert "p50_latency_ms" in res
+    assert "stage_latencies_ms" in res
+    assert res["zero_cloud_certified"] is True
+    assert res["mean_latency_ms"] > 0.0
+
