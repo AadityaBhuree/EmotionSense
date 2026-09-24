@@ -49,6 +49,19 @@ from src.ui.biometric_charts import (
     render_poincare_plot,
     render_biometric_telemetry_hud_html,
 )
+from src.core.cognitive_models import (
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
+    OculomotorSnapshot,
+)
+from src.analytics.oculometrics import OculomotorEngine
+from src.ui.cognitive_charts import (
+    render_gaze_dispersion_chart,
+    render_nasa_tlx_radar,
+    render_cognitive_workload_gauge,
+    render_oculomotor_hud_html,
+)
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -498,6 +511,55 @@ if uploaded_file is not None:
                     st.plotly_chart(render_bvp_waveform_chart(f_bvp, pulse=b_pulse, height=220), use_container_width=True)
                 with fb_c2:
                     st.plotly_chart(render_poincare_plot(rr_sim, height=220), use_container_width=True)
+
+                # Phase 11: Offline Oculomotor Telemetry & Cognitive Overload Analysis
+                st.markdown("<div class='es-section-title'>🧠 Oculomotor Telemetry & Cognitive Overload Analysis</div>", unsafe_allow_html=True)
+
+                cpr_est = min(1.0, max(0.1, 0.25 + mean_aro * 0.45 - mean_val * 0.15))
+                pir_val = 0.40 + cpr_est * 0.12
+                perclos_est = min(0.35, max(0.02, 0.05 + (1.0 - mean_val) * 0.05 + (1.0 - (samples[0].attention_score / 100.0 if samples else 0.8)) * 0.1))
+                blink_sup = mean_aro > 0.6 and mean_val > -0.2
+                fix_dwell = float(np.clip(320.0 + mean_aro * 350.0, 150.0, 1500.0))
+                disp_area = float(np.clip(0.18 - mean_aro * 0.08, 0.04, 0.40))
+                strain_est = f_stress.stress_index if 'f_stress' in locals() else 0.35
+
+                p_metric = PupillometryMetrics(
+                    pupil_diameter_ratio=round(pir_val, 3),
+                    dilation_change_pct=round(cpr_est * 30.0, 1),
+                    cognitive_pupillary_response=round(cpr_est, 3),
+                )
+                b_dyn = BlinkDynamics(
+                    blink_rate_bpm=round(8.0 if blink_sup else 16.0, 1),
+                    perclos=round(perclos_est, 3),
+                    blink_suppressed=blink_sup,
+                    micro_sleep_detected=perclos_est > 0.15,
+                )
+                g_tel = GazeTelemetry(
+                    fixation_duration_ms=round(fix_dwell, 1),
+                    dispersion_area=round(disp_area, 3),
+                    saccade_velocity_deg_s=round(110.0 + mean_aro * 60.0, 1),
+                )
+                f_workload = OculomotorEngine.compute_cognitive_workload(
+                    p_metric, b_dyn, g_tel, autonomic_strain=strain_est
+                )
+                f_oculo_snap = OculomotorSnapshot(
+                    timestamp=time.time(),
+                    pupillometry=p_metric,
+                    blinks=b_dyn,
+                    gaze=g_tel,
+                    workload=f_workload,
+                )
+
+                st.markdown(render_oculomotor_hud_html(f_oculo_snap), unsafe_allow_html=True)
+
+                oc_c1, oc_c2, oc_c3 = st.columns([4, 4, 4])
+                with oc_c1:
+                    st.plotly_chart(render_cognitive_workload_gauge(f_workload, height=210), use_container_width=True)
+                with oc_c2:
+                    st.plotly_chart(render_nasa_tlx_radar(f_workload.nasa_tlx, height=210), use_container_width=True)
+                with oc_c3:
+                    sim_gaze_pts = [(0.5 + float(np.sin(i * 0.5)) * disp_area, 0.5 + float(np.cos(i * 0.4)) * disp_area) for i in range(12)]
+                    st.plotly_chart(render_gaze_dispersion_chart(sim_gaze_pts, current_gaze=g_tel, height=210), use_container_width=True)
 
                 # Phase 9: AI Multimodal Diagnostic Synthesis & Candidate Evaluation
                 st.markdown("<div class='es-section-title'>🤖 AI Diagnostic Synthesis & Candidate Evaluation</div>", unsafe_allow_html=True)
