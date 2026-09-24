@@ -53,6 +53,12 @@ from src.ui.biometric_charts import (
     render_autonomic_stress_gauge,
     render_biometric_telemetry_hud_html,
 )
+from src.analytics.oculometrics import OculomotorEngine
+from src.ui.cognitive_charts import (
+    render_gaze_dispersion_chart,
+    render_cognitive_workload_gauge,
+    render_oculomotor_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -73,6 +79,8 @@ if "edge_engine" not in st.session_state:
     st.session_state.edge_engine = ONNXEdgeInferenceEngine()
 if "biometric_engine" not in st.session_state:
     st.session_state.biometric_engine = BiometricEngine(fps=30.0)
+if "oculomotor_engine" not in st.session_state:
+    st.session_state.oculomotor_engine = OculomotorEngine()
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -675,6 +683,34 @@ with right_col:
                 st.plotly_chart(render_bvp_waveform_chart(bio_telem.bvp_history, pulse=bio_telem.pulse, height=210), use_container_width=True)
             with bio_col2:
                 st.plotly_chart(render_autonomic_stress_gauge(bio_telem.autonomic_stress, height=210), use_container_width=True)
+
+            # Phase 11: Real-Time Oculomotor Telemetry & Cognitive Workload HUD
+            oculo_engine = st.session_state.oculomotor_engine
+            base_pir = 0.40 + max(0.0, sim_arousal * 0.15)
+            sim_ear = 0.28 if (int(t_now * 3) % 11 != 0) else 0.12
+            sim_yaw = float(np.sin(t_now * 0.5) * 8.0)
+            sim_pitch = float(np.cos(t_now * 0.4) * 4.0)
+            sim_strain = bio_telem.autonomic_stress.stress_index if 'bio_telem' in locals() else 0.35
+
+            oculo_snap = oculo_engine.process_frame(
+                left_eye_pts=np.array([[0, 0], [0.3, sim_ear], [0.7, sim_ear], [1.0, 0], [0.7, -sim_ear], [0.3, -sim_ear]]),
+                right_eye_pts=np.array([[0, 0], [0.3, sim_ear], [0.7, sim_ear], [1.0, 0], [0.7, -sim_ear], [0.3, -sim_ear]]),
+                pir_sample=base_pir,
+                yaw_deg=sim_yaw,
+                pitch_deg=sim_pitch,
+                autonomic_strain=sim_strain,
+                timestamp=t_now,
+            )
+            st.session_state.latest_oculomotor = oculo_snap
+
+            st.markdown(render_oculomotor_hud_html(oculo_snap), unsafe_allow_html=True)
+
+            oculo_col1, oculo_col2 = st.columns([7, 5])
+            with oculo_col1:
+                gaze_pts = [(0.5 + y / 90.0, 0.5 + p / 60.0) for _, y, p in oculo_engine.gaze_history]
+                st.plotly_chart(render_gaze_dispersion_chart(gaze_pts, current_gaze=oculo_snap.gaze, height=210), use_container_width=True)
+            with oculo_col2:
+                st.plotly_chart(render_cognitive_workload_gauge(oculo_snap.workload, height=210), use_container_width=True)
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
