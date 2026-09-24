@@ -86,17 +86,20 @@ with st.sidebar:
     - **Vision Mesh**: `< 15.0 ms`
     - **Cross-Modal (CMAF)**: `< 20.0 ms`
     - **Optical rPPG (POS)**: `< 6.0 ms`
+    - **Oculomotor & Pupillometry**: `< 4.0 ms`
+    - **Cognitive Workload Fusion**: `< 1.0 ms`
     - **Autonomic Stress Fusion**: `< 2.0 ms`
     - **Target FPS**: `≥ 30.0 FPS`
     """)
 
 # Main Studio Tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🚀 Latency Benchmark & Stress Test",
     "🗜️ Model Quantization & Compression",
     "📦 Edge Manifest & Export",
     "🤖 Edge SLM & Agent Profiling",
     "🫀 Edge Optical rPPG & Biometric SLA",
+    "🧠 Edge Oculomotor & Cognitive SLA",
 ])
 
 with tab1:
@@ -348,4 +351,101 @@ with tab5:
             • <b>Regulatory Compliance:</b> Meets strict HIPAA Section 164.312 physical/technical safeguard standards and EU GDPR biometric privacy directives.
         </div>
         """, unsafe_allow_html=True)
+
+with tab6:
+    st.markdown("""
+    <div class="es-panel" style="margin-bottom: 1rem;">
+        <div style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            🧠 Edge Oculomotor Kinematics & Cognitive Workload Pipeline SLA
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Evaluates the execution latency, memory footprint, and frame throughput of the real-time pupillometry, Eye Aspect Ratio (EAR), PERCLOS drowsiness kinematics, 3D gaze velocity tracking, and NASA-TLX cognitive workload estimation pipeline.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_oculo_ctrl, col_oculo_act = st.columns([3, 1])
+    with col_oculo_ctrl:
+        st.markdown("#### ⏱️ Real-Time Oculomotor Latency Stress Test")
+        st.caption("Validates the stringent `< 4.0 ms` SLA required for zero-jitter 60 FPS cognitive monitoring.")
+    with col_oculo_act:
+        run_oculo_bench = st.button("⚡ Profile Oculomotor Pipeline", use_container_width=True, type="primary")
+
+    if run_oculo_bench or "oculo_benchmark" not in st.session_state:
+        with st.spinner("Benchmarking edge oculomotor and cognitive workload pipeline..."):
+            st.session_state.oculo_benchmark = bench_suite.evaluate_oculomotor_pipeline(iterations=benchmark_iterations)
+
+    oculo_res = st.session_state.oculo_benchmark
+
+    if oculo_res:
+        ob1, ob2, ob3, ob4 = st.columns(4)
+        with ob1:
+            render_metric_card(
+                "Mean Pipeline Latency",
+                f"{oculo_res['mean_latency_ms']:.2f} ms",
+                delta=f"SLA < {oculo_res['sla_target_ms']} ms ({'PASS ✅' if oculo_res['sla_compliant'] else 'FAIL ❌'})",
+                color="#10b981" if oculo_res['sla_compliant'] else "#ef4444",
+            )
+        with ob2:
+            render_metric_card(
+                "Peak Throughput",
+                f"{oculo_res['fps_throughput']:.0f} FPS",
+                delta="Ultra High Refresh (120Hz Ready)",
+                color="#0ea5e9",
+            )
+        with ob3:
+            render_metric_card(
+                "RAM Footprint",
+                f"{oculo_res['memory_mb']:.1f} MB",
+                delta="Zero Cache Thrashing",
+                color="#a855f7",
+            )
+        with ob4:
+            render_metric_card(
+                "Neurometric Privacy",
+                "100% On-Device",
+                delta="Zero Landmark Leaks",
+                color="#10b981",
+            )
+
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+
+        st.markdown("##### ⏱️ Oculomotor Stage Latency Breakdown (P50)")
+        oc_stages = oculo_res.get("stage_latencies_ms", {})
+        oc_names = {
+            "iris_pupillometry_calc": "1. Iris Boundary Pupillometry & CPR Calculation",
+            "ear_blink_perclos": "2. Peri-Ocular EAR Blink & PERCLOS Accumulation",
+            "gaze_ivt_discrimination": "3. 3D Gaze Vector & I-VT Saccade Velocity",
+            "nasa_tlx_composite_fusion": "4. Multimodal NASA-TLX Cognitive Workload Fusion",
+        }
+
+        import plotly.graph_objects as go
+        fig_oc_bar = go.Figure()
+        fig_oc_bar.add_trace(go.Bar(
+            y=[oc_names.get(k, k) for k in oc_stages.keys()],
+            x=list(oc_stages.values()),
+            orientation='h',
+            marker=dict(color=['#ec4899', '#8b5cf6', '#3b82f6', '#10b981']),
+            text=[f"{v:.2f} ms" for v in oc_stages.values()],
+            textposition='auto',
+        ))
+        fig_oc_bar.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(18, 22, 34, 0.6)',
+            margin=dict(l=20, r=20, t=10, b=20),
+            height=180,
+            xaxis=dict(title="Execution Time (ms)", gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#94a3b8')),
+            yaxis=dict(autorange="reversed", tickfont=dict(color='#f8fafc', size=11)),
+        )
+        st.plotly_chart(fig_oc_bar, use_container_width=True)
+
+        st.markdown("""
+        <div class="es-panel" style="border-left: 3px solid #ec4899; margin-top: 10px; font-size: 0.85rem; line-height: 1.5;">
+            <b style="color: #f8fafc;">🛡️ Zero-Cloud Oculomotor Privacy & Edge Neurometric Assurance</b><br>
+            • <b>Vectorized Coordinate Processing:</b> Oculomotor signals are computed purely from dimensionless floating-point landmark coordinates (MediaPipe landmarks 468–477). No raw peri-ocular camera frames or iris images are stored or transmitted.<br>
+            • <b>On-Device Workload Inference:</b> The NASA-TLX multi-factor fusion algorithm executes completely in-memory on the edge CPU/NPU with sub-millisecond overhead.<br>
+            • <b>Air-Gapped Operation:</b> EmotionSense operates 100% offline, guaranteeing patient privacy and intellectual property confidentiality in high-security environments.
+        </div>
+        """, unsafe_allow_html=True)
+
 

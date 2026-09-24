@@ -65,3 +65,18 @@ def test_edge_benchmark_suite_rppg():
     assert res["zero_cloud_certified"] is True
     assert res["mean_latency_ms"] > 0.0
 
+
+def test_edge_benchmark_suite_oculomotor():
+    from src.edge.benchmark import EdgeBenchmarkSuite
+    suite = EdgeBenchmarkSuite()
+    res = suite.evaluate_oculomotor_pipeline(iterations=10)
+
+    assert "mean_latency_ms" in res
+    assert "p50_latency_ms" in res
+    assert "stage_latencies_ms" in res
+    assert "iris_pupillometry_calc" in res["stage_latencies_ms"]
+    assert res["zero_cloud_certified"] is True
+    assert res["sla_target_ms"] == 4.0
+    assert res["mean_latency_ms"] > 0.0
+
+
