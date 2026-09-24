@@ -36,6 +36,15 @@ from src.core.biometric_models import (
     AutonomicStressRecord,
     BiometricTelemetry,
 )
+from src.core.cognitive_models import (
+    WorkloadTier,
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
+    NASATLXDimensions,
+    CognitiveWorkloadRecord,
+    OculomotorSnapshot,
+)
 
 __all__ = [
     "EmotionCategory",
@@ -67,6 +76,14 @@ __all__ = [
     "RespirationMetrics",
     "AutonomicStressRecord",
     "BiometricTelemetry",
+    "WorkloadTier",
+    "PupillometryMetrics",
+    "BlinkDynamics",
+    "GazeTelemetry",
+    "NASATLXDimensions",
+    "CognitiveWorkloadRecord",
+    "OculomotorSnapshot",
 ]
+
 
 
