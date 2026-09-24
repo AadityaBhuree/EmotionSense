@@ -35,6 +35,18 @@ from src.agent import (
 from src.analytics.biometrics import BiometricEngine
 from src.core.biometric_models import PulseMeasurement, HRVMetrics, RespirationMetrics, BiometricTelemetry
 from src.ui.biometric_charts import render_biometric_telemetry_hud_html
+from src.core.cognitive_models import (
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
+    OculomotorSnapshot,
+)
+from src.analytics.oculometrics import OculomotorEngine
+from src.ui.cognitive_charts import (
+    render_oculomotor_hud_html,
+    render_nasa_tlx_radar,
+    render_cognitive_workload_gauge,
+)
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -175,7 +187,15 @@ else:
     st.markdown("<div class='es-section-title'>📊 Session Aggregate Telemetry</div>", unsafe_allow_html=True)
 
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    timeline_points = session_data.get("timeline", [])
+    avg_workload = 0.52
+    if timeline_points:
+        avg_workload = float(np.mean([
+            np.clip(0.35 + float(f.get("affect", {}).get("arousal", 0.0)) * 0.35 + float(f.get("fatigue_level", 0.1)) * 0.2, 0.05, 0.98)
+            for f in timeline_points
+        ]))
+
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
     with m1:
         render_metric_card("Total Samples", f"{session_data.get('samples_count', 0)}", color="#3b82f6")
     with m2:
@@ -186,8 +206,8 @@ else:
         render_metric_card("Avg Valence", f"{session_data.get('average_valence', 0):+.2f}", color="#10b981")
     with m5:
         render_metric_card("Avg Arousal", f"{session_data.get('average_arousal', 0):+.2f}", color="#f59e0b")
-
-    timeline_points = session_data.get("timeline", [])
+    with m6:
+        render_metric_card("Avg Workload", f"{avg_workload:.2f}", color="#ec4899")
 
     if timeline_points:
         st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
@@ -243,6 +263,55 @@ else:
             autonomic_stress=frame_stress,
         )
         st.markdown(render_biometric_telemetry_hud_html(frame_telem), unsafe_allow_html=True)
+
+        # Phase 11: Frame Cognitive Workload & Oculomotor Pupillometry Record
+        c_fatigue = float(current_frame.get("fatigue_level", 0.15))
+        c_engagement = float(current_frame.get("engagement_index", 0.65))
+
+        f_pupil_dia = float(np.clip(3.4 + f_aro * 1.6 + (1.0 - f_val) * 0.4, 2.0, 7.0))
+        f_pir = float(np.clip((f_pupil_dia - 3.2) / 3.2, -0.4, 0.9))
+        f_ear = float(np.clip(0.32 - c_fatigue * 0.14, 0.12, 0.40))
+        f_perclos = float(np.clip(c_fatigue * 0.55 + max(0.0, 0.22 - f_ear) * 1.5, 0.0, 0.85))
+        f_blink_rate = float(np.clip(16.0 + f_aro * 8.0 - c_fatigue * 6.0, 4.0, 45.0))
+        f_fix_ratio = float(np.clip(0.78 - f_aro * 0.25, 0.2, 0.95))
+
+        frame_pupil = PupillometryMetrics(
+            mean_pupil_diameter_mm=round(f_pupil_dia, 2),
+            pupil_iris_ratio=round(f_pir, 3),
+            cpr_amplitude=round(f_pir * 0.6, 3),
+        )
+        frame_blink = BlinkDynamics(
+            blink_rate_bpm=round(f_blink_rate, 1),
+            mean_ear=round(f_ear, 3),
+            perclos_score=round(f_perclos, 3),
+            drowsiness_detected=bool(f_perclos > 0.35 or f_ear < 0.20),
+        )
+        frame_gaze = GazeTelemetry(
+            fixation_duration_ms=round(280.0 * f_fix_ratio, 1),
+            saccade_velocity_deg_s=round(120.0 + f_aro * 180.0, 1),
+            fixation_to_saccade_ratio=round(f_fix_ratio, 2),
+            scanpath_entropy=round(1.2 + f_aro * 0.8, 2),
+        )
+        frame_oculo = OculomotorSnapshot(
+            pupillometry=frame_pupil,
+            blink=frame_blink,
+            gaze=frame_gaze,
+        )
+        frame_workload = OculomotorEngine.compute_cognitive_workload(
+            frame_oculo,
+            task_type="Clinical Diagnostic Review",
+            valence=f_val,
+            arousal=f_aro,
+            engagement=c_engagement,
+        )
+
+        st.markdown(render_oculomotor_hud_html(frame_oculo, frame_workload), unsafe_allow_html=True)
+
+        cg_col1, cg_col2 = st.columns([1, 1])
+        with cg_col1:
+            st.plotly_chart(render_cognitive_workload_gauge(frame_workload), use_container_width=True)
+        with cg_col2:
+            st.plotly_chart(render_nasa_tlx_radar(frame_workload.nasa_tlx), use_container_width=True)
 
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
