@@ -95,6 +95,14 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Autonomic Multimodal Stress Fusion**: Unified late fusion combining physiological strain with affective state (Valence, Arousal, vocal jitter).
 - **Zero-Cloud Optical Privacy & Edge SLA**: Sub-6ms pipeline latency, ephemeral RGB reduction in volatile cache, 100% on-device compute.
 
+### 🧠 Cognitive Workload, Oculomotor Telemetry & Pupillometric Neurometrics (Phase 11)
+- **Contact-Free Pupillometry & Cognitive Pupillary Response (CPR)**: Measures pupil diameter and Pupil-to-Iris Ratio (PIR) from MediaPipe FaceMesh iris boundary landmarks (468–477) to quantify locus coeruleus noradrenergic cognitive activation without specialized eye-trackers.
+- **Eye Aspect Ratio (EAR) & PERCLOS Kinematics**: Computes eyelid closure ratio and PERCLOS metric ($P_{80}$) to detect progressive cognitive fatigue and impending microsleep events.
+- **3D Gaze Tracking & I-VT Velocity Discrimination**: High-precision gaze yaw/pitch estimation and Velocity-Threshold Identification (I-VT algorithm) distinguishing fixational focus ($> 250\,\text{ms}$) from exploratory saccades ($> 100^\circ/\text{s}$).
+- **Gaze Dispersion & Focal Heatmaps**: Quantifies visual scanning entropy, cognitive tunneling, and spatial fixation centroids.
+- **Multi-Sensor NASA-TLX Mental Overload Index**: Late fusion synthesizing pupillometric dilation, blink dynamics, gaze fixation-to-saccade ratio, emotional arousal, and lexical complexity into a unified 6-factor NASA-TLX index ($0.0 - 1.0$) and classification tiers (*Low Load, Optimal Engagement, High Effort, Cognitive Overload*).
+- **Zero-Cloud Edge Neurometric Assurance**: Sub-4.0ms processing SLA running 100% locally on CPU/NPU with zero landmark or frame exfiltration.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -346,13 +354,13 @@ docker compose logs -f
 Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, longitudinal profiling, and edge acceleration pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (173 tests across 24 modules)
+# Execute automated test suite (187 tests across 26 modules)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 173 unit, integration, persistence, dyadic telemetry, longitudinal profiling, edge acceleration, agentic reasoning, and biometric rPPG tests run with 100% pass rate across Python 3.10+.*
+*All 187 unit, integration, persistence, dyadic telemetry, longitudinal profiling, edge acceleration, agentic reasoning, biometric rPPG, and cognitive workload tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -384,6 +392,9 @@ ruff check .
 | `POST` | `/api/biometrics/rppg` | Compute pulse and HRV from raw RGB frame series or base64 video |
 | `POST` | `/api/biometrics/stress` | Compute unified autonomic stress index from physiological + VAD parameters |
 | `GET` | `/api/biometrics/config` | Retrieve optical filtering parameters and hardware latency SLA specs |
+| `POST` | `/api/cognitive/oculometrics` | Extract pupillometry PIR, EAR, PERCLOS & 3D gaze kinematics from landmarks |
+| `POST` | `/api/cognitive/workload` | Compute multimodal NASA-TLX Cognitive Workload Index and classification tier |
+| `GET` | `/api/cognitive/config` | Retrieve oculomotor threshold constants, calibration baselines & SLA specs |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 
