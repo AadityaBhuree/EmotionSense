@@ -480,6 +480,71 @@ def test_biometric_api_endpoints(client):
     assert 45.0 <= telem["pulse"]["bpm"] <= 180.0
 
 
+def test_cognitive_api_endpoints(client):
+    """Test Phase 11 cognitive workload and oculomotor REST endpoints."""
+    # 1. Config endpoint
+    cfg_res = client.get("/api/cognitive/config")
+    assert cfg_res.status_code == 200
+    c_data = cfg_res.json()
+    assert c_data["status"] == "online"
+    assert "ear_closed_threshold" in c_data
+    assert "Cognitive_Overload" in c_data["workload_tiers"]
+    assert "mental_demand" in c_data["nasa_tlx_dimensions"]
+
+    # 2. Oculometrics endpoint
+    eye_pts = [
+        [0.0, 0.0],
+        [0.3, 0.25],
+        [0.7, 0.25],
+        [1.0, 0.0],
+        [0.7, -0.25],
+        [0.3, -0.25],
+    ]
+    oculo_res = client.post(
+        "/api/cognitive/oculometrics",
+        json={
+            "left_eye_points": eye_pts,
+            "right_eye_points": eye_pts,
+            "pir_sample": 0.48,
+            "yaw_deg": 3.0,
+            "pitch_deg": -1.5,
+            "autonomic_strain": 0.35,
+        }
+    )
+    assert oculo_res.status_code == 200
+    o_data = oculo_res.json()
+    assert o_data["status"] == "success"
+    snap = o_data["snapshot"]
+    assert "pupillometry" in snap
+    assert "blinks" in snap
+    assert "gaze" in snap
+    assert "workload" in snap
+    assert 0.0 <= snap["workload"]["workload_index"] <= 1.0
+
+    # 3. Workload computation endpoint
+    wl_res = client.post(
+        "/api/cognitive/workload",
+        json={
+            "cpr": 0.75,
+            "perclos": 0.12,
+            "blink_suppressed": True,
+            "fixation_duration_ms": 650.0,
+            "dispersion_area": 0.08,
+            "autonomic_strain": 0.55,
+            "speech_pause_ratio": 0.25,
+        }
+    )
+    assert wl_res.status_code == 200
+    w_data = wl_res.json()
+    assert w_data["status"] == "success"
+    wl = w_data["workload"]
+    assert "tier" in wl
+    assert "nasa_tlx" in wl
+    assert wl["nasa_tlx"]["mental_demand"] > 50.0
+    assert 0.0 <= wl["mental_exhaustion_risk"] <= 1.0
+
+
+
 
 
 

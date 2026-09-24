@@ -24,7 +24,12 @@ from src.utils.report_generator import DiagnosticReportGenerator
 from src.audio.speech_transcriber import LiveSpeechTranscriber
 from src.audio.diarizer import AcousticDiarizer
 from src.storage import SessionDatabase
-from src.analytics import LongitudinalProfileAnalyzer, generate_synthetic_cohort_benchmarks, BiometricEngine
+from src.analytics import (
+    LongitudinalProfileAnalyzer,
+    generate_synthetic_cohort_benchmarks,
+    BiometricEngine,
+    OculomotorEngine,
+)
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
 from src.edge.benchmark import EdgeBenchmarkSuite
@@ -35,6 +40,12 @@ from src.core.biometric_models import (
     HRVMetrics,
     RespirationMetrics,
     BiometricTelemetry,
+)
+from src.core.cognitive_models import (
+    WorkloadTier,
+    PupillometryMetrics,
+    BlinkDynamics,
+    GazeTelemetry,
 )
 
 
@@ -67,6 +78,7 @@ edge_bench_suite = EdgeBenchmarkSuite(engine=edge_engine, quantizer=edge_quantiz
 clinical_agent = ClinicalReasoningAgent()
 chat_copilot = ClinicalChatCopilot()
 biometric_engine = BiometricEngine(fps=30.0)
+oculomotor_engine = OculomotorEngine()
 
 
 # Request & Response Schemas
@@ -120,6 +132,24 @@ class BiometricStressRequest(BaseModel):
     arousal: Optional[float] = Field(0.0, description="Affective arousal (0.0 to 1.0)")
     vocal_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
 
+
+class OculometricsRequest(BaseModel):
+    left_eye_points: List[List[float]] = Field(..., description="6 (x, y) coordinates for left eye")
+    right_eye_points: List[List[float]] = Field(..., description="6 (x, y) coordinates for right eye")
+    pir_sample: Optional[float] = Field(0.42, description="Pupil-to-Iris Ratio (PIR)")
+    yaw_deg: Optional[float] = Field(0.0, description="Gaze yaw angle in degrees")
+    pitch_deg: Optional[float] = Field(0.0, description="Gaze pitch angle in degrees")
+    autonomic_strain: Optional[float] = Field(0.30, description="Autonomic strain index (0.0 to 1.0)")
+
+
+class CognitiveWorkloadRequest(BaseModel):
+    cpr: float = Field(0.25, description="Cognitive Pupillary Response index (0.0 to 1.0)")
+    perclos: float = Field(0.06, description="PERCLOS eye closure fraction (0.0 to 1.0)")
+    blink_suppressed: Optional[bool] = Field(False, description="Whether blink rate is suppressed (<8 bpm)")
+    fixation_duration_ms: Optional[float] = Field(350.0, description="Current fixation duration in ms")
+    dispersion_area: Optional[float] = Field(0.12, description="Gaze dispersion radius")
+    autonomic_strain: Optional[float] = Field(0.30, description="Sympathetic autonomic strain (0.0 to 1.0)")
+    speech_pause_ratio: Optional[float] = Field(0.20, description="Acoustic speech pause ratio")
 
 
 class DialogueTranscriptRequest(BaseModel):
@@ -692,6 +722,55 @@ async def get_biometric_status():
         "default_fps": 30.0,
         "hrv_metrics": ["SDNN", "RMSSD", "pNN50", "Baevsky_Stress_Index", "HRV_Vitality_Score"],
         "autonomic_classifications": [c.value for c in StressClassification],
+    }
+
+
+@app.post("/api/cognitive/oculometrics", tags=["Cognitive Workload"])
+async def evaluate_oculometrics(req: OculometricsRequest):
+    """Evaluate eye landmarks, pupil dilation ratio, blink rate, and gaze dynamics."""
+    import numpy as np
+    l_pts = np.array(req.left_eye_points, dtype=np.float64)
+    r_pts = np.array(req.right_eye_points, dtype=np.float64)
+    snapshot = oculomotor_engine.process_frame(
+        left_eye_pts=l_pts,
+        right_eye_pts=r_pts,
+        pir_sample=req.pir_sample or 0.42,
+        yaw_deg=req.yaw_deg or 0.0,
+        pitch_deg=req.pitch_deg or 0.0,
+        autonomic_strain=req.autonomic_strain or 0.30,
+    )
+    return {"status": "success", "snapshot": snapshot.to_dict()}
+
+
+@app.post("/api/cognitive/workload", tags=["Cognitive Workload"])
+async def compute_cognitive_workload_endpoint(req: CognitiveWorkloadRequest):
+    """Compute unified Cognitive Workload Index and NASA-TLX dimensional estimates."""
+    pupil = PupillometryMetrics(cognitive_pupillary_response=req.cpr)
+    blinks = BlinkDynamics(perclos=req.perclos, blink_suppressed=req.blink_suppressed or False)
+    gaze = GazeTelemetry(
+        fixation_duration_ms=req.fixation_duration_ms or 350.0,
+        dispersion_area=req.dispersion_area or 0.12,
+    )
+    workload = OculomotorEngine.compute_cognitive_workload(
+        pupil,
+        blinks,
+        gaze,
+        autonomic_strain=req.autonomic_strain or 0.30,
+        speech_pause_ratio=req.speech_pause_ratio or 0.20,
+    )
+    return {"status": "success", "workload": workload.to_dict()}
+
+
+@app.get("/api/cognitive/config", tags=["Cognitive Workload"])
+async def get_cognitive_config():
+    """Retrieve cognitive engine calibration thresholds, EAR baseline, and NASA-TLX specifications."""
+    return {
+        "status": "online",
+        "ear_closed_threshold": oculomotor_engine.ear_closed_threshold,
+        "baseline_pir": oculomotor_engine.baseline_pir,
+        "saccade_velocity_threshold_deg_s": oculomotor_engine.saccade_velocity_threshold,
+        "workload_tiers": [t.value for t in WorkloadTier],
+        "nasa_tlx_dimensions": ["mental_demand", "temporal_demand", "effort", "frustration"],
     }
 
 
