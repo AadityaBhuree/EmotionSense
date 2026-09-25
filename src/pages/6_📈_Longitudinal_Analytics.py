@@ -44,6 +44,22 @@ from src.ui.cognitive_charts import (
     render_nasa_tlx_radar,
     render_oculomotor_hud_html,
 )
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
+    KinesicExpressivity,
+    SomatosensorySnapshot,
+)
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_postural_ergonomics_diagram,
+    render_psychomotor_agitation_gauge,
+    render_somatosensory_hud_html,
+)
 
 st.set_page_config(
     page_title="Longitudinal Analytics | EmotionSense",
@@ -288,11 +304,80 @@ for i, p in enumerate(points):
         "workload_obj": w_idx,
     })
 
-tab_traj, tab_radar, tab_bio, tab_cog, tab_table = st.tabs([
+soma_sessions = []
+for i, p in enumerate(points):
+    s_val = p.mean_valence
+    s_aro = p.mean_arousal
+    s_fat = float(np.clip(0.15 + (1.0 - s_val) * 0.18, 0.05, 0.85))
+    s_slump = float(np.clip(0.18 + s_fat * 0.40 + max(0.0, -s_val * 0.22), 0.05, 0.85))
+    s_fhp = float(np.clip(54.0 - s_slump * 20.0, 30.0, 65.0))
+    s_state = PostureState.SLUMPED.value if s_slump >= 0.45 else (
+        PostureState.TENSE_ELEVATED.value if s_aro > 0.60 and s_val < -0.2 else PostureState.UPRIGHT.value
+    )
+    post_m = PosturalMetrics(
+        forward_head_angle_deg=round(s_fhp, 1),
+        spinal_tilt_deg=round(float(np.sin(i * 0.5) * 3.0), 1),
+        shoulder_elevation_asymmetry=0.14 if s_state == PostureState.TENSE_ELEVATED.value else 0.04,
+        slump_index=round(s_slump, 3),
+        posture_state=s_state,
+    )
+    ad_active = s_aro > 0.55 or s_fat > 0.40
+    ad_type = AdaptorType.NECK_TOUCH.value if s_aro > 0.60 else (
+        AdaptorType.TEMPLE_RUB.value if s_fat > 0.40 else AdaptorType.CHIN_SUPPORT.value
+    )
+    ad_cat = AdaptorCategory.PACIFYING_STRESS.value if s_aro > 0.60 else (
+        AdaptorCategory.FATIGUE_OVERLOAD.value if s_fat > 0.40 else AdaptorCategory.EVALUATIVE_COGNITIVE.value
+    )
+    ad_m = MicroGestureAdaptor(
+        adaptor_type=ad_type if ad_active else AdaptorType.NONE.value,
+        category=ad_cat if ad_active else AdaptorCategory.BASELINE_NONE.value,
+        proximity_distance=0.12 if ad_active else 0.85,
+        active=ad_active,
+    )
+    fid_m = FidgetingDynamics(
+        restlessness_score=round(float(np.clip(s_aro * 0.65 + s_fat * 0.20, 0.08, 0.95)), 3),
+        is_fidgeting=s_aro > 0.55,
+    )
+    exp_m = KinesicExpressivity(
+        expressivity_score=round(float(np.clip(0.40 + s_aro * 0.35, 0.10, 0.95)), 3),
+    )
+    b_strain = bio_sessions[i]["allostatic_stress"] if i < len(bio_sessions) else 0.30
+    c_load = cog_sessions[i]["workload_score"] if i < len(cog_sessions) else 0.35
+    agit_m = SomatosensoryEngine.fuse_psychomotor_agitation(
+        posture=post_m,
+        primary_adaptor=ad_m,
+        fidgeting=fid_m,
+        autonomic_stress=b_strain,
+        cognitive_workload=c_load,
+    )
+    snap_s = SomatosensorySnapshot(
+        timestamp=p.timestamp,
+        posture=post_m,
+        adaptors=[ad_m] if ad_active else [],
+        primary_adaptor=ad_m,
+        fidgeting=fid_m,
+        expressivity=exp_m,
+        agitation=agit_m,
+    )
+    soma_sessions.append({
+        "label": f"Ses {i+1} ({p.date_str[:10]})",
+        "date_str": p.date_str,
+        "slump_index": round(s_slump, 3),
+        "slump_pct": round(s_slump * 100.0, 1),
+        "posture_state": s_state,
+        "restlessness_pct": round(fid_m.restlessness_score * 100.0, 1),
+        "agitation_score": round(agit_m.agitation_index, 3),
+        "agitation_pct": round(agit_m.agitation_index * 100.0, 1),
+        "tier": agit_m.tier,
+        "snapshot": snap_s,
+    })
+
+tab_traj, tab_radar, tab_bio, tab_cog, tab_soma, tab_table = st.tabs([
     "📈 Trajectory Trendline",
     "🎯 Cohort Volatility Radar",
     "🫀 Physiological & Allostatic Drift",
     "🧠 Cognitive Workload & Burnout Drift",
+    "🧘 Postural Ergonomics & Agitation Drift",
     "📑 Session Ledger & Micro-Inspection",
 ])
 
@@ -476,12 +561,89 @@ with tab_cog:
     else:
         st.info("No cognitive sessions recorded for this subject profile.")
 
+with tab_soma:
+    if soma_sessions:
+        soma_top1, soma_top2, soma_top3, soma_top4 = st.columns(4)
+        latest_soma = soma_sessions[-1]
+        first_soma = soma_sessions[0]
+        delta_slump = latest_soma["slump_index"] - first_soma["slump_index"]
+        delta_agit = latest_soma["agitation_score"] - first_soma["agitation_score"]
+
+        with soma_top1:
+            st.metric(
+                "Postural Slump Index",
+                f"{latest_soma['slump_pct']}%",
+                delta=f"{delta_slump * 100.0:+.1f}%" if len(soma_sessions) > 1 else None,
+                delta_color="inverse",
+                help="Normalized spinal slump magnitude (lower is better ergonomics)",
+            )
+        with soma_top2:
+            st.metric(
+                "Postural Alignment",
+                latest_soma["posture_state"].upper(),
+                delta="Ergonomic Spine" if latest_soma["posture_state"] == "Upright" else "Postural Strain Alert",
+                delta_color="normal" if latest_soma["posture_state"] == "Upright" else "inverse",
+            )
+        with soma_top3:
+            st.metric(
+                "Psychomotor Agitation",
+                f"{latest_soma['agitation_pct']}%",
+                delta=f"{delta_agit * 100.0:+.1f}%" if len(soma_sessions) > 1 else None,
+                delta_color="inverse",
+                help="Composite Psychomotor Agitation Index (PAI) across sessions",
+            )
+        with soma_top4:
+            st.metric(
+                "Kinetic Restlessness",
+                f"{latest_soma['restlessness_pct']}%",
+                help="Hand/wrist kinetic motion variance across temporal window",
+            )
+
+        st.markdown(render_somatosensory_hud_html(latest_soma["snapshot"]), unsafe_allow_html=True)
+
+        s_left, s_right = st.columns([2.4, 1.2])
+        with s_left:
+            fig_soma_drift = go.Figure()
+            fig_soma_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in soma_sessions],
+                y=[s["slump_pct"] for s in soma_sessions],
+                name="Postural Slump %",
+                line=dict(color="#f59e0b", width=3),
+                mode="lines+markers",
+            ))
+            fig_soma_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in soma_sessions],
+                y=[s["agitation_pct"] for s in soma_sessions],
+                name="Psychomotor Agitation %",
+                line=dict(color="#ef4444", width=2, dash="dash"),
+                mode="lines+markers",
+            ))
+            fig_soma_drift.add_hline(y=45.0, line_dash="dot", line_color="#ef4444", annotation_text="Slump Threshold (45%)")
+            fig_soma_drift.update_layout(
+                title="Multi-Session Postural Ergonomics & Agitation Drift",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,23,42,0.6)",
+                font=dict(color="#e2e8f0"),
+                margin=dict(l=30, r=30, t=40, b=30),
+                height=320,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(range=[0.0, 100.0], gridcolor="rgba(255,255,255,0.08)"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            )
+            st.plotly_chart(fig_soma_drift, use_container_width=True)
+        with s_right:
+            st.plotly_chart(render_postural_ergonomics_diagram(latest_soma["snapshot"].posture, height=190), use_container_width=True)
+            st.plotly_chart(render_psychomotor_agitation_gauge(latest_soma["snapshot"].agitation, height=190), use_container_width=True)
+    else:
+        st.info("No somatosensory sessions recorded for this subject profile.")
+
 with tab_table:
     if points:
         table_rows = []
         for i, p in enumerate(points):
             b_info = bio_sessions[i] if i < len(bio_sessions) else {}
             c_info = cog_sessions[i] if i < len(cog_sessions) else {}
+            s_info = soma_sessions[i] if i < len(soma_sessions) else {}
             table_rows.append({
                 "Session": f"Session {i+1}",
                 "Date": p.date_str,
@@ -492,8 +654,10 @@ with tab_table:
                 "HRV RMSSD": f"{b_info.get('rmssd_ms', '--')} ms",
                 "Cognitive Workload": f"{c_info.get('workload_pct', '--')}%",
                 "Workload Tier": c_info.get('tier', 'N/A').upper(),
+                "Postural State": s_info.get('posture_state', 'N/A').upper(),
+                "Slump %": f"{s_info.get('slump_pct', '--')}%",
+                "Psychomotor Agitation": f"{s_info.get('agitation_pct', '--')}%",
                 "Allostatic Stress": f"{b_info.get('stress_pct', '--')}%",
-                "Autonomic State": b_info.get('classification', 'N/A'),
                 "Anomalies": p.anomaly_count,
             })
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
