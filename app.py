@@ -76,6 +76,8 @@ with st.sidebar:
     - **Autonomic Stress**: `Baevsky SI + Vagal Tone`
     - **Oculometrics**: `Iris CPR + PERCLOS` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     - **Cognitive Workload**: `NASA-TLX Multi-Factor`
+    - **Somatosensory Kinematics**: `Ergonomics (FHP/Slump)` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
+    - **Psychomotor Agitation**: `PAI + Adaptors + Fidgeting` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -84,6 +86,29 @@ with st.sidebar:
 
 # Main Workstation Console Header
 render_header("EmotionSense Workstation", "Multimodal Affective Intelligence & Real-Time Emotion Decoder")
+
+# Phase 12 Somatosensory Kinematics & Ergonomics Banner
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(6, 182, 212, 0.09)); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.6rem;">🧘</span>
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <span>Phase 12 Somatosensory Kinematics, Postural Ergonomics & Micro-Gesture Kinesics Active</span>
+                <span class="es-badge" style="font-size: 0.65rem; background: rgba(139, 92, 246, 0.25); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4);">KINESICS READY</span>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                Upper-Body Posture Alignment (FHP/Slump/Tilt) • Hand-to-Face Adaptors (Self-Touch) • Kinetic Restlessness Flux • Psychomotor Agitation Index (PAI)
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <span class="es-badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3);">Postural Ergonomics</span>
+        <span class="es-badge es-badge-cyan">Micro-Gesture Adaptors</span>
+        <span class="es-badge es-badge-green">Sub-3.5ms Edge SLA</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Phase 11 Cognitive Neurometrics Banner
 st.markdown("""
@@ -132,7 +157,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Key Platform Telemetry Metrics
-c1, c2, c3, c4, c5, c6 = st.columns(6)
+c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
 with c1:
     render_metric_card("Affect Taxonomy", "8 Core + 8 Nuance", delta="Plutchik/Ekman", color="#3b82f6", subtext="Calibrated Spectrum")
 with c2:
@@ -142,9 +167,11 @@ with c3:
 with c4:
     render_metric_card("Cognitive Load", "NASA-TLX", delta="Pupillometry CPR", color="#ec4899", subtext="PIR & Gaze Fixation")
 with c5:
-    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
+    render_metric_card("Somatosensory", "Postural & PAI", delta="Ergonomics", color="#8b5cf6", subtext="FHP & Micro-Gestures")
 with c6:
-    render_metric_card("Inference Latency", "< 4.8 ms", delta="Zero-Lag Local", color="#f59e0b", subtext="Hardware Optimized")
+    render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
+with c7:
+    render_metric_card("Inference Latency", "< 3.5 ms", delta="Zero-Lag Edge", color="#f59e0b", subtext="Hardware Optimized")
 
 st.markdown("<div style='margin-bottom: 0.85rem;'></div>", unsafe_allow_html=True)
 
