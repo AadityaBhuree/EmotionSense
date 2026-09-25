@@ -103,6 +103,13 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Multi-Sensor NASA-TLX Mental Overload Index**: Late fusion synthesizing pupillometric dilation, blink dynamics, gaze fixation-to-saccade ratio, emotional arousal, and lexical complexity into a unified 6-factor NASA-TLX index ($0.0 - 1.0$) and classification tiers (*Low Load, Optimal Engagement, High Effort, Cognitive Overload*).
 - **Zero-Cloud Edge Neurometric Assurance**: Sub-4.0ms processing SLA running 100% locally on CPU/NPU with zero landmark or frame exfiltration.
 
+### 🧘 Somatosensory Kinematics, Postural Ergonomics & Micro-Gesture Kinesics (Phase 12)
+- **Upper-Body Postural Alignment**: Real-time tracking of Forward Head Posture angle ($\theta_{\text{FHP}}$), Slump Index ($S_{\text{slump}}$), coronal lateral spinal tilt, and shoulder elevation tension asymmetry from MediaPipe upper-body pose landmarks.
+- **Hand-to-Face Micro-Gesture Adaptors**: Geometric proximity tracking classifying self-touch adaptors (Chin Support, Mouth Cover, Temple Rub, Eye Rub, Neck Touch, Cheek Touch) and affective categories (Evaluative, Defensive, Fatigue, Pacifying).
+- **Kinetic Restlessness & Fidgeting Dynamics**: Instantaneous motion energy variance, rapid micro-motion frequency spectrum (BPM), and displacement velocity quantifying psychomotor restlessness.
+- **Multimodal Psychomotor Agitation Index (PAI)**: Multi-modal fusion of postural slump, self-touch adaptors, kinetic fidgeting, autonomic stress, and cognitive workload into a unified index ($0.0 - 1.0$) and clinical tiers (*Composed, Restless Mild, Agitated High, Acute Motor Storm*).
+- **Zero-Cloud Edge Kinesic SLA**: Sub-3.5ms processing SLA executing 100% on-device on CPU/NPU with zero video exfiltration.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -354,13 +361,13 @@ docker compose logs -f
 Validate the full multimodal vision, audio DSP, acoustic diarization, dyadic interaction, NLP, SQLite persistence, longitudinal profiling, and edge acceleration pipelines using `pytest` and `ruff`:
 
 ```bash
-# Execute automated test suite (187 tests across 26 modules)
+# Execute automated test suite (212 tests across 29 modules)
 pytest -v
 
 # Run code hygiene and lint validation
 ruff check .
 ```
-*All 187 unit, integration, persistence, dyadic telemetry, longitudinal profiling, edge acceleration, agentic reasoning, biometric rPPG, and cognitive workload tests run with 100% pass rate across Python 3.10+.*
+*All 212 unit, integration, persistence, dyadic telemetry, longitudinal profiling, edge acceleration, agentic reasoning, biometric rPPG, cognitive workload, and somatosensory kinematics tests run with 100% pass rate across Python 3.10+.*
 
 ---
 
@@ -395,6 +402,9 @@ ruff check .
 | `POST` | `/api/cognitive/oculometrics` | Extract pupillometry PIR, EAR, PERCLOS & 3D gaze kinematics from landmarks |
 | `POST` | `/api/cognitive/workload` | Compute multimodal NASA-TLX Cognitive Workload Index and classification tier |
 | `GET` | `/api/cognitive/config` | Retrieve oculomotor threshold constants, calibration baselines & SLA specs |
+| `POST` | `/api/somatosensory/kinematics` | Extract upper-body posture, forward head angle, slump & adaptors |
+| `POST` | `/api/somatosensory/agitation` | Compute composite Psychomotor Agitation Index (PAI) late fusion |
+| `GET` | `/api/somatosensory/config` | Retrieve ergonomic angles, adaptor thresholds, and PAI SLA specs |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 

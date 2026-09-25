@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Phase 11 Completed — Cognitive Workload, Oculomotor Telemetry & Pupillometric Neurometrics (187/187 Tests Passing)  
+> **Status:** Phase 12 Completed — Somatosensory Kinematics, Postural Ergonomics & Micro-Gesture Kinesics (212/212 Tests Passing)  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -24,6 +24,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 9. **Multimodal Agentic Reasoning & Clinical Copilot**: Pluggable LLM/SLM reasoning engine (RuleBasedExpert 0ms, Ollama local LLaMA 3.2, OpenAI/vLLM, Google Gemini), token-budget compressed telemetry, Chain-of-Thought (CoT) diagnostic synthesis, and an interactive in-studio clinical copilot.
 10. **Remote Biometric & Physiological Telemetry (rPPG)**: Contact-free optical photoplethysmography via Plane-Orthogonal-to-Skin (POS) and CHROM algorithms, extracting instantaneous pulse (BPM), Heart Rate Variability (SDNN, RMSSD, pNN50), Baevsky Stress Index, Respiration Rate (RPM via RSA), and unified Autonomic Stress Index without wearable hardware.
 11. **Cognitive Workload & Oculomotor Telemetry**: Contact-free pupillometry and Cognitive Pupillary Response (CPR) via MediaPipe iris landmarks, Eye Aspect Ratio (EAR), blink dynamics, PERCLOS drowsiness metric, 3D gaze tracking, I-VT fixation vs. saccade velocity discrimination, gaze dispersion heatmaps, multi-sensor NASA-TLX Mental Overload Index fusion (0.0 to 1.0), and workload tiers.
+12. **Somatosensory Kinematics & Postural Ergonomics**: Real-time upper-body spinal alignment tracking (Forward Head Posture angle, Slump Index, lateral tilt, shoulder elevation asymmetry), hand-to-face micro-gesture self-touch adaptors (chin support, mouth cover, temple rub, eye rub, neck touch), kinetic restlessness / fidgeting spectral flux, and composite Psychomotor Agitation Index (PAI) multi-sensor fusion.
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
@@ -261,6 +262,9 @@ EmotionSense/
 | `POST` | `/api/biometrics/rppg` | Compute pulse and HRV from raw RGB frame series | `RPPGRequest` (`rgb_series`, `fps`) | `{"status": "success", "telemetry": {...}}` |
 | `POST` | `/api/biometrics/stress` | Compute unified autonomic stress index from parameters | `StressRequest` (`pulse`, `hrv`, `respiration`, `valence`, `arousal`) | `{"status": "success", "stress": {...}}` |
 | `GET` | `/api/biometrics/config` | Retrieve optical filtering and hardware SLA configuration | None | `{"status": "success", "config": {...}}` |
+| `POST` | `/api/somatosensory/kinematics` | Process upper-body posture landmarks and micro-gesture adaptors | `SomatosensoryKinematicsRequest` (`face_anchor`, `torso_landmarks`, `hands`) | `{"status": "success", "snapshot": {...}}` |
+| `POST` | `/api/somatosensory/agitation` | Compute composite Psychomotor Agitation Index (PAI) late fusion | `SomatosensoryAgitationRequest` (`posture`, `adaptor`, `fidgeting`, `stress`) | `{"status": "success", "agitation": {...}}` |
+| `GET` | `/api/somatosensory/config` | Retrieve ergonomic angles, adaptor thresholds, and PAI SLA specs | None | `{"status": "success", "config": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -275,13 +279,16 @@ EmotionSense/
 
 ## 6. Verification & Quality Metrics
 
-All **187** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, and cognitive workload tests pass cleanly across Python 3.10+:
+All **212** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, cognitive workload, and somatosensory kinematics tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================ 187 passed in 38.41s =============================
+# ============================ 212 passed in 16.83s =============================
 ```
 
+- **Somatosensory Kinematics & Ergonomics Suite (`test_somatosensory.py`)**: Forward Head Posture angle ($\theta_{\text{FHP}}$), Slump Index ($S_{\text{slump}}$), coronal lateral tilt, shoulder elevation tension asymmetry, hand-to-face micro-gesture adaptors (Chin Support, Mouth Cover, Temple Rub, Eye Rub, Neck Touch, Cheek Touch), kinetic restlessness / fidgeting spectral flux, gesticulation expressivity, and composite Psychomotor Agitation Index (PAI) multi-sensor fusion.
+- **Somatosensory UI Visualizations Suite (`test_ui_somatosensory_charts.py`)**: Upper-body postural alignment schematic diagrams, hand-to-face adaptor occurrence timelines, kinetic fidgeting energy waveforms, semicircular PAI tachometer gauges, and tactical somatosensory HUD HTML.
+- **Edge Benchmark Somatosensory SLA (`test_edge_runtime.py`)**: Real-time validation of the sub-3.5ms somatosensory kinematics and PAI fusion execution SLA with P50/P95/P99 latency profiling.
 - **Cognitive Workload & Oculomotor Telemetry Suite (`test_cognitive_workload.py`)**: MediaPipe iris pupil diameter and Pupil-to-Iris Ratio (PIR), Eye Aspect Ratio (EAR), blink dynamics and PERCLOS drowsiness detection, 3D gaze velocity tracking with I-VT fixation vs. saccade discrimination, and 6-factor NASA-TLX composite mental overload fusion.
 - **Cognitive UI Visualizations Suite (`test_ui_cognitive_charts.py`)**: Gaze dispersion spatial heatmaps, NASA-TLX dimensional radar spider charts, semicircular cognitive workload gauge with workload tiers, and tactical Oculomotor HUD HTML.
 - **Remote Biometrics Suite (`test_biometrics.py`)**: Plane-Orthogonal-to-Skin (POS) chroma extraction, Butterworth 2nd-order bandpass filtering, FFT spectral and time-domain peak detection, HRV (SDNN, RMSSD, pNN50, Baevsky Stress Index), Respiration Sinus Arrhythmia (RSA), and multi-sensor Autonomic Stress late fusion.
