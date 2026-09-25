@@ -47,6 +47,23 @@ from src.ui.cognitive_charts import (
     render_nasa_tlx_radar,
     render_cognitive_workload_gauge,
 )
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
+    KinesicExpressivity,
+    SomatosensorySnapshot,
+)
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_postural_ergonomics_diagram,
+    render_adaptor_timeline_chart,
+    render_psychomotor_agitation_gauge,
+    render_somatosensory_hud_html,
+)
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -312,6 +329,84 @@ else:
             st.plotly_chart(render_cognitive_workload_gauge(frame_workload), use_container_width=True)
         with cg_col2:
             st.plotly_chart(render_nasa_tlx_radar(frame_workload.nasa_tlx), use_container_width=True)
+
+        # Phase 12: Frame Somatosensory Kinematics & Postural Diagnostics
+        f_slump = float(np.clip(0.18 + c_fatigue * 0.45 + max(0.0, -f_val * 0.25), 0.05, 0.85))
+        f_fhp = float(np.clip(54.0 - f_slump * 20.0, 30.0, 65.0))
+        f_state = PostureState.SLUMPED.value if f_slump >= 0.45 else (
+            PostureState.TENSE_ELEVATED.value if f_aro > 0.65 and f_val < -0.2 else PostureState.UPRIGHT.value
+        )
+
+        frame_posture = PosturalMetrics(
+            forward_head_angle_deg=round(f_fhp, 1),
+            spinal_tilt_deg=round(float(np.sin(frame_idx * 0.2) * 3.5), 1),
+            shoulder_elevation_asymmetry=round(0.14 if f_state == PostureState.TENSE_ELEVATED.value else 0.04, 3),
+            slump_index=round(f_slump, 3),
+            posture_state=f_state,
+        )
+
+        # Frame adaptor
+        if f_aro > 0.60 and f_val < -0.20:
+            frame_adaptor = MicroGestureAdaptor(
+                adaptor_type=AdaptorType.NECK_TOUCH.value,
+                category=AdaptorCategory.PACIFYING_STRESS.value,
+                proximity_distance=0.14,
+                active=True,
+                duration_ms=1800.0,
+            )
+        elif c_fatigue > 0.40:
+            frame_adaptor = MicroGestureAdaptor(
+                adaptor_type=AdaptorType.TEMPLE_RUB.value,
+                category=AdaptorCategory.FATIGUE_OVERLOAD.value,
+                proximity_distance=0.12,
+                active=True,
+                duration_ms=2200.0,
+            )
+        elif c_engagement > 0.70:
+            frame_adaptor = MicroGestureAdaptor(
+                adaptor_type=AdaptorType.CHIN_SUPPORT.value,
+                category=AdaptorCategory.EVALUATIVE_COGNITIVE.value,
+                proximity_distance=0.13,
+                active=True,
+                duration_ms=2500.0,
+            )
+        else:
+            frame_adaptor = MicroGestureAdaptor(active=False)
+
+        frame_fidget = FidgetingDynamics(
+            restlessness_score=round(float(np.clip(f_aro * 0.7 + c_fatigue * 0.2, 0.08, 0.95)), 3),
+            is_fidgeting=f_aro > 0.55,
+        )
+        frame_express = KinesicExpressivity(
+            expressivity_score=round(float(np.clip(c_engagement * 0.6 + f_aro * 0.4, 0.10, 0.95)), 3),
+        )
+        frame_agitation = SomatosensoryEngine.fuse_psychomotor_agitation(
+            posture=frame_posture,
+            primary_adaptor=frame_adaptor,
+            fidgeting=frame_fidget,
+            autonomic_stress=frame_stress.stress_index,
+            cognitive_workload=frame_workload.workload_index,
+        )
+
+        frame_soma_snap = SomatosensorySnapshot(
+            timestamp=current_frame.get("timestamp", 0.0),
+            posture=frame_posture,
+            adaptors=[frame_adaptor] if frame_adaptor.active else [],
+            primary_adaptor=frame_adaptor,
+            fidgeting=frame_fidget,
+            expressivity=frame_express,
+            agitation=frame_agitation,
+        )
+
+        st.markdown(render_somatosensory_hud_html(frame_soma_snap), unsafe_allow_html=True)
+
+        sm_col1, sm_col2, sm_col3 = st.columns([1, 1, 1])
+        with sm_col1:
+            st.plotly_chart(render_postural_ergonomics_diagram(frame_posture, height=210), use_container_width=True)
+        with sm_col2:
+            st.plotly_chart(render_adaptor_timeline_chart([frame_adaptor] if frame_adaptor.active else [], height=210), use_container_width=True)
+        with sm_col3:
+            st.plotly_chart(render_psychomotor_agitation_gauge(frame_agitation, height=210), use_container_width=True)
 
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
