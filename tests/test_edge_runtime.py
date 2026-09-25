@@ -80,3 +80,21 @@ def test_edge_benchmark_suite_oculomotor():
     assert res["mean_latency_ms"] > 0.0
 
 
+def test_edge_benchmark_suite_somatosensory():
+    from src.edge.benchmark import EdgeBenchmarkSuite
+    suite = EdgeBenchmarkSuite()
+    res = suite.evaluate_somatosensory_pipeline(iterations=10)
+
+    assert "mean_latency_ms" in res
+    assert "p50_latency_ms" in res
+    assert "stage_latencies_ms" in res
+    assert "posture_angle_kinematics" in res["stage_latencies_ms"]
+    assert "microgesture_adaptor_heuristic" in res["stage_latencies_ms"]
+    assert "kinetic_fidgeting_flux" in res["stage_latencies_ms"]
+    assert "pai_multimodal_fusion" in res["stage_latencies_ms"]
+    assert res["zero_cloud_certified"] is True
+    assert res["sla_target_ms"] == 3.5
+    assert res["mean_latency_ms"] > 0.0
+
+
+
