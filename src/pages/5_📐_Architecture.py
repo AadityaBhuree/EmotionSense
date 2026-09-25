@@ -28,13 +28,29 @@ from src.ui.cognitive_charts import (
     render_nasa_tlx_radar,
     render_oculomotor_hud_html,
 )
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
+    KinesicExpressivity,
+    SomatosensorySnapshot,
+)
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_postural_ergonomics_diagram,
+    render_psychomotor_agitation_gauge,
+    render_somatosensory_hud_html,
+)
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -50,6 +66,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
     "🤖 Agentic Reasoning & Clinical Copilot",
     "🫀 Remote Biometrics & Autonomic Telemetry",
     "🧠 Cognitive Workload & Oculomotor Telemetry",
+    "🧘 Somatosensory Kinematics & Postural Ergonomics",
 ])
 
 
@@ -682,6 +699,120 @@ with tab15:
             st.plotly_chart(render_cognitive_workload_gauge(test_wl, height=220), use_container_width=True)
         with g2:
             st.plotly_chart(render_nasa_tlx_radar(test_wl.nasa_tlx, height=220), use_container_width=True)
+
+
+with tab16:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            🧘 Phase 12: Somatosensory Kinematics, Postural Ergonomics & Micro-Gesture Kinesics
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Non-invasive tracking of somatic behavior, upper-body ergonomics, spinal alignment, hand-to-face self-touch adaptors (chin support, mouth covering, temple rubbing, neck touching), kinetic fidgeting energy variance, and a composite multi-sensor Psychomotor Agitation Index (PAI).
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Upper-Body Postural Ergonomics & Forward Head Angle
+    Spinal and postural degradation quantify somatic fatigue, depressive collapse, and autonomic muscular bracing:
+
+    $$\theta_{\text{FHP}} = \arctan\left(\frac{y_{\text{ear}} - y_{\text{shoulder}}}{x_{\text{ear}} - x_{\text{shoulder}}}\right)$$
+
+    $$\Delta y_{\text{shoulder}} = \frac{|y_{\text{shoulder,L}} - y_{\text{shoulder,R}}|}{w_{\text{torso}}}$$
+
+    $$S_{\text{slump}} = \text{clip}\left(1.0 - \frac{d_{v,\text{nose-shoulder}} - 0.40}{0.50}, 0.0, 1.0\right)$$
+
+    - **Postural States**:
+      - `UPRIGHT`: $S < 0.35, \Delta y < 0.12$ (Optimal ergonomic alignment, confident approach affect).
+      - `SLUMPED`: $S \ge 0.45$ (Spinal collapse, cognitive exhaustion, depressive hypo-arousal).
+      - `TENSE_ELEVATED`: $\Delta y > 0.12$ (Trapezius muscle contraction, acute somatic distress).
+      - `LATERAL_LEAN`: $|\theta_{\text{tilt}}| > 12^\circ$ (Coronal imbalance, conversational disengagement).
+
+    #### 2. Hand-to-Face Micro-Gestures (Self-Touch Adaptors)
+    Self-touching behaviors serve as unconscious regulatory adaptors (Ekman & Friesen):
+    - **Chin Support / Resting ($d \le 0.16 \cdot w_{\text{torso}}$)**: Evaluative contemplation, deep cognitive processing, or acute boredom.
+    - **Mouth Covering / Finger-to-Lips ($d \le 0.14 \cdot w_{\text{torso}}$)**: Cognitive censorship, hesitation, uncertainty, or suppression.
+    - **Temple / Eye Rubbing ($d \le 0.15 \cdot w_{\text{torso}}$)**: Ocular strain, cognitive overload, headache, or extreme mental fatigue.
+    - **Neck Touch / Collar Pull ($d \le 0.20 \cdot w_{\text{torso}}$)**: Pacifying behavior, autonomic stress spike, vasodilation relief.
+
+    #### 3. Kinetic Restlessness & Fidgeting Energy
+    Quantifies displacement velocity and variance of hands/wrists over a rolling temporal window ($W = 3.0\,\text{s}$):
+
+    $$E_{\text{kinetic}}(t) = \frac{1}{2} \|\mathbf{v}_{\text{hands}}(t)\|^2, \quad \sigma^2_{\text{kinetic}} = \text{Var}(E_{\text{kinetic}}(t-W : t))$$
+
+    - High kinetic variance ($\sigma^2 \ge 0.015$) flags active fidgeting and motor restlessness.
+
+    #### 4. Multimodal Psychomotor Agitation Index (PAI $\in [0.0, 1.0]$)
+    Synthesizes kinetic fidgeting, postural tension, self-touch adaptors, autonomic cardiac strain, and vocal perturbation:
+
+    $$\text{PAI} = 0.35 \cdot R_{\text{fidget}} + 0.20 \cdot \text{Stress}_{\text{somatic}} + 0.15 \cdot A_{\text{adaptor}} + 0.15 \cdot \text{Stress}_{\text{cardiac}} + 0.15 \cdot J_{\text{acoustic}}$$
+
+    - **Classification Tiers**: `COMPOSED` ($<0.25$), `RESTLESS_MILD` ($0.25-0.50$), `AGITATED_HIGH` ($0.50-0.75$), `ACUTE_MOTOR_STORM` ($\ge 0.75$).
+    - **Psychomotor Slowing (Retardation)**: Flags severe lethargy when fidgeting is near-zero ($R < 0.12$), posture is heavily slumped ($S \ge 0.50$), and speech pauses are elevated.
+    """)
+
+    st.markdown("#### 🧪 Interactive Somatosensory & Kinesics Simulator")
+    sim_s1, sim_s2 = st.columns([1.5, 3.5])
+    with sim_s1:
+        test_slump = st.slider("Postural Slump Index", 0.0, 1.0, 0.20, step=0.05)
+        test_asym = st.slider("Shoulder Elevation Asymmetry", 0.0, 0.30, 0.04, step=0.01)
+        test_adaptor = st.selectbox(
+            "Active Micro-Gesture Adaptor",
+            ["None", "Chin_Support", "Mouth_Cover", "Temple_Rub", "Neck_Touch", "Cheek_Touch"]
+        )
+        test_restless = st.slider("Kinetic Restlessness Score", 0.0, 1.0, 0.25, step=0.05)
+        test_autonomic = st.slider("Autonomic Cardiac Stress", 0.0, 1.0, 0.30, step=0.05)
+
+    test_posture_state = PostureState.SLUMPED.value if test_slump >= 0.45 else (
+        PostureState.TENSE_ELEVATED.value if test_asym > 0.12 else PostureState.UPRIGHT.value
+    )
+    sim_posture = PosturalMetrics(
+        forward_head_angle_deg=round(54.0 - test_slump * 20.0, 1),
+        shoulder_elevation_asymmetry=test_asym,
+        slump_index=test_slump,
+        posture_state=test_posture_state,
+    )
+    cat_val = SomatosensoryEngine.ADAPTOR_CATEGORIES.get(
+        AdaptorType(test_adaptor) if test_adaptor in [a.value for a in AdaptorType] else AdaptorType.NONE,
+        AdaptorCategory.BASELINE_NONE.value
+    )
+    sim_adaptor = MicroGestureAdaptor(
+        adaptor_type=test_adaptor,
+        category=cat_val,
+        proximity_distance=0.12 if test_adaptor != "None" else 0.85,
+        active=test_adaptor != "None",
+    )
+    sim_fidget = FidgetingDynamics(
+        restlessness_score=test_restless,
+        is_fidgeting=test_restless > 0.45,
+    )
+    sim_express = KinesicExpressivity(
+        expressivity_score=0.45,
+    )
+    sim_agitation = SomatosensoryEngine.fuse_psychomotor_agitation(
+        posture=sim_posture,
+        primary_adaptor=sim_adaptor,
+        fidgeting=sim_fidget,
+        autonomic_stress=test_autonomic,
+        cognitive_workload=0.35,
+    )
+    sim_snapshot = SomatosensorySnapshot(
+        posture=sim_posture,
+        adaptors=[sim_adaptor] if sim_adaptor.active else [],
+        primary_adaptor=sim_adaptor,
+        fidgeting=sim_fidget,
+        expressivity=sim_express,
+        agitation=sim_agitation,
+    )
+
+    with sim_s2:
+        st.markdown(render_somatosensory_hud_html(sim_snapshot), unsafe_allow_html=True)
+        sg1, sg2 = st.columns([1, 1])
+        with sg1:
+            st.plotly_chart(render_postural_ergonomics_diagram(sim_posture, height=220), use_container_width=True)
+        with sg2:
+            st.plotly_chart(render_psychomotor_agitation_gauge(sim_agitation, height=220), use_container_width=True)
 
 
 
