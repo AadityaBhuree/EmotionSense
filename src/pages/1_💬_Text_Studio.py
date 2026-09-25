@@ -33,6 +33,20 @@ from src.analytics.biometrics import BiometricEngine
 from src.ui.biometric_charts import render_autonomic_stress_gauge, render_autonomic_balance_bar
 from src.core.cognitive_models import NASATLXDimensions, CognitiveWorkloadRecord, WorkloadTier
 from src.ui.cognitive_charts import render_cognitive_workload_gauge, render_nasa_tlx_radar
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PsychomotorTier,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
+)
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_psychomotor_agitation_gauge,
+    render_adaptor_timeline_chart,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -404,6 +418,84 @@ if mode == "📝 Single Message & Live Salience":
             <div>Avg Syntactic Depth: <b style="color: #10b981; font-family: 'JetBrains Mono', monospace;">{avg_sentence_len:.1f} wds/sent</b></div>
             <div>Predicted NASA-TLX Effort: <b style="color: #f59e0b; font-family: 'JetBrains Mono', monospace;">{effort:.0f}/100</b></div>
             <div>Cognitive Exhaustion Risk: <b style="color: {'#ef4444' if text_workload.mental_exhaustion_risk > 0.6 else '#38bdf8'}; font-family: 'JetBrains Mono', monospace;">{text_workload.mental_exhaustion_risk * 100:.0f}%</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Phase 12: Somatosensory Kinematics, Postural Ergonomics & Psychomotor Agitation Projection
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>🧘 Somatosensory Kinematics & Psychomotor Agitation Projection</div>", unsafe_allow_html=True)
+
+        # Posture projection from affect
+        if res.affect.valence < -0.3 and res.affect.arousal > 0.4:
+            soma_posture_state = PostureState.TENSE_ELEVATED.value
+            soma_slump = 0.38
+        elif res.affect.valence < -0.3:
+            soma_posture_state = PostureState.SLUMPED.value
+            soma_slump = 0.55
+        elif res.affect.arousal > 0.6:
+            soma_posture_state = PostureState.UPRIGHT.value
+            soma_slump = 0.12
+        else:
+            soma_posture_state = PostureState.UPRIGHT.value
+            soma_slump = 0.20
+
+        # Micro-gesture adaptor projection
+        if dom in ["anger", "fear"] or res.affect.arousal > 0.65:
+            pred_adaptor_type = AdaptorType.NECK_TOUCH.value
+            pred_adaptor_cat = AdaptorCategory.PACIFYING_STRESS.value
+            pred_adaptor_active = True
+        elif mental_demand > 65.0:
+            pred_adaptor_type = AdaptorType.CHIN_SUPPORT.value
+            pred_adaptor_cat = AdaptorCategory.EVALUATIVE_COGNITIVE.value
+            pred_adaptor_active = True
+        elif text_workload.mental_exhaustion_risk > 0.5:
+            pred_adaptor_type = AdaptorType.TEMPLE_RUB.value
+            pred_adaptor_cat = AdaptorCategory.FATIGUE_OVERLOAD.value
+            pred_adaptor_active = True
+        else:
+            pred_adaptor_type = AdaptorType.NONE.value
+            pred_adaptor_cat = AdaptorCategory.BASELINE_NONE.value
+            pred_adaptor_active = False
+
+        soma_posture = PosturalMetrics(
+            posture_state=soma_posture_state,
+            slump_index=soma_slump,
+            shoulder_elevation_asymmetry=0.14 if soma_posture_state == PostureState.TENSE_ELEVATED.value else 0.04,
+        )
+        soma_adaptor = MicroGestureAdaptor(
+            adaptor_type=pred_adaptor_type,
+            category=pred_adaptor_cat,
+            proximity_distance=0.12 if pred_adaptor_active else 0.85,
+            active=pred_adaptor_active,
+        )
+        pred_restless = float(min(0.95, max(0.08, res.affect.arousal * 0.7 + (1.0 - res.affect.valence) * 0.2)))
+        soma_fidget = FidgetingDynamics(
+            restlessness_score=pred_restless,
+            is_fidgeting=pred_restless > 0.45,
+            state=PsychomotorTier.AGITATED_HIGH.value if pred_restless > 0.65 else (
+                PsychomotorTier.RESTLESS_MILD.value if pred_restless > 0.35 else PsychomotorTier.COMPOSED.value
+            ),
+        )
+        soma_agitation = SomatosensoryEngine.fuse_psychomotor_agitation(
+            posture=soma_posture,
+            primary_adaptor=soma_adaptor,
+            fidgeting=soma_fidget,
+            autonomic_stress=soma_stress.stress_index,
+            cognitive_workload=cog_workload_idx,
+        )
+
+        sk1, sk2 = st.columns([5, 7])
+        with sk1:
+            st.plotly_chart(render_psychomotor_agitation_gauge(soma_agitation, height=220), use_container_width=True)
+        with sk2:
+            st.plotly_chart(render_adaptor_timeline_chart([soma_adaptor] if pred_adaptor_active else [], height=220), use_container_width=True)
+
+        st.markdown(f"""
+        <div class="es-panel" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>Postural Alignment: <b style="color: {'#10b981' if soma_posture.posture_state == 'Upright' else '#f59e0b'}; font-family: 'JetBrains Mono', monospace;">{soma_posture.posture_state.upper()}</b></div>
+            <div>Active Self-Touch: <b style="color: #a78bfa; font-family: 'JetBrains Mono', monospace;">{pred_adaptor_type.replace('_', ' ').upper()}</b></div>
+            <div>Kinetic Restlessness: <b style="color: {'#ef4444' if soma_fidget.is_fidgeting else '#38bdf8'}; font-family: 'JetBrains Mono', monospace;">{pred_restless * 100:.0f}%</b></div>
+            <div>Psychomotor State: <b style="color: #f1f5f9; font-family: 'JetBrains Mono', monospace;">{soma_agitation.tier.replace('_', ' ').upper()}</b></div>
         </div>
         """, unsafe_allow_html=True)
 
