@@ -62,6 +62,23 @@ from src.ui.cognitive_charts import (
     render_cognitive_workload_gauge,
     render_oculomotor_hud_html,
 )
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
+    KinesicExpressivity,
+    SomatosensorySnapshot,
+)
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_postural_ergonomics_diagram,
+    render_adaptor_timeline_chart,
+    render_psychomotor_agitation_gauge,
+    render_somatosensory_hud_html,
+)
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -560,6 +577,88 @@ if uploaded_file is not None:
                 with oc_c3:
                     sim_gaze_pts = [(0.5 + float(np.sin(i * 0.5)) * disp_area, 0.5 + float(np.cos(i * 0.4)) * disp_area) for i in range(12)]
                     st.plotly_chart(render_gaze_dispersion_chart(sim_gaze_pts, current_gaze=g_tel, height=210), use_container_width=True)
+
+                # Phase 12: Offline Somatosensory Kinematics, Posture Drift & Kinesic Adaptors
+                st.markdown("<div class='es-section-title'>🧘 Somatosensory Kinematics, Posture Stability & Adaptor Kinesics</div>", unsafe_allow_html=True)
+
+                # Derive postural metrics from session duration and affect
+                posture_slump = float(np.clip(0.18 + (1.0 - mean_val) * 0.15 + (1.0 - (samples[0].engagement_index / 100.0 if samples else 0.7)) * 0.15, 0.05, 0.85))
+                fhp_deg = float(np.clip(54.0 - posture_slump * 22.0, 30.0, 65.0))
+                p_state = PostureState.SLUMPED.value if posture_slump >= 0.45 else (
+                    PostureState.TENSE_ELEVATED.value if mean_aro > 0.65 and mean_val < -0.2 else PostureState.UPRIGHT.value
+                )
+
+                file_posture = PosturalMetrics(
+                    forward_head_angle_deg=round(fhp_deg, 1),
+                    spinal_tilt_deg=round(float(np.sin(len(samples)) * 4.0), 1),
+                    shoulder_elevation_asymmetry=round(0.14 if p_state == PostureState.TENSE_ELEVATED.value else 0.04, 3),
+                    slump_index=round(posture_slump, 3),
+                    posture_state=p_state,
+                )
+
+                # Micro-gesture adaptors detected across session
+                file_adaptors = []
+                if cpr_est > 0.45:
+                    file_adaptors.append(MicroGestureAdaptor(
+                        adaptor_type=AdaptorType.CHIN_SUPPORT.value,
+                        category=AdaptorCategory.EVALUATIVE_COGNITIVE.value,
+                        proximity_distance=0.12,
+                        active=True,
+                        duration_ms=4200.0,
+                    ))
+                if perclos_est > 0.12:
+                    file_adaptors.append(MicroGestureAdaptor(
+                        adaptor_type=AdaptorType.TEMPLE_RUB.value,
+                        category=AdaptorCategory.FATIGUE_OVERLOAD.value,
+                        proximity_distance=0.14,
+                        active=True,
+                        duration_ms=2800.0,
+                    ))
+                if strain_est > 0.50:
+                    file_adaptors.append(MicroGestureAdaptor(
+                        adaptor_type=AdaptorType.NECK_TOUCH.value,
+                        category=AdaptorCategory.PACIFYING_STRESS.value,
+                        proximity_distance=0.16,
+                        active=True,
+                        duration_ms=3100.0,
+                    ))
+
+                prim_adaptor = file_adaptors[0] if file_adaptors else MicroGestureAdaptor()
+
+                file_fidget = FidgetingDynamics(
+                    restlessness_score=round(float(np.clip(mean_aro * 0.65 + (1.0 - mean_val) * 0.15, 0.08, 0.92)), 3),
+                    is_fidgeting=mean_aro > 0.55,
+                )
+                file_express = KinesicExpressivity(
+                    expressivity_score=round(float(np.clip(0.40 + mean_aro * 0.40, 0.10, 0.95)), 3),
+                )
+                file_agitation = SomatosensoryEngine.fuse_psychomotor_agitation(
+                    posture=file_posture,
+                    primary_adaptor=prim_adaptor,
+                    fidgeting=file_fidget,
+                    autonomic_stress=strain_est,
+                    cognitive_workload=f_workload.workload_index,
+                )
+
+                file_soma_snap = SomatosensorySnapshot(
+                    timestamp=time.time(),
+                    posture=file_posture,
+                    adaptors=file_adaptors,
+                    primary_adaptor=prim_adaptor,
+                    fidgeting=file_fidget,
+                    expressivity=file_express,
+                    agitation=file_agitation,
+                )
+
+                st.markdown(render_somatosensory_hud_html(file_soma_snap), unsafe_allow_html=True)
+
+                sm_c1, sm_c2, sm_c3 = st.columns([4, 4, 4])
+                with sm_c1:
+                    st.plotly_chart(render_postural_ergonomics_diagram(file_posture, height=210), use_container_width=True)
+                with sm_c2:
+                    st.plotly_chart(render_adaptor_timeline_chart(file_adaptors, height=210), use_container_width=True)
+                with sm_c3:
+                    st.plotly_chart(render_psychomotor_agitation_gauge(file_agitation, height=210), use_container_width=True)
 
                 # Phase 9: AI Multimodal Diagnostic Synthesis & Candidate Evaluation
                 st.markdown("<div class='es-section-title'>🤖 AI Diagnostic Synthesis & Candidate Evaluation</div>", unsafe_allow_html=True)
