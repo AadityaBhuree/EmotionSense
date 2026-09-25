@@ -59,6 +59,12 @@ from src.ui.cognitive_charts import (
     render_cognitive_workload_gauge,
     render_oculomotor_hud_html,
 )
+from src.analytics.somatosensory import SomatosensoryEngine
+from src.ui.somatosensory_charts import (
+    render_postural_ergonomics_diagram,
+    render_psychomotor_agitation_gauge,
+    render_somatosensory_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -81,6 +87,8 @@ if "biometric_engine" not in st.session_state:
     st.session_state.biometric_engine = BiometricEngine(fps=30.0)
 if "oculomotor_engine" not in st.session_state:
     st.session_state.oculomotor_engine = OculomotorEngine()
+if "somatosensory_engine" not in st.session_state:
+    st.session_state.somatosensory_engine = SomatosensoryEngine()
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -711,6 +719,39 @@ with right_col:
                 st.plotly_chart(render_gaze_dispersion_chart(gaze_pts, current_gaze=oculo_snap.gaze, height=210), use_container_width=True)
             with oculo_col2:
                 st.plotly_chart(render_cognitive_workload_gauge(oculo_snap.workload, height=210), use_container_width=True)
+
+            # Phase 12: Real-Time Somatosensory Kinematics & Postural Ergonomics HUD
+            soma_engine = st.session_state.somatosensory_engine
+            # Simulated upper-body keypoints dynamic with head pose and arousal
+            ls_pt = (0.28, 0.62 + float(np.sin(t_now * 0.3) * 0.02))
+            rs_pt = (0.72, 0.62 - float(np.sin(t_now * 0.3) * 0.02))
+            nose_pt = (0.50 + sim_yaw * 0.005, 0.30 + sim_pitch * 0.005)
+
+            # Active self-touch adaptor heuristic
+            lh_pt = (0.50, 0.44) if (int(t_now * 0.2) % 7 == 0) else (0.35, 0.85)
+            rh_pt = (0.65, 0.85)
+
+            soma_snap = soma_engine.process_frame(
+                left_shoulder=ls_pt,
+                right_shoulder=rs_pt,
+                nose=nose_pt,
+                left_hand=lh_pt,
+                right_hand=rh_pt,
+                autonomic_stress=sim_strain,
+                cognitive_workload=oculo_snap.workload.workload_index,
+                acoustic_jitter=latest_acoustics.jitter_percent if latest_acoustics else 0.02,
+                speech_active=latest_acoustics.speech_active if latest_acoustics else False,
+                timestamp=t_now,
+            )
+            st.session_state.latest_somatosensory = soma_snap
+
+            st.markdown(render_somatosensory_hud_html(soma_snap), unsafe_allow_html=True)
+
+            soma_col1, soma_col2 = st.columns([7, 5])
+            with soma_col1:
+                st.plotly_chart(render_postural_ergonomics_diagram(soma_snap.posture, height=210), use_container_width=True)
+            with soma_col2:
+                st.plotly_chart(render_psychomotor_agitation_gauge(soma_snap.agitation, height=210), use_container_width=True)
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
