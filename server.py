@@ -29,6 +29,7 @@ from src.analytics import (
     generate_synthetic_cohort_benchmarks,
     BiometricEngine,
     OculomotorEngine,
+    SomatosensoryEngine,
 )
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
@@ -46,6 +47,15 @@ from src.core.cognitive_models import (
     PupillometryMetrics,
     BlinkDynamics,
     GazeTelemetry,
+)
+from src.core.somatosensory_models import (
+    PostureState,
+    AdaptorType,
+    AdaptorCategory,
+    PsychomotorTier,
+    PosturalMetrics,
+    MicroGestureAdaptor,
+    FidgetingDynamics,
 )
 
 
@@ -79,6 +89,7 @@ clinical_agent = ClinicalReasoningAgent()
 chat_copilot = ClinicalChatCopilot()
 biometric_engine = BiometricEngine(fps=30.0)
 oculomotor_engine = OculomotorEngine()
+somatosensory_engine = SomatosensoryEngine()
 
 
 # Request & Response Schemas
@@ -150,6 +161,32 @@ class CognitiveWorkloadRequest(BaseModel):
     dispersion_area: Optional[float] = Field(0.12, description="Gaze dispersion radius")
     autonomic_strain: Optional[float] = Field(0.30, description="Sympathetic autonomic strain (0.0 to 1.0)")
     speech_pause_ratio: Optional[float] = Field(0.20, description="Acoustic speech pause ratio")
+
+
+class SomatosensoryKinematicsRequest(BaseModel):
+    left_shoulder: List[float] = Field(..., description="[x, y] coordinates for left shoulder")
+    right_shoulder: List[float] = Field(..., description="[x, y] coordinates for right shoulder")
+    nose: List[float] = Field(..., description="[x, y] coordinates for nose anchor")
+    left_ear: Optional[List[float]] = Field(None, description="Optional [x, y] for left ear")
+    right_ear: Optional[List[float]] = Field(None, description="Optional [x, y] for right ear")
+    left_hand: Optional[List[float]] = Field(None, description="Optional [x, y] for left hand/wrist")
+    right_hand: Optional[List[float]] = Field(None, description="Optional [x, y] for right hand/wrist")
+    autonomic_stress: Optional[float] = Field(0.25, description="Autonomic stress strain (0.0 to 1.0)")
+    cognitive_workload: Optional[float] = Field(0.30, description="Cognitive workload index (0.0 to 1.0)")
+    acoustic_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
+    speech_active: Optional[bool] = Field(True, description="Whether subject is actively speaking")
+
+
+class PsychomotorAgitationRequest(BaseModel):
+    restlessness_score: float = Field(0.20, description="Restlessness / fidgeting score (0.0 to 1.0)")
+    is_fidgeting: Optional[bool] = Field(False, description="Active fidgeting flag")
+    slump_index: Optional[float] = Field(0.20, description="Postural slump index (0.0 to 1.0)")
+    posture_state: Optional[str] = Field("Upright", description="Current posture state")
+    primary_adaptor_type: Optional[str] = Field("None", description="Active self-touch adaptor type")
+    primary_adaptor_active: Optional[bool] = Field(False, description="Whether adaptor is active")
+    autonomic_stress: Optional[float] = Field(0.25, description="Autonomic cardiac stress strain")
+    cognitive_workload: Optional[float] = Field(0.30, description="Cognitive workload strain")
+    acoustic_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
 
 
 class DialogueTranscriptRequest(BaseModel):
@@ -771,6 +808,84 @@ async def get_cognitive_config():
         "saccade_velocity_threshold_deg_s": oculomotor_engine.saccade_velocity_threshold,
         "workload_tiers": [t.value for t in WorkloadTier],
         "nasa_tlx_dimensions": ["mental_demand", "temporal_demand", "effort", "frustration"],
+    }
+
+
+# ============================================================================
+# Phase 12: Somatosensory Kinematics & Postural Ergonomics Endpoints
+# ============================================================================
+
+@app.post("/api/somatosensory/kinematics", tags=["Somatosensory Kinematics"])
+async def evaluate_somatosensory_kinematics(req: SomatosensoryKinematicsRequest):
+    """Evaluate upper-body posture, micro-gesture self-touch adaptors, and kinetic fidgeting."""
+    ls = (req.left_shoulder[0], req.left_shoulder[1]) if len(req.left_shoulder) >= 2 else (0.30, 0.60)
+    rs = (req.right_shoulder[0], req.right_shoulder[1]) if len(req.right_shoulder) >= 2 else (0.70, 0.60)
+    nose = (req.nose[0], req.nose[1]) if len(req.nose) >= 2 else (0.50, 0.30)
+    le = (req.left_ear[0], req.left_ear[1]) if req.left_ear and len(req.left_ear) >= 2 else None
+    re = (req.right_ear[0], req.right_ear[1]) if req.right_ear and len(req.right_ear) >= 2 else None
+    lh = (req.left_hand[0], req.left_hand[1]) if req.left_hand and len(req.left_hand) >= 2 else None
+    rh = (req.right_hand[0], req.right_hand[1]) if req.right_hand and len(req.right_hand) >= 2 else None
+
+    snapshot = somatosensory_engine.process_frame(
+        left_shoulder=ls,
+        right_shoulder=rs,
+        nose=nose,
+        left_ear=le,
+        right_ear=re,
+        left_hand=lh,
+        right_hand=rh,
+        autonomic_stress=req.autonomic_stress or 0.25,
+        cognitive_workload=req.cognitive_workload or 0.30,
+        acoustic_jitter=req.acoustic_jitter or 0.02,
+        speech_active=req.speech_active if req.speech_active is not None else True,
+    )
+    return {"status": "success", "snapshot": snapshot.to_dict()}
+
+
+@app.post("/api/somatosensory/agitation", tags=["Somatosensory Kinematics"])
+async def compute_psychomotor_agitation_endpoint(req: PsychomotorAgitationRequest):
+    """Compute multimodal Psychomotor Agitation Index (PAI) from posture, adaptors, and fidgeting."""
+    posture = PosturalMetrics(
+        posture_state=req.posture_state or PostureState.UPRIGHT.value,
+        slump_index=req.slump_index or 0.20,
+    )
+    cat = SomatosensoryEngine.ADAPTOR_CATEGORIES.get(
+        AdaptorType(req.primary_adaptor_type) if req.primary_adaptor_type in [a.value for a in AdaptorType] else AdaptorType.NONE,
+        AdaptorCategory.BASELINE_NONE.value
+    )
+    adaptor = MicroGestureAdaptor(
+        adaptor_type=req.primary_adaptor_type or AdaptorType.NONE.value,
+        category=cat,
+        active=req.primary_adaptor_active or False,
+    )
+    fidgeting = FidgetingDynamics(
+        restlessness_score=req.restlessness_score,
+        is_fidgeting=req.is_fidgeting or False,
+    )
+
+    agitation = SomatosensoryEngine.fuse_psychomotor_agitation(
+        posture=posture,
+        primary_adaptor=adaptor,
+        fidgeting=fidgeting,
+        autonomic_stress=req.autonomic_stress or 0.25,
+        cognitive_workload=req.cognitive_workload or 0.30,
+        acoustic_jitter=req.acoustic_jitter or 0.02,
+    )
+    return {"status": "success", "agitation": agitation.to_dict()}
+
+
+@app.get("/api/somatosensory/config", tags=["Somatosensory Kinematics"])
+async def get_somatosensory_config():
+    """Retrieve somatosensory thresholds, posture states, adaptor types, and psychomotor tiers."""
+    return {
+        "status": "online",
+        "slump_threshold": somatosensory_engine.slump_threshold,
+        "shoulder_asymmetry_threshold": somatosensory_engine.shoulder_asymmetry_threshold,
+        "fidgeting_variance_threshold": somatosensory_engine.fidgeting_variance_threshold,
+        "posture_states": [p.value for p in PostureState],
+        "adaptor_types": [a.value for a in AdaptorType],
+        "adaptor_categories": [c.value for c in AdaptorCategory],
+        "psychomotor_tiers": [t.value for t in PsychomotorTier],
     }
 
 

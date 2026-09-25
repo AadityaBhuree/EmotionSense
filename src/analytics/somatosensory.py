@@ -365,9 +365,9 @@ class SomatosensoryEngine:
         # Tier assignment
         if pai_score < 0.25:
             tier = PsychomotorTier.COMPOSED.value
-        elif pai_score < 0.55:
+        elif pai_score < 0.50:
             tier = PsychomotorTier.RESTLESS_MILD.value
-        elif pai_score < 0.80:
+        elif pai_score < 0.75:
             tier = PsychomotorTier.AGITATED_HIGH.value
         else:
             tier = PsychomotorTier.ACUTE_MOTOR_STORM.value

@@ -544,6 +544,67 @@ def test_cognitive_api_endpoints(client):
     assert 0.0 <= wl["mental_exhaustion_risk"] <= 1.0
 
 
+def test_somatosensory_api_endpoints(client):
+    """Test Phase 12 somatosensory kinematics and psychomotor agitation REST endpoints."""
+    # 1. Config endpoint
+    cfg_res = client.get("/api/somatosensory/config")
+    assert cfg_res.status_code == 200
+    c_data = cfg_res.json()
+    assert c_data["status"] == "online"
+    assert "slump_threshold" in c_data
+    assert "Upright" in c_data["posture_states"]
+    assert "Chin_Support" in c_data["adaptor_types"]
+    assert "Composed" in c_data["psychomotor_tiers"]
+
+    # 2. Kinematics endpoint
+    kin_res = client.post(
+        "/api/somatosensory/kinematics",
+        json={
+            "left_shoulder": [0.30, 0.60],
+            "right_shoulder": [0.70, 0.60],
+            "nose": [0.50, 0.30],
+            "left_hand": [0.50, 0.44],  # Chin touch
+            "right_hand": [0.65, 0.85],
+            "autonomic_stress": 0.25,
+            "cognitive_workload": 0.35,
+        }
+    )
+    assert kin_res.status_code == 200
+    k_data = kin_res.json()
+    assert k_data["status"] == "success"
+    snap = k_data["snapshot"]
+    assert "posture" in snap
+    assert "primary_adaptor" in snap
+    assert "fidgeting" in snap
+    assert "agitation" in snap
+    assert snap["primary_adaptor"]["adaptor_type"] == "Chin_Support"
+    assert snap["posture"]["posture_state"] == "Upright"
+
+    # 3. Psychomotor agitation computation endpoint
+    agit_res = client.post(
+        "/api/somatosensory/agitation",
+        json={
+            "restlessness_score": 0.72,
+            "is_fidgeting": True,
+            "slump_index": 0.45,
+            "posture_state": "Tense_Elevated",
+            "primary_adaptor_type": "Neck_Touch",
+            "primary_adaptor_active": True,
+            "autonomic_stress": 0.65,
+            "cognitive_workload": 0.50,
+        }
+    )
+    assert agit_res.status_code == 200
+    a_data = agit_res.json()
+    assert a_data["status"] == "success"
+    agit = a_data["agitation"]
+    assert "tier" in agit
+    assert agit["tier"] in ["Agitated_High", "Acute_Motor_Storm"]
+    assert agit["agitation_index"] > 0.40
+    assert len(agit["contributing_factors"]) > 0
+
+
+
 
 
 
