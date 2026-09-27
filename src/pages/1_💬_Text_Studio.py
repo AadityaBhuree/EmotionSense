@@ -47,6 +47,16 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_adaptor_timeline_chart,
 )
+from src.core.credibility_models import (
+    FacialVeracityMetrics,
+    VoiceStressProfile,
+)
+from src.analytics.credibility import CredibilityEngine
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -496,6 +506,64 @@ if mode == "📝 Single Message & Live Salience":
             <div>Active Self-Touch: <b style="color: #a78bfa; font-family: 'JetBrains Mono', monospace;">{pred_adaptor_type.replace('_', ' ').upper()}</b></div>
             <div>Kinetic Restlessness: <b style="color: {'#ef4444' if soma_fidget.is_fidgeting else '#38bdf8'}; font-family: 'JetBrains Mono', monospace;">{pred_restless * 100:.0f}%</b></div>
             <div>Psychomotor State: <b style="color: #f1f5f9; font-family: 'JetBrains Mono', monospace;">{soma_agitation.tier.replace('_', ' ').upper()}</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Phase 13: Forensic Veracity & Deception Risk Sentinel
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>⚖️ Forensic Veracity & Deception Risk Sentinel</div>", unsafe_allow_html=True)
+
+        # Linguistic Deceit and Cognitive Strain Heuristics
+        text_lower = text_input.lower()
+        hedge_words = ["honestly", "trust me", "believe me", "to be frank", "swear", "actually", "literally"]
+        hedge_count = sum(1 for h in hedge_words if h in text_lower)
+        distancing_count = text_lower.count("that person") + text_lower.count("someone") + text_lower.count("they")
+        first_person_count = text_lower.count("i ") + text_lower.count("my ") + text_lower.count("me ")
+
+        # Predicted Cross-Modal Veracity Indicators
+        cred_engine = CredibilityEngine()
+        pred_duchenne_congruence = 0.92 if res.affect.valence > 0.4 and hedge_count == 0 else (
+            0.35 if hedge_count > 0 or (res.affect.valence > 0.3 and res.affect.arousal < 0.2) else 0.78
+        )
+        pred_micro_leakage = (hedge_count > 0 and res.affect.valence > 0.2) or (res.affect.valence < -0.4 and "happy" in text_lower)
+
+        pred_facial_metrics = FacialVeracityMetrics(
+            duchenne_congruence=round(pred_duchenne_congruence, 2),
+            duchenne_incongruence_index=round(1.0 - pred_duchenne_congruence, 2),
+            sneer_asymmetry_index=0.28 if hedge_count > 0 else 0.05,
+            micro_leakage_detected=pred_micro_leakage,
+            leakage_events_count=1 if pred_micro_leakage else 0,
+            macro_masked_state=dom.capitalize(),
+        )
+
+        pred_vocal_stress = VoiceStressProfile(
+            stress_index=float(min(0.90, max(0.12, res.affect.arousal * 0.6 + (0.25 if hedge_count > 0 else 0.0)))),
+            is_voice_stressed=(res.affect.arousal > 0.65 or hedge_count > 0),
+            cpp_db=9.5 if hedge_count > 0 else 13.5,
+        )
+
+        text_cred_snapshot = cred_engine.fuse_credibility_assessment(
+            facial_metrics=pred_facial_metrics,
+            voice_stress=pred_vocal_stress,
+            pupil_cpr=1.0 + (effort / 250.0),
+            pacifying_adaptor_active=pred_adaptor_active,
+            pulse_bpm=72.0 + (res.affect.arousal * 25.0),
+        )
+
+        st.markdown(render_credibility_hud_html(text_cred_snapshot), unsafe_allow_html=True)
+
+        cr1, cr2 = st.columns([5, 7])
+        with cr1:
+            st.plotly_chart(render_credibility_tachometer_gauge(text_cred_snapshot, height=220), use_container_width=True)
+        with cr2:
+            st.plotly_chart(render_polygraph_multimodal_stress_radar(text_cred_snapshot.polygraph, height=220), use_container_width=True)
+
+        st.markdown(f"""
+        <div class="es-panel" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>Linguistic Hedge Markers: <b style="color: {'#ef4444' if hedge_count > 0 else '#10b981'}; font-family: 'JetBrains Mono', monospace;">{hedge_count} flagged</b></div>
+            <div>Self-Referential Pronouns: <b style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">{first_person_count} tokens</b></div>
+            <div>Deception Risk Index: <b style="color: {'#ef4444' if text_cred_snapshot.deception_risk_index > 0.5 else '#34d399'}; font-family: 'JetBrains Mono', monospace;">{text_cred_snapshot.deception_risk_index * 100:.0f}%</b></div>
+            <div>Forensic Status: <b style="color: #f1f5f9; font-family: 'JetBrains Mono', monospace;">{text_cred_snapshot.tier.replace('_', ' ').upper()}</b></div>
         </div>
         """, unsafe_allow_html=True)
 
