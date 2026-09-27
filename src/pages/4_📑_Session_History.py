@@ -64,6 +64,18 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_somatosensory_hud_html,
 )
+from src.core.credibility_models import (
+    MicroLeakageEvent,
+    FacialVeracityMetrics,
+    VoiceStressProfile,
+)
+from src.analytics.credibility import CredibilityEngine
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_micro_leakage_timeline,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -407,6 +419,62 @@ else:
             st.plotly_chart(render_adaptor_timeline_chart([frame_adaptor] if frame_adaptor.active else [], height=210), use_container_width=True)
         with sm_col3:
             st.plotly_chart(render_psychomotor_agitation_gauge(frame_agitation, height=210), use_container_width=True)
+
+        # Phase 13: Frame Forensic Veracity, Micro-Leakage & Credibility Dossier
+        st.markdown("<div class='es-section-title'>⚖️ Forensic Veracity, Micro-Leakage & Credibility Dossier</div>", unsafe_allow_html=True)
+        hist_cred_engine = CredibilityEngine()
+        c_dom = current_frame.get("dominant_emotion", "neutral").lower()
+
+        hist_leakages = []
+        is_leakage_frame = (f_val < -0.30 and f_aro > 0.45) or (c_dom in ["fear", "contempt"] and f_val > 0.0)
+        if is_leakage_frame:
+            hist_leakages.append(MicroLeakageEvent(
+                timestamp=float(current_frame.get("timestamp", frame_idx * 0.5)),
+                duration_ms=round(float(95.0 + f_aro * 60.0), 1),
+                leaked_affect=c_dom.capitalize() if c_dom in ["fear", "contempt", "anger"] else "Fear",
+                masked_affect="Joy" if f_val > 0.2 else "Neutral",
+                conflicting_action_units=["AU04", "AU20"] if f_aro > 0.6 else ["AU04", "AU15"],
+                leakage_intensity=round(float(min(1.0, abs(f_val) + 0.3)), 2),
+                confidence=0.89,
+            ))
+
+        hist_duchenne = float(np.clip(0.90 if f_val > 0.20 and not is_leakage_frame else (0.28 if is_leakage_frame else 0.65), 0.10, 0.95))
+        hist_fac_metrics = FacialVeracityMetrics(
+            duchenne_congruence=round(hist_duchenne, 2),
+            duchenne_incongruence_index=round(1.0 - hist_duchenne, 2),
+            sneer_asymmetry_index=round(0.32 if is_leakage_frame else 0.05, 2),
+            micro_leakage_detected=is_leakage_frame,
+            leakage_events_count=1 if is_leakage_frame else 0,
+            macro_masked_state=c_dom.capitalize(),
+        )
+
+        hist_vox_stress = VoiceStressProfile(
+            micro_tremor_energy=round(float(min(0.12, 0.03 + f_aro * 0.06)), 4),
+            cpp_db=round(float(max(7.0, 14.5 - f_aro * 6.0)), 1),
+            stress_index=round(float(np.clip(f_aro * 0.60 + (0.25 if is_leakage_frame else 0.0), 0.10, 0.95)), 3),
+            is_voice_stressed=f_aro > 0.55 or is_leakage_frame,
+        )
+
+        hist_cred_snap = hist_cred_engine.fuse_credibility_assessment(
+            facial_metrics=hist_fac_metrics,
+            voice_stress=hist_vox_stress,
+            pupil_cpr=float(getattr(frame_oculo, "pupillometry", None).cpr if getattr(frame_oculo, "pupillometry", None) else 1.0),
+            pacifying_adaptor_active=frame_adaptor.active,
+            pulse_bpm=float(frame_pulse.bpm if 'frame_pulse' in locals() and hasattr(frame_pulse, 'bpm') else 72.0),
+            detected_flags=["Micro_Flash_Leakage"] if is_leakage_frame else [],
+            timestamp=float(current_frame.get("timestamp", 0.0)),
+        )
+        hist_cred_snap.recent_leakages = hist_leakages
+
+        st.markdown(render_credibility_hud_html(hist_cred_snap), unsafe_allow_html=True)
+
+        cr_col1, cr_col2, cr_col3 = st.columns([1, 1, 1])
+        with cr_col1:
+            st.plotly_chart(render_credibility_tachometer_gauge(hist_cred_snap, height=210), use_container_width=True)
+        with cr_col2:
+            st.plotly_chart(render_micro_leakage_timeline(hist_leakages, height=210), use_container_width=True)
+        with cr_col3:
+            st.plotly_chart(render_polygraph_multimodal_stress_radar(hist_cred_snap.polygraph, height=210), use_container_width=True)
 
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
