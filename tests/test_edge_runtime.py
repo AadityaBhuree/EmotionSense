@@ -97,4 +97,22 @@ def test_edge_benchmark_suite_somatosensory():
     assert res["mean_latency_ms"] > 0.0
 
 
+def test_edge_benchmark_suite_credibility():
+    from src.edge.benchmark import EdgeBenchmarkSuite
+    suite = EdgeBenchmarkSuite()
+    res = suite.evaluate_credibility_pipeline(iterations=10)
+
+    assert "mean_latency_ms" in res
+    assert "p50_latency_ms" in res
+    assert "stage_latencies_ms" in res
+    assert "micro_leakage_detection" in res["stage_latencies_ms"]
+    assert "duchenne_congruence_analysis" in res["stage_latencies_ms"]
+    assert "vocal_micro_tremor_vsa" in res["stage_latencies_ms"]
+    assert "cdri_polygraph_fusion" in res["stage_latencies_ms"]
+    assert res["zero_cloud_certified"] is True
+    assert res["sla_target_ms"] == 3.0
+    assert res["mean_latency_ms"] > 0.0
+
+
+
 

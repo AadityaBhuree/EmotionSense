@@ -88,13 +88,14 @@ with st.sidebar:
     - **Optical rPPG (POS)**: `< 6.0 ms`
     - **Oculomotor & Pupillometry**: `< 4.0 ms`
     - **Somatosensory Kinematics & PAI**: `< 3.5 ms`
+    - **Forensic Credibility & Deception Sentinel**: `< 3.0 ms`
     - **Cognitive Workload Fusion**: `< 1.0 ms`
     - **Autonomic Stress Fusion**: `< 2.0 ms`
     - **Target FPS**: `≥ 30.0 FPS`
     """)
 
 # Main Studio Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🚀 Latency Benchmark & Stress Test",
     "🗜️ Model Quantization & Compression",
     "📦 Edge Manifest & Export",
@@ -102,6 +103,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🫀 Edge Optical rPPG & Biometric SLA",
     "🧠 Edge Oculomotor & Cognitive SLA",
     "🧘 Edge Somatosensory & Ergonomics SLA",
+    "⚖️ Edge Forensic Veracity & Credibility SLA",
 ])
 
 with tab1:
@@ -545,6 +547,92 @@ with tab7:
             • <b>Ergonomic Intervention Boundary:</b> Postural alerts are generated client-side with configurable cooldown thresholds to prevent notification fatigue while adhering to ISO 9241-5 ergonomic standards.
         </div>
         """, unsafe_allow_html=True)
+
+
+with tab8:
+    st.markdown("#### ⚖️ Zero-Cloud Forensic Veracity & Deception Sentinel SLA")
+    st.caption("Validates contact-free micro-momentary leakage detection (<200ms), Duchenne smile genuineness, 8-14 Hz vocal fold micro-tremor (VSA), and polygraphic CDRI late fusion against real-time sub-3.0ms edge latency SLAs.")
+
+    col_bench_cred, _ = st.columns([1.5, 3])
+    with col_bench_cred:
+        run_cred_bench = st.button("⚡ Profile Edge Forensic Credibility Pipeline SLA", use_container_width=True, type="primary")
+
+    if run_cred_bench or "cred_benchmark_res" not in st.session_state:
+        with st.spinner("Benchmarking forensic veracity pipeline & CDRI fusion..."):
+            st.session_state.cred_benchmark_res = bench_suite.evaluate_credibility_pipeline(iterations=benchmark_iterations)
+
+    cred_res = st.session_state.cred_benchmark_res
+    if cred_res:
+        cb1, cb2, cb3, cb4 = st.columns(4)
+        with cb1:
+            render_metric_card(
+                "Credibility Pipeline Latency",
+                f"{cred_res['mean_latency_ms']:.2f} ms",
+                delta=f"SLA < {cred_res['sla_target_ms']} ms ({'PASS ✅' if cred_res['sla_compliant'] else 'FAIL ❌'})",
+                color="#10b981" if cred_res['sla_compliant'] else "#ef4444",
+            )
+        with cb2:
+            render_metric_card(
+                "Sentinel Throughput",
+                f"{cred_res['fps_throughput']:.0f} FPS",
+                delta="Ultra-High Framerate",
+                color="#0ea5e9",
+            )
+        with cb3:
+            render_metric_card(
+                "Ephemeral Footprint",
+                f"{cred_res['memory_mb']:.1f} MB",
+                delta="Zero Memory Retention",
+                color="#8b5cf6",
+            )
+        with cb4:
+            render_metric_card(
+                "Forensic Privacy",
+                "100% On-Device",
+                delta="Zero Audio/Video Exfiltration",
+                color="#10b981",
+            )
+
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+
+        st.markdown("##### ⏱️ Forensic Computational Stage Latency Breakdown (P50)")
+        cred_stages = cred_res.get("stage_latencies_ms", {})
+        cred_stage_names = {
+            "micro_leakage_detection": "1. Sub-200ms Micro-Expression Transient Leakage Filter",
+            "duchenne_congruence_analysis": "2. Duchenne Genuine vs Social Smile Incongruence Ratio",
+            "vocal_micro_tremor_vsa": "3. 8-14 Hz Lippold Vocal Fold Micro-Tremor & CPP Estimation",
+            "cdri_polygraph_fusion": "4. Multimodal Credibility & Deception Risk (CDRI) Late Fusion",
+        }
+
+        import plotly.graph_objects as go
+        fig_cred_bar = go.Figure()
+        fig_cred_bar.add_trace(go.Bar(
+            y=[cred_stage_names.get(k, k) for k in cred_stages.keys()],
+            x=list(cred_stages.values()),
+            orientation='h',
+            marker=dict(color=['#f43f5e', '#f59e0b', '#06b6d4', '#10b981']),
+            text=[f"{v:.2f} ms" for v in cred_stages.values()],
+            textposition='auto',
+        ))
+        fig_cred_bar.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(18, 22, 34, 0.6)',
+            margin=dict(l=20, r=20, t=10, b=20),
+            height=180,
+            xaxis=dict(title="Execution Time (ms)", gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#94a3b8')),
+            yaxis=dict(autorange="reversed", tickfont=dict(color='#f8fafc', size=11)),
+        )
+        st.plotly_chart(fig_cred_bar, use_container_width=True)
+
+        st.markdown("""
+        <div class="es-panel" style="border-left: 3px solid #f43f5e; margin-top: 10px; font-size: 0.85rem; line-height: 1.5;">
+            <b style="color: #f8fafc;">🛡️ Zero-Cloud Forensic Veracity & Cryptographic Audit Assurance</b><br>
+            • <b>Ephemeral Micro-Flash Detection:</b> Sub-200ms Action Unit transients are evaluated within volatile temporal sliding buffers; zero facial frames, landmarks, or voice recordings are ever persisted to disk or sent to external servers.<br>
+            • <b>Client-Side Mathematical VSA:</b> 8–14 Hz vocal fold micro-tremor and Cepstral Peak Prominence (CPP) are derived strictly via local FFT and inverse cepstrum in CPU RAM.<br>
+            • <b>Forensic Credibility Non-Repudiation:</b> All CDRI metrics, confidence intervals, and active deception anomaly flags are calculated deterministically with reproducible zero-cloud audit integrity.
+        </div>
+        """, unsafe_allow_html=True)
+
 
 
 
