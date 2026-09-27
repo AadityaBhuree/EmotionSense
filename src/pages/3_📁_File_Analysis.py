@@ -79,6 +79,18 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_somatosensory_hud_html,
 )
+from src.core.credibility_models import (
+    MicroLeakageEvent,
+    FacialVeracityMetrics,
+    VoiceStressProfile,
+)
+from src.analytics.credibility import CredibilityEngine
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_micro_leakage_timeline,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -659,6 +671,64 @@ if uploaded_file is not None:
                     st.plotly_chart(render_adaptor_timeline_chart(file_adaptors, height=210), use_container_width=True)
                 with sm_c3:
                     st.plotly_chart(render_psychomotor_agitation_gauge(file_agitation, height=210), use_container_width=True)
+
+                # Phase 13: Offline Forensic Veracity, Micro-Expression Leakage & Credibility Sentinel
+                st.markdown("<div class='es-section-title'>⚖️ Forensic Veracity, Micro-Expression Leakage & Credibility Sentinel</div>", unsafe_allow_html=True)
+                file_cred_engine = CredibilityEngine()
+
+                # Detect micro-leakage anomalies across offline timeline samples
+                file_leakages = []
+                for idx, s in enumerate(samples[:30]):
+                    s_val = getattr(s, "valence", 0.0) if hasattr(s, "valence") else s.get("valence", 0.0)
+                    s_aro = getattr(s, "arousal", 0.0) if hasattr(s, "arousal") else s.get("arousal", 0.0)
+                    # Transient negative micro-leakage against positive macro-context
+                    if mean_val > 0.15 and s_val < -0.30 and s_aro > 0.40:
+                        file_leakages.append(MicroLeakageEvent(
+                            timestamp=float(idx * 0.5),
+                            duration_ms=round(float(80.0 + (abs(s_val) * 70.0)), 1),
+                            leaked_affect="Fear" if s_aro > 0.6 else "Contempt",
+                            masked_affect="Joy" if mean_val > 0.4 else "Neutral",
+                            conflicting_action_units=["AU04", "AU15"] if s_aro <= 0.6 else ["AU04", "AU20"],
+                            leakage_intensity=round(float(min(1.0, abs(s_val))), 2),
+                            confidence=0.88,
+                        ))
+
+                file_duchenne = float(np.clip(0.88 if mean_val > 0.25 and len(file_leakages) == 0 else 0.42, 0.10, 0.95))
+                file_fac_metrics = FacialVeracityMetrics(
+                    duchenne_congruence=round(file_duchenne, 2),
+                    duchenne_incongruence_index=round(1.0 - file_duchenne, 2),
+                    sneer_asymmetry_index=round(0.24 if len(file_leakages) > 0 else 0.05, 2),
+                    micro_leakage_detected=len(file_leakages) > 0,
+                    leakage_events_count=len(file_leakages),
+                    macro_masked_state="Joy" if mean_val > 0.25 else "Neutral",
+                )
+
+                file_vox_stress = VoiceStressProfile(
+                    micro_tremor_energy=round(float(min(0.12, 0.03 + mean_aro * 0.05)), 4),
+                    cpp_db=round(float(max(7.5, 14.0 - mean_aro * 5.0)), 1),
+                    stress_index=round(float(np.clip(mean_aro * 0.55 + (0.20 if len(file_leakages) > 0 else 0.0), 0.10, 0.90)), 3),
+                    is_voice_stressed=mean_aro > 0.58,
+                )
+
+                file_cred_snap = file_cred_engine.fuse_credibility_assessment(
+                    facial_metrics=file_fac_metrics,
+                    voice_stress=file_vox_stress,
+                    pupil_cpr=cpr_est,
+                    pacifying_adaptor_active=len(file_adaptors) > 0,
+                    pulse_bpm=b_pulse.bpm if 'b_pulse' in locals() and hasattr(b_pulse, 'bpm') else 72.0,
+                    detected_flags=["Micro_Flash_Leakage"] if len(file_leakages) > 0 else [],
+                )
+                file_cred_snap.recent_leakages = file_leakages
+
+                st.markdown(render_credibility_hud_html(file_cred_snap), unsafe_allow_html=True)
+
+                fc_c1, fc_c2, fc_c3 = st.columns([4, 4, 4])
+                with fc_c1:
+                    st.plotly_chart(render_credibility_tachometer_gauge(file_cred_snap, height=210), use_container_width=True)
+                with fc_c2:
+                    st.plotly_chart(render_micro_leakage_timeline(file_leakages, height=210), use_container_width=True)
+                with fc_c3:
+                    st.plotly_chart(render_polygraph_multimodal_stress_radar(file_cred_snap.polygraph, height=210), use_container_width=True)
 
                 # Phase 9: AI Multimodal Diagnostic Synthesis & Candidate Evaluation
                 st.markdown("<div class='es-section-title'>🤖 AI Diagnostic Synthesis & Candidate Evaluation</div>", unsafe_allow_html=True)
