@@ -22,6 +22,12 @@ from src.ui.biometric_charts import (
     render_autonomic_balance_bar,
     render_biometric_telemetry_hud_html,
 )
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_micro_leakage_timeline,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 __all__ = [
     "inject_glassmorphic_styles",
@@ -39,4 +45,8 @@ __all__ = [
     "render_autonomic_stress_gauge",
     "render_autonomic_balance_bar",
     "render_biometric_telemetry_hud_html",
+    "render_credibility_tachometer_gauge",
+    "render_micro_leakage_timeline",
+    "render_polygraph_multimodal_stress_radar",
+    "render_credibility_hud_html",
 ]
