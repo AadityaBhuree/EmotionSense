@@ -60,6 +60,16 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_somatosensory_hud_html,
 )
+from src.core.credibility_models import (
+    FacialVeracityMetrics,
+    VoiceStressProfile,
+)
+from src.analytics.credibility import CredibilityEngine
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 st.set_page_config(
     page_title="Longitudinal Analytics | EmotionSense",
@@ -305,6 +315,7 @@ for i, p in enumerate(points):
     })
 
 soma_sessions = []
+cred_sessions = []
 for i, p in enumerate(points):
     s_val = p.mean_valence
     s_aro = p.mean_arousal
@@ -372,12 +383,53 @@ for i, p in enumerate(points):
         "snapshot": snap_s,
     })
 
-tab_traj, tab_radar, tab_bio, tab_cog, tab_soma, tab_table = st.tabs([
+    # Phase 13: Multi-Session Forensic Veracity & Credibility Projection
+    cred_eng_sim = CredibilityEngine()
+    c_duchenne = float(np.clip(0.85 + p.mean_valence * 0.15 - p.anomaly_count * 0.05, 0.20, 0.95))
+    leak_present = p.anomaly_count > 0 or p.mean_valence < -0.25
+    c_fac_m = FacialVeracityMetrics(
+        duchenne_congruence=round(c_duchenne, 2),
+        duchenne_incongruence_index=round(1.0 - c_duchenne, 2),
+        sneer_asymmetry_index=round(0.25 if leak_present else 0.05, 2),
+        micro_leakage_detected=leak_present,
+        leakage_events_count=p.anomaly_count,
+        macro_masked_state=p.dominant_emotion.capitalize(),
+    )
+    c_vox_m = VoiceStressProfile(
+        micro_tremor_energy=round(float(min(0.12, 0.03 + p.mean_arousal * 0.05)), 4),
+        cpp_db=round(float(max(7.0, 14.0 - p.mean_arousal * 6.0)), 1),
+        stress_index=round(float(np.clip(p.mean_arousal * 0.55 + (0.20 if leak_present else 0.0), 0.10, 0.92)), 3),
+        is_voice_stressed=p.mean_arousal > 0.55 or leak_present,
+    )
+    b_bpm = bio_sessions[i]["rhr_bpm"] if i < len(bio_sessions) else 72.0
+    snap_cred = cred_eng_sim.fuse_credibility_assessment(
+        facial_metrics=c_fac_m,
+        voice_stress=c_vox_m,
+        pupil_cpr=1.0 + (c_load * 0.35),
+        pacifying_adaptor_active=ad_m.active,
+        pulse_bpm=float(b_bpm),
+        detected_flags=["Micro_Flash_Leakage"] if leak_present else [],
+    )
+    cred_sessions.append({
+        "label": f"Ses {i+1} ({p.date_str[:10]})",
+        "date_str": p.date_str,
+        "credibility_score": snap_cred.credibility_score,
+        "credibility_pct": round(snap_cred.credibility_score * 100.0, 1),
+        "deception_risk": snap_cred.deception_risk_index,
+        "deception_risk_pct": round(snap_cred.deception_risk_index * 100.0, 1),
+        "tier": snap_cred.tier,
+        "duchenne_pct": round(c_duchenne * 100.0, 1),
+        "voice_stress_pct": round(c_vox_m.stress_index * 100.0, 1),
+        "snapshot": snap_cred,
+    })
+
+tab_traj, tab_radar, tab_bio, tab_cog, tab_soma, tab_cred, tab_table = st.tabs([
     "📈 Trajectory Trendline",
     "🎯 Cohort Volatility Radar",
     "🫀 Physiological & Allostatic Drift",
     "🧠 Cognitive Workload & Burnout Drift",
     "🧘 Postural Ergonomics & Agitation Drift",
+    "⚖️ Forensic Veracity & Credibility Drift",
     "📑 Session Ledger & Micro-Inspection",
 ])
 
@@ -637,6 +689,81 @@ with tab_soma:
     else:
         st.info("No somatosensory sessions recorded for this subject profile.")
 
+with tab_cred:
+    if cred_sessions:
+        cred_top1, cred_top2, cred_top3, cred_top4 = st.columns(4)
+        latest_c = cred_sessions[-1]
+        first_c = cred_sessions[0]
+        delta_cred = latest_c["credibility_score"] - first_c["credibility_score"]
+        delta_risk = latest_c["deception_risk"] - first_c["deception_risk"]
+
+        with cred_top1:
+            st.metric(
+                "Credibility Score",
+                f"{latest_c['credibility_pct']}%",
+                delta=f"{delta_cred * 100.0:+.1f}%" if len(cred_sessions) > 1 else None,
+                delta_color="normal",
+                help="Multi-session composite veracity and authenticity score",
+            )
+        with cred_top2:
+            st.metric(
+                "Deception Risk Index",
+                f"{latest_c['deception_risk_pct']}%",
+                delta=f"{delta_risk * 100.0:+.1f}%" if len(cred_sessions) > 1 else None,
+                delta_color="inverse",
+                help="Composite multimodal deception and dissimulation strain",
+            )
+        with cred_top3:
+            st.metric(
+                "Duchenne Congruence",
+                f"{latest_c['duchenne_pct']}%",
+                help="Mean genuine smile congruence across sessions",
+            )
+        with cred_top4:
+            st.metric(
+                "Voice Stress (VSA)",
+                f"{latest_c['voice_stress_pct']}%",
+                help="Laryngeal micro-tremor and vocal stress perturbation",
+            )
+
+        st.markdown(render_credibility_hud_html(latest_c["snapshot"]), unsafe_allow_html=True)
+
+        cr_left, cr_right = st.columns([2.4, 1.2])
+        with cr_left:
+            fig_cred_drift = go.Figure()
+            fig_cred_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in cred_sessions],
+                y=[s["credibility_pct"] for s in cred_sessions],
+                name="Credibility %",
+                line=dict(color="#10b981", width=3),
+                mode="lines+markers",
+            ))
+            fig_cred_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in cred_sessions],
+                y=[s["deception_risk_pct"] for s in cred_sessions],
+                name="Deception Risk %",
+                line=dict(color="#ef4444", width=2, dash="dash"),
+                mode="lines+markers",
+            ))
+            fig_cred_drift.add_hline(y=50.0, line_dash="dot", line_color="#f59e0b", annotation_text="Incongruence Threshold (50%)")
+            fig_cred_drift.update_layout(
+                title="Multi-Session Forensic Credibility & Deception Risk Drift",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,23,42,0.6)",
+                font=dict(color="#e2e8f0"),
+                margin=dict(l=30, r=30, t=40, b=30),
+                height=320,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(range=[0.0, 100.0], gridcolor="rgba(255,255,255,0.08)"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            )
+            st.plotly_chart(fig_cred_drift, use_container_width=True)
+        with cr_right:
+            st.plotly_chart(render_credibility_tachometer_gauge(latest_c["snapshot"], height=190), use_container_width=True)
+            st.plotly_chart(render_polygraph_multimodal_stress_radar(latest_c["snapshot"].polygraph, height=190), use_container_width=True)
+    else:
+        st.info("No forensic veracity sessions recorded for this subject profile.")
+
 with tab_table:
     if points:
         table_rows = []
@@ -644,6 +771,7 @@ with tab_table:
             b_info = bio_sessions[i] if i < len(bio_sessions) else {}
             c_info = cog_sessions[i] if i < len(cog_sessions) else {}
             s_info = soma_sessions[i] if i < len(soma_sessions) else {}
+            cr_info = cred_sessions[i] if i < len(cred_sessions) else {}
             table_rows.append({
                 "Session": f"Session {i+1}",
                 "Date": p.date_str,
@@ -657,6 +785,8 @@ with tab_table:
                 "Postural State": s_info.get('posture_state', 'N/A').upper(),
                 "Slump %": f"{s_info.get('slump_pct', '--')}%",
                 "Psychomotor Agitation": f"{s_info.get('agitation_pct', '--')}%",
+                "Credibility Score": f"{cr_info.get('credibility_pct', '--')}%",
+                "Deception Risk": f"{cr_info.get('deception_risk_pct', '--')}%",
                 "Allostatic Stress": f"{b_info.get('stress_pct', '--')}%",
                 "Anomalies": p.anomaly_count,
             })
