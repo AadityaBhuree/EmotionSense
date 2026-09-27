@@ -30,6 +30,7 @@ from src.analytics import (
     BiometricEngine,
     OculomotorEngine,
     SomatosensoryEngine,
+    CredibilityEngine,
 )
 from src.edge.runtime import ONNXEdgeInferenceEngine
 from src.edge.quantizer import ModelQuantizationOptimizer
@@ -56,6 +57,11 @@ from src.core.somatosensory_models import (
     PosturalMetrics,
     MicroGestureAdaptor,
     FidgetingDynamics,
+)
+from src.core.credibility_models import (
+    VeracityTier,
+    DeceptionFlag,
+    VoiceStressProfile,
 )
 
 
@@ -90,6 +96,7 @@ chat_copilot = ClinicalChatCopilot()
 biometric_engine = BiometricEngine(fps=30.0)
 oculomotor_engine = OculomotorEngine()
 somatosensory_engine = SomatosensoryEngine()
+credibility_engine = CredibilityEngine()
 
 
 # Request & Response Schemas
@@ -187,6 +194,23 @@ class PsychomotorAgitationRequest(BaseModel):
     autonomic_stress: Optional[float] = Field(0.25, description="Autonomic cardiac stress strain")
     cognitive_workload: Optional[float] = Field(0.30, description="Cognitive workload strain")
     acoustic_jitter: Optional[float] = Field(0.02, description="Acoustic vocal jitter metric")
+
+
+class ForensicCredibilityRequest(BaseModel):
+    action_units: Dict[str, float] = Field(default_factory=dict, description="FACS Action Unit intensities")
+    macro_emotion: Optional[str] = Field("Neutral", description="Predominant macro facial emotion")
+    valence: Optional[float] = Field(0.0, description="Affective valence (-1.0 to 1.0)")
+    voice_stress_index: Optional[float] = Field(0.18, description="Acoustic voice stress score (0.0 to 1.0)")
+    pupil_cpr: Optional[float] = Field(1.0, description="Cognitive Pupillary Response (CPR)")
+    pacifying_adaptor_active: Optional[bool] = Field(False, description="Whether a pacifying self-touch adaptor is active")
+    pulse_bpm: Optional[float] = Field(72.0, description="Instantaneous pulse BPM")
+    response_latency_sec: Optional[float] = Field(0.45, description="Speech response latency in seconds")
+
+
+class MicroLeakageAnalysisRequest(BaseModel):
+    action_units: Dict[str, float] = Field(..., description="FACS Action Unit dictionary")
+    macro_emotion: Optional[str] = Field("Neutral", description="Current macro emotion")
+    valence: Optional[float] = Field(0.0, description="Current valence")
 
 
 class DialogueTranscriptRequest(BaseModel):
@@ -886,6 +910,74 @@ async def get_somatosensory_config():
         "adaptor_types": [a.value for a in AdaptorType],
         "adaptor_categories": [c.value for c in AdaptorCategory],
         "psychomotor_tiers": [t.value for t in PsychomotorTier],
+    }
+
+
+# ============================================================================
+# Phase 13: Forensic Veracity, Micro-Leakage & Credibility Endpoints
+# ============================================================================
+
+@app.post("/api/forensic/credibility", tags=["Forensic Veracity & Credibility"])
+async def evaluate_forensic_credibility(req: ForensicCredibilityRequest):
+    """Fuses multi-channel affective markers into the Credibility & Deception Risk Index (CDRI)."""
+    fac_metrics, leakages, fac_flags = credibility_engine.compute_facial_veracity(
+        action_units=req.action_units,
+        macro_emotion=req.macro_emotion or "Neutral",
+        valence=req.valence or 0.0,
+    )
+    vocal = VoiceStressProfile(
+        stress_index=req.voice_stress_index or 0.18,
+        response_latency_sec=req.response_latency_sec or 0.45,
+        is_voice_stressed=(req.voice_stress_index or 0.18) >= credibility_engine.voice_stress_threshold,
+    )
+    vocal_flags = [DeceptionFlag.ACOUSTIC_MICRO_TREMOR.value] if vocal.is_voice_stressed else []
+    if (req.response_latency_sec or 0.45) > 2.5:
+        vocal_flags.append(DeceptionFlag.LATENCY_ELONGATION.value)
+
+    snapshot = credibility_engine.fuse_credibility_assessment(
+        facial_metrics=fac_metrics,
+        voice_stress=vocal,
+        pupil_cpr=req.pupil_cpr or 1.0,
+        pacifying_adaptor_active=req.pacifying_adaptor_active or False,
+        pulse_bpm=req.pulse_bpm or 72.0,
+        detected_flags=fac_flags + vocal_flags,
+    )
+    return {"status": "success", "snapshot": snapshot.to_dict()}
+
+
+@app.post("/api/forensic/leakage", tags=["Forensic Veracity & Credibility"])
+async def evaluate_micro_leakage(req: MicroLeakageAnalysisRequest):
+    """Evaluates facial Action Units for Duchenne smile incongruence and transient micro-expression flashes."""
+    fac_metrics, leakages, flags = credibility_engine.compute_facial_veracity(
+        action_units=req.action_units,
+        macro_emotion=req.macro_emotion or "Neutral",
+        valence=req.valence or 0.0,
+    )
+    return {
+        "status": "success",
+        "facial_veracity": fac_metrics.to_dict(),
+        "leakages": [lk.to_dict() for lk in leakages],
+        "flags": flags,
+    }
+
+
+@app.get("/api/forensic/config", tags=["Forensic Veracity & Credibility"])
+async def get_forensic_config():
+    """Retrieves forensic veracity tiers, deception flags, and calibration thresholds."""
+    return {
+        "status": "online",
+        "leakage_flash_max_ms": credibility_engine.leakage_flash_max_ms,
+        "duchenne_threshold": credibility_engine.duchenne_threshold,
+        "voice_stress_threshold": credibility_engine.voice_stress_threshold,
+        "veracity_tiers": [t.value for t in VeracityTier],
+        "deception_flags": [f.value for f in DeceptionFlag],
+        "weights": {
+            "facial": credibility_engine.WEIGHT_FACIAL,
+            "vocal": credibility_engine.WEIGHT_VOCAL,
+            "pupillometric": credibility_engine.WEIGHT_PUPILLOMETRIC,
+            "somatosensory": credibility_engine.WEIGHT_SOMATOSENSORY,
+            "autonomic": credibility_engine.WEIGHT_AUTONOMIC,
+        },
     }
 
 

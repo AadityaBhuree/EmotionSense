@@ -5,6 +5,7 @@ from src.analytics.longitudinal_analyzer import (
 from src.analytics.biometrics import BiometricEngine
 from src.analytics.oculometrics import OculomotorEngine
 from src.analytics.somatosensory import SomatosensoryEngine
+from src.analytics.credibility import CredibilityEngine
 
 __all__ = [
     "LongitudinalProfileAnalyzer",
@@ -12,5 +13,6 @@ __all__ = [
     "BiometricEngine",
     "OculomotorEngine",
     "SomatosensoryEngine",
+    "CredibilityEngine",
 ]
 

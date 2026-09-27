@@ -604,6 +604,58 @@ def test_somatosensory_api_endpoints(client):
     assert len(agit["contributing_factors"]) > 0
 
 
+def test_forensic_credibility_endpoints(client):
+    """Test Phase 13 forensic credibility and micro-leakage REST endpoints."""
+    # 1. Config endpoint
+    cfg_res = client.get("/api/forensic/config")
+    assert cfg_res.status_code == 200
+    c_data = cfg_res.json()
+    assert c_data["status"] == "online"
+    assert "Veridical_Authentic" in c_data["veracity_tiers"]
+    assert "Non_Duchenne_Masking" in c_data["deception_flags"]
+    assert "facial" in c_data["weights"]
+
+    # 2. Micro-leakage endpoint
+    leak_res = client.post(
+        "/api/forensic/leakage",
+        json={
+            "action_units": {"AU12": 0.85, "AU06": 0.05},
+            "macro_emotion": "Joy",
+            "valence": 0.60,
+        }
+    )
+    assert leak_res.status_code == 200
+    l_data = leak_res.json()
+    assert l_data["status"] == "success"
+    assert "facial_veracity" in l_data
+    assert l_data["facial_veracity"]["duchenne_incongruence_index"] > 0.30
+    assert "Non_Duchenne_Masking" in l_data["flags"]
+
+    # 3. Credibility composite evaluation endpoint
+    cred_res = client.post(
+        "/api/forensic/credibility",
+        json={
+            "action_units": {"AU12": 0.80, "AU06": 0.70},
+            "macro_emotion": "Joy",
+            "valence": 0.70,
+            "voice_stress_index": 0.15,
+            "pupil_cpr": 1.02,
+            "pacifying_adaptor_active": False,
+            "pulse_bpm": 70.0,
+            "response_latency_sec": 0.40,
+        }
+    )
+    assert cred_res.status_code == 200
+    cr_data = cred_res.json()
+    assert cr_data["status"] == "success"
+    snap = cr_data["snapshot"]
+    assert "credibility_score" in snap
+    assert "deception_risk_index" in snap
+    assert snap["tier"] == "Veridical_Authentic"
+    assert snap["credibility_score"] > 0.70
+
+
+
 
 
 
