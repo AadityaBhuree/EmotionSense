@@ -65,6 +65,13 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_somatosensory_hud_html,
 )
+from src.analytics.credibility import CredibilityEngine
+from src.core.credibility_models import VoiceStressProfile
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -89,6 +96,8 @@ if "oculomotor_engine" not in st.session_state:
     st.session_state.oculomotor_engine = OculomotorEngine()
 if "somatosensory_engine" not in st.session_state:
     st.session_state.somatosensory_engine = SomatosensoryEngine()
+if "credibility_engine" not in st.session_state:
+    st.session_state.credibility_engine = CredibilityEngine()
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -752,6 +761,54 @@ with right_col:
                 st.plotly_chart(render_postural_ergonomics_diagram(soma_snap.posture, height=210), use_container_width=True)
             with soma_col2:
                 st.plotly_chart(render_psychomotor_agitation_gauge(soma_snap.agitation, height=210), use_container_width=True)
+
+            # Phase 13: Real-Time Forensic Veracity & Credibility Sentinel HUD
+            cred_eng = st.session_state.credibility_engine
+            # Extract live or simulated FACS AUs
+            cur_vision = getattr(current_state, "vision", None)
+            live_au_dict = cur_vision.action_units.to_dict() if cur_vision and cur_vision.action_units else {
+                "AU12": float(max(0.0, current_state.affect.valence * 0.8)),
+                "AU06": float(max(0.0, current_state.affect.valence * 0.75)),
+                "AU04": float(max(0.0, -current_state.affect.valence * 0.6)),
+                "AU14": 0.05,
+            }
+            live_fac_metrics, live_leakages, live_flags = cred_eng.compute_facial_veracity(
+                action_units=live_au_dict,
+                macro_emotion=cur_vision.dominant_emotion if cur_vision else current_state.dominant_emotion,
+                valence=current_state.affect.valence,
+                timestamp=t_now,
+            )
+
+            vox_stress_val = float(latest_voice.vocal_stress_level) if latest_voice else float(current_state.affect.arousal * 0.35)
+            live_vox_profile = VoiceStressProfile(
+                stress_index=vox_stress_val,
+                is_voice_stressed=vox_stress_val > 0.45,
+                cpp_db=10.5 if vox_stress_val > 0.45 else 13.5,
+                response_latency_sec=0.45,
+            )
+
+            cpr_val = float(oculo_snap.pupillometry.cpr) if hasattr(oculo_snap, 'pupillometry') else 1.0
+            adaptor_act = soma_snap.primary_adaptor.active if hasattr(soma_snap, 'primary_adaptor') else False
+            pulse_bpm_val = float(bio_telem.pulse.bpm) if 'bio_telem' in locals() and hasattr(bio_telem, 'pulse') and bio_telem.pulse.bpm else 72.0
+
+            live_cred_snapshot = cred_eng.fuse_credibility_assessment(
+                facial_metrics=live_fac_metrics,
+                voice_stress=live_vox_profile,
+                pupil_cpr=cpr_val,
+                pacifying_adaptor_active=adaptor_act,
+                pulse_bpm=pulse_bpm_val,
+                detected_flags=live_flags,
+                timestamp=t_now,
+            )
+            st.session_state.latest_credibility = live_cred_snapshot
+
+            st.markdown(render_credibility_hud_html(live_cred_snapshot), unsafe_allow_html=True)
+
+            cred_col1, cred_col2 = st.columns([5, 7])
+            with cred_col1:
+                st.plotly_chart(render_credibility_tachometer_gauge(live_cred_snapshot, height=210), use_container_width=True)
+            with cred_col2:
+                st.plotly_chart(render_polygraph_multimodal_stress_radar(live_cred_snapshot.polygraph, height=210), use_container_width=True)
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
