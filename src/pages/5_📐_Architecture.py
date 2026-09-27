@@ -44,13 +44,25 @@ from src.ui.somatosensory_charts import (
     render_psychomotor_agitation_gauge,
     render_somatosensory_hud_html,
 )
+from src.core.credibility_models import (
+    DeceptionFlag,
+    MicroLeakageEvent,
+    VoiceStressProfile,
+)
+from src.analytics.credibility import CredibilityEngine
+from src.ui.credibility_charts import (
+    render_credibility_tachometer_gauge,
+    render_micro_leakage_timeline,
+    render_polygraph_multimodal_stress_radar,
+    render_credibility_hud_html,
+)
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -67,6 +79,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
     "🫀 Remote Biometrics & Autonomic Telemetry",
     "🧠 Cognitive Workload & Oculomotor Telemetry",
     "🧘 Somatosensory Kinematics & Postural Ergonomics",
+    "⚖️ Forensic Veracity & Deception Sentinel",
 ])
 
 
@@ -813,6 +826,104 @@ with tab16:
             st.plotly_chart(render_postural_ergonomics_diagram(sim_posture, height=220), use_container_width=True)
         with sg2:
             st.plotly_chart(render_psychomotor_agitation_gauge(sim_agitation, height=220), use_container_width=True)
+
+
+with tab17:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            ⚖️ Phase 13: Forensic Veracity Assessment, Affective Deception Leakage & Multimodal Credibility Sentinel
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Non-contact polygraphic credibility assessment synthesizing facial micro-expression leakage flashes (&lt;200ms), Duchenne smile incongruence (social masking), 8–14 Hz vocal fold micro-tremor (Voice Stress Analysis), pupillary dilation strain, and pacifying self-touch adaptors into the unified Credibility & Deception Risk Index (CDRI).
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Facial Micro-Momentary Leakage & Duchenne Incongruence
+    Under high cognitive strain or deception, genuine affective impulses involuntary breakthrough macro-facial dissimulation:
+
+    $$\Delta \mathbf{e}_{\text{leak}}(t) = \|\mathbf{e}_{\text{AU}}(t) - \bar{\mathbf{e}}_{\text{AU}}(t - \tau : t)\| > \theta_{\text{flash}}, \quad \Delta t_{\text{duration}} \in [20\,\text{ms}, 200\,\text{ms}]$$
+
+    - **Duchenne Social Masking Incongruence ($\mathcal{I}_{\text{duchenne}}$)**:
+      $$\mathcal{I}_{\text{duchenne}} = \text{clip}\left(1.0 - \frac{\text{AU06}_{\text{eye\_squint}} + 0.05}{\text{AU12}_{\text{lip\_corner}} + 0.05}, 0.0, 1.0\right)$$
+      - Genuine smile activates both Zygomaticus Major (AU12) and Orbicularis Oculi (AU06).
+      - Forced social masking presents strong AU12 ($>0.40$) with absent AU06 ($<0.15$), triggering `NON_DUCHENNE_MASKING`.
+    - **FACS Sneer Asymmetry ($\mathcal{A}_{\text{sneer}}$)**:
+      $$\mathcal{A}_{\text{sneer}} = \frac{|\text{AU14}_{\text{left}} - \text{AU14}_{\text{right}}|}{\max(\text{AU14}_{\text{left}}, \text{AU14}_{\text{right}}, 0.1)}$$
+
+    #### 2. Acoustic Voice Stress Analysis (VSA) & Glottal Dynamics
+    Acute autonomic stress provokes sympathetic laryngeal constriction and vocal fold micro-tremor:
+    - **8–14 Hz Lippold Vocal Micro-Tremor**:
+      $$E_{\text{tremor}} = \int_{8\,\text{Hz}}^{14\,\text{Hz}} |S_{F_0}(f)|^2 \, df$$
+    - **Cepstral Peak Prominence (CPP in dB)**:
+      $$\text{CPP} = \mathcal{C}(q_0) - \hat{\mathcal{C}}(q_0)$$
+      Measures regularity of vocal fold vibration; values drop below $9.0\,\text{dB}$ during hyper-constricted deception stress.
+
+    #### 3. Composite Credibility & Deception Risk Index (CDRI $\in [0.0, 1.0]$)
+    Multi-sensor polygraphic late fusion across visual, acoustic, oculomotor, somatosensory, and cardiac channels:
+
+    $$\text{CDRI} = 0.25 \cdot S_{\text{facial}} + 0.25 \cdot S_{\text{vocal}} + 0.20 \cdot S_{\text{pupil}} + 0.15 \cdot S_{\text{somato}} + 0.15 \cdot S_{\text{cardiac}}$$
+
+    $$\text{Credibility Score} = 1.0 - \text{CDRI}$$
+
+    - **Classification Tiers**:
+      - `VERIDICAL_AUTHENTIC` ($\text{CDRI} < 0.25$): High congruence, organic prosody, authentic Duchenne activation.
+      - `COGNITIVE_STRAIN` ($0.25 \le \text{CDRI} < 0.50$): Elevated mental effort without overt affective dissimulation.
+      - `SUSPICIOUS_INCONGRUENCE` ($0.50 \le \text{CDRI} < 0.75$): Non-Duchenne smile masking or vocal perturbation flagged.
+      - `HIGH_DECEPTION_RISK` ($\text{CDRI} \ge 0.75$): Multi-channel synchrony of deception markers (pulse surge, voice stress, micro-leakage).
+    """)
+
+    st.markdown("#### 🧪 Interactive Forensic Veracity & Credibility Simulator")
+    sim_c1, sim_c2 = st.columns([1.5, 3.5])
+    with sim_c1:
+        test_au12 = st.slider("AU12 (Lip Corner Puller)", 0.0, 1.0, 0.75, step=0.05)
+        test_au06 = st.slider("AU06 (Cheek Raiser / Eye Squint)", 0.0, 1.0, 0.10, step=0.05)
+        test_leak_toggle = st.checkbox("Inject Sub-200ms Micro-Leakage Flash (Fear)", value=True)
+        test_vox_stress = st.slider("Voice Stress Score", 0.0, 1.0, 0.40, step=0.05)
+        test_cpr = st.slider("Pupil CPR Dilation", 0.8, 1.5, 1.15, step=0.05)
+        test_pacify = st.checkbox("Pacifying Self-Touch Active (Mouth Cover)", value=False)
+        test_pulse = st.slider("Instantaneous Pulse (BPM)", 55.0, 140.0, 88.0, step=1.0)
+
+    # Compute simulation snapshot
+    sim_cred_engine = CredibilityEngine()
+    sim_au_map = {"AU12": test_au12, "AU06": test_au06, "AU04": 0.55 if test_leak_toggle else 0.05, "AU20": 0.50 if test_leak_toggle else 0.0}
+    sim_fac, sim_leaks, sim_fl = sim_cred_engine.compute_facial_veracity(
+        action_units=sim_au_map,
+        macro_emotion="Joy" if test_au12 > 0.4 else "Neutral",
+    )
+    if test_leak_toggle:
+        sim_leaks = [MicroLeakageEvent(timestamp=1.8, duration_ms=135.0, leaked_affect="Fear", masked_affect="Joy")]
+        sim_fac.micro_leakage_detected = True
+        sim_fac.leakage_events_count = 1
+        sim_fl.append(DeceptionFlag.MICRO_FLASH_LEAKAGE.value)
+
+    sim_vox = VoiceStressProfile(
+        stress_index=test_vox_stress,
+        is_voice_stressed=test_vox_stress > 0.45,
+        cpp_db=round(float(max(6.5, 15.0 - test_vox_stress * 10.0)), 1),
+    )
+    sim_cred_snap = sim_cred_engine.fuse_credibility_assessment(
+        facial_metrics=sim_fac,
+        voice_stress=sim_vox,
+        pupil_cpr=test_cpr,
+        pacifying_adaptor_active=test_pacify,
+        pulse_bpm=test_pulse,
+        detected_flags=sim_fl,
+    )
+    sim_cred_snap.recent_leakages = sim_leaks
+
+    with sim_s2:
+        st.markdown(render_credibility_hud_html(sim_cred_snap), unsafe_allow_html=True)
+        cg1, cg2, cg3 = st.columns([1, 1, 1])
+        with cg1:
+            st.plotly_chart(render_credibility_tachometer_gauge(sim_cred_snap, height=220), use_container_width=True)
+        with cg2:
+            st.plotly_chart(render_micro_leakage_timeline(sim_leaks, height=220), use_container_width=True)
+        with cg3:
+            st.plotly_chart(render_polygraph_multimodal_stress_radar(sim_cred_snap.polygraph, height=220), use_container_width=True)
+
 
 
 
