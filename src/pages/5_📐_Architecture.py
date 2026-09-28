@@ -56,13 +56,21 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_markov_transition_heatmap,
+    render_hazard_tachometer_gauge,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 st.set_page_config(page_title="Architecture & Docs | EmotionSense", page_icon="📖", layout="wide")
 inject_modern_styles()
 
 render_header("System Architecture & Engineering Specs", "Mathematical Models, Temporal Late Fusion, WebRTC & Microservices")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17, tab18 = st.tabs([
     "🏛️ Tri-Modal Fusion Pipeline",
     "💬 Conversational NLP & Escalation Math",
     "📐 Russell's Circumplex & 3D VAD",
@@ -80,6 +88,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
     "🧠 Cognitive Workload & Oculomotor Telemetry",
     "🧘 Somatosensory Kinematics & Postural Ergonomics",
     "⚖️ Forensic Veracity & Deception Sentinel",
+    "🔮 Affective Horizon & MDP Forecasting",
 ])
 
 
@@ -914,7 +923,7 @@ with tab17:
     )
     sim_cred_snap.recent_leakages = sim_leaks
 
-    with sim_s2:
+    with sim_c2:
         st.markdown(render_credibility_hud_html(sim_cred_snap), unsafe_allow_html=True)
         cg1, cg2, cg3 = st.columns([1, 1, 1])
         with cg1:
@@ -923,6 +932,122 @@ with tab17:
             st.plotly_chart(render_micro_leakage_timeline(sim_leaks, height=220), use_container_width=True)
         with cg3:
             st.plotly_chart(render_polygraph_multimodal_stress_radar(sim_cred_snap.polygraph, height=220), use_container_width=True)
+
+
+with tab18:
+    st.markdown("""
+    <div class="es-panel">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.35rem;">
+            🔮 Phase 14: Affective Horizon Forecasting, Markov State Transitions & Predictive MDP Sentinel
+        </div>
+        <p style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.5; margin: 0;">
+            Continuous forward emotional trajectory forecasting. Models emotional dynamics as discrete-state Markov chains and Markov Decision Processes (MDP) to anticipate hostile escalation, panic onset, and burnout crashes 3 to 10 steps ahead, evaluating counterfactual interventions in real time.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(r"""
+    #### 1. Discrete State Space & Transition Probability Matrix
+    Human affective progression is formalized across an 8-state canonical macro-state space $\mathcal{S}$:
+    - `COMPOSURE`: Low arousal ($\le 0.35$), Positive valence ($\ge +0.15$)
+    - `OPTIMAL_FLOW`: Moderate arousal ($0.35 - 0.80$), Positive valence ($\ge +0.20$)
+    - `COGNITIVE_STRAIN`: High mental load ($\text{NASA-TLX} \ge 0.68$), Neutral/Negative valence
+    - `AGITATED_FRUSTRATION`: High arousal ($\ge 0.45$), Negative valence ($\le -0.25$), High PAI
+    - `ACUTE_ESCALATION`: Hostile anger, High arousal ($\ge 0.65$), Crashing valence ($\le -0.45$)
+    - `BURNOUT_COLLAPSE`: Plunging valence ($\le -0.20$), Severe fatigue ($\text{PERCLOS} \ge 0.35$)
+    - `DECEPTIVE_TENSION`: Elevated veracity risk ($\text{CDRI} \ge 0.65$), voice stress micro-tremor
+    - `BASELINE_NEUTRAL`: Emotional equilibrium reference point
+
+    $$\mathbf{P} \in \mathbb{R}^{8 \times 8}, \quad P_{ij} = P(S_{t+1} = s_j \mid S_t = s_i) \ge 0, \quad \sum_{j=1}^8 P_{ij} = 1.0$$
+
+    #### 2. Multi-Step Horizon Projection & Telemetry Covariates
+    The forward affective probability distribution at horizon step $h$ is computed via iterative matrix multiplication:
+
+    $$\mathbf{\pi}^{(t+h)} = \mathbf{\pi}^{(t)} \tilde{\mathbf{P}}^h$$
+
+    Continuous physiological covariates $\mathbf{x}_t = [\Delta\text{BPM}, \text{NASA-TLX}, \text{PERCLOS}, \text{CDRI}, \text{PAI}]^\top$ dynamically modulate transition rates:
+
+    $$\tilde{P}_{ij}(\mathbf{x}_t) = \frac{P_{ij} \exp(\mathbf{w}_{ij}^\top \mathbf{x}_t)}{\sum_k P_{ik} \exp(\mathbf{w}_{ik}^\top \mathbf{x}_t)}$$
+
+    #### 3. Hazard Formulations
+    - **Escalation Velocity Index (EVI)**:
+      $$\text{EVI}(t) = \frac{1}{\sum_{h=1}^H \gamma^{h-1}} \sum_{h=1}^H \gamma^{h-1} P(S_{t+h} \in \{\text{Acute Escalation}, \text{Agitated Frustration}\} \mid S_t)$$
+    - **Burnout Crash Hazard (BCH)**:
+      $$\text{BCH}(t) = \frac{1}{\sum_{h=1}^H \gamma^{h-1}} \sum_{h=1}^H \gamma^{h-1} P(S_{t+h} \in \{\text{Burnout Collapse}, \text{Cognitive Strain}\} \mid S_t)$$
+
+    #### 4. Counterfactual MDP Intervention Policy Optimization
+    Action Space $\mathcal{A} = \{\text{PASSIVE\_MONITOR}, \text{ACTIVE\_EMPATHY}, \text{TEMPO\_DECELERATION}, \text{COGNITIVE\_OFFLOADING}, \text{PHYSIOLOGICAL\_RESET}\}$:
+
+    $$a^* = \arg\max_{a \in \mathcal{A}} \left[ \Delta V_a(S_{t+H}) \cdot 0.5 + \text{Stability}_a \cdot 0.5 \right]$$
+    """)
+
+    st.markdown("#### 🧪 Interactive Affective Horizon & Policy Simulator")
+    hsim_c1, hsim_c2 = st.columns([1.5, 3.5])
+    with hsim_c1:
+        sim_val = st.slider("Current Valence", -1.0, 1.0, -0.45, step=0.05, key="arch_sim_val")
+        sim_aro = st.slider("Current Arousal", 0.0, 1.0, 0.70, step=0.05, key="arch_sim_aro")
+        sim_pulse = st.slider("Heart Rate (BPM)", 50.0, 140.0, 96.0, step=1.0, key="arch_sim_pulse")
+        sim_cog = st.slider("Cognitive Load (NASA-TLX)", 0.0, 1.0, 0.55, step=0.05, key="arch_sim_cog")
+        sim_perclos = st.slider("PERCLOS Eye Drowsiness", 0.0, 1.0, 0.15, step=0.05, key="arch_sim_perclos")
+        sim_pai = st.slider("Psychomotor Agitation (PAI)", 0.0, 1.0, 0.45, step=0.05, key="arch_sim_pai")
+        sim_steps = st.slider("Horizon Steps Ahead", 3, 10, 5, step=1, key="arch_sim_steps")
+
+    sim_forecaster = AffectiveHorizonForecaster()
+    sim_telem = {
+        "pulse_bpm": sim_pulse,
+        "cognitive_load": sim_cog,
+        "perclos": sim_perclos,
+        "cdri": 0.1,
+        "pai": sim_pai,
+        "arousal": sim_aro,
+    }
+
+    arch_snapshot = sim_forecaster.generate_forecast_snapshot(
+        valence=sim_val,
+        arousal=sim_aro,
+        telemetry=sim_telem,
+        horizon_steps=sim_steps,
+        step_interval_sec=3.0,
+    )
+
+    with hsim_c2:
+        st.markdown(render_forecasting_hud_html(arch_snapshot), unsafe_allow_html=True)
+        hrow1_1, hrow1_2 = st.columns([6, 6])
+        with hrow1_1:
+            st.plotly_chart(
+                render_horizon_trajectory_fan_chart(
+                    arch_snapshot.forecast_trajectory,
+                    current_valence=sim_val,
+                    current_arousal=sim_aro,
+                    height=230,
+                ),
+                use_container_width=True,
+            )
+        with hrow1_2:
+            st.plotly_chart(
+                render_policy_simulation_comparison_chart(
+                    arch_snapshot.policy_options,
+                    height=230,
+                ),
+                use_container_width=True,
+            )
+
+        hrow2_1, hrow2_2 = st.columns([7, 5])
+        with hrow2_1:
+            st.plotly_chart(
+                render_markov_transition_heatmap(arch_snapshot.transition_matrix, height=270),
+                use_container_width=True,
+            )
+        with hrow2_2:
+            st.plotly_chart(
+                render_hazard_tachometer_gauge(
+                    arch_snapshot.escalation_velocity_index,
+                    arch_snapshot.burnout_crash_hazard,
+                    arch_snapshot.risk_tier,
+                    height=240,
+                ),
+                use_container_width=True,
+            )
 
 
 
