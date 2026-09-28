@@ -63,6 +63,12 @@ from src.core.credibility_models import (
     DeceptionFlag,
     VoiceStressProfile,
 )
+from src.core.forecasting_models import (
+    AffectiveMacroState,
+    InterventionAction,
+    HorizonRiskTier,
+)
+from src.analytics.forecasting import AffectiveHorizonForecaster, STATE_COORDINATES
 
 
 # Initialize FastAPI App
@@ -97,6 +103,7 @@ biometric_engine = BiometricEngine(fps=30.0)
 oculomotor_engine = OculomotorEngine()
 somatosensory_engine = SomatosensoryEngine()
 credibility_engine = CredibilityEngine()
+forecasting_engine = AffectiveHorizonForecaster()
 
 
 # Request & Response Schemas
@@ -211,6 +218,22 @@ class MicroLeakageAnalysisRequest(BaseModel):
     action_units: Dict[str, float] = Field(..., description="FACS Action Unit dictionary")
     macro_emotion: Optional[str] = Field("Neutral", description="Current macro emotion")
     valence: Optional[float] = Field(0.0, description="Current valence")
+
+
+class HorizonForecastRequest(BaseModel):
+    valence: float = Field(0.0, description="Current affective valence (-1.0 to 1.0)")
+    arousal: float = Field(0.0, description="Current affective arousal (0.0 to 1.0)")
+    horizon_steps: Optional[int] = Field(5, description="Number of forward Markov steps")
+    step_interval_sec: Optional[float] = Field(3.0, description="Step temporal resolution in seconds")
+    telemetry: Optional[Dict[str, float]] = Field(default_factory=dict, description="Continuous physiological & cognitive telemetry")
+
+
+class PolicySimulationRequest(BaseModel):
+    current_state: Optional[str] = Field("Baseline_Neutral", description="Current discrete affective macro-state")
+    valence: Optional[float] = Field(0.0, description="Affective valence")
+    arousal: Optional[float] = Field(0.0, description="Affective arousal")
+    horizon_steps: Optional[int] = Field(5, description="Forward horizon steps to simulate")
+    telemetry: Optional[Dict[str, float]] = Field(default_factory=dict, description="Continuous telemetry covariates")
 
 
 class DialogueTranscriptRequest(BaseModel):
@@ -978,6 +1001,67 @@ async def get_forensic_config():
             "somatosensory": credibility_engine.WEIGHT_SOMATOSENSORY,
             "autonomic": credibility_engine.WEIGHT_AUTONOMIC,
         },
+    }
+
+
+@app.post("/api/forecast/horizon", tags=["Affective Forecasting & MDP"])
+async def project_affective_horizon(req: HorizonForecastRequest):
+    """Computes forward Markov transition horizon, hazard indices (EVI/BCH), and optimal MDP policy."""
+    snapshot = forecasting_engine.generate_forecast_snapshot(
+        valence=req.valence,
+        arousal=req.arousal,
+        telemetry=req.telemetry,
+        horizon_steps=req.horizon_steps or 5,
+        step_interval_sec=req.step_interval_sec or 3.0,
+    )
+    return {"status": "success", "snapshot": snapshot.to_dict()}
+
+
+@app.post("/api/forecast/simulate-policy", tags=["Affective Forecasting & MDP"])
+async def simulate_deescalation_policies(req: PolicySimulationRequest):
+    """Simulates counterfactual intervention policies to quantify expected hazard reductions."""
+    state = req.current_state or forecasting_engine.classify_macro_state(
+        valence=req.valence or 0.0,
+        arousal=req.arousal or 0.0,
+        cognitive_load=req.telemetry.get("cognitive_load", 0.0) if req.telemetry else 0.0,
+        cdri=req.telemetry.get("cdri", 0.0) if req.telemetry else 0.0,
+        perclos=req.telemetry.get("perclos", 0.0) if req.telemetry else 0.0,
+        pai=req.telemetry.get("pai", 0.0) if req.telemetry else 0.0,
+    )
+    policies = forecasting_engine.simulate_intervention_policies(
+        current_state=state,
+        horizon_steps=req.horizon_steps or 5,
+        telemetry=req.telemetry,
+    )
+    return {
+        "status": "success",
+        "current_state": state,
+        "policies": [p.to_dict() for p in policies],
+    }
+
+
+@app.get("/api/forecast/states", tags=["Affective Forecasting & MDP"])
+async def get_forecasting_states():
+    """Returns discrete affective macro-states and canonical (Valence, Arousal) coordinates."""
+    return {
+        "status": "online",
+        "states": [s.value for s in AffectiveMacroState],
+        "state_coordinates": {s: list(coords) for s, coords in STATE_COORDINATES.items()},
+        "intervention_actions": [a.value for a in InterventionAction],
+        "risk_tiers": [t.value for t in HorizonRiskTier],
+    }
+
+
+@app.get("/api/forecast/config", tags=["Affective Forecasting & MDP"])
+async def get_forecasting_config():
+    """Retrieves Markov transition baseline parameters, discount factors, and edge SLA specs."""
+    return {
+        "status": "online",
+        "state_order": forecasting_engine.state_order,
+        "num_states": forecasting_engine.num_states,
+        "gamma_discount": 0.85,
+        "step_interval_default_sec": 3.0,
+        "sla_target_ms": 2.5,
     }
 
 
