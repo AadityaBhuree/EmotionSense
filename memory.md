@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Phase 13 Completed — Forensic Veracity Assessment, Affective Deception Leakage & Multimodal Credibility Sentinel (229/229 Tests Passing)  
+> **Status:** Phase 14 Completed — Affective Horizon Forecasting, Markov State Transition Dynamics & Predictive MDP Sentinel (243/243 Tests Passing)  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -26,6 +26,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 11. **Cognitive Workload & Oculomotor Telemetry**: Contact-free pupillometry and Cognitive Pupillary Response (CPR) via MediaPipe iris landmarks, Eye Aspect Ratio (EAR), blink dynamics, PERCLOS drowsiness metric, 3D gaze tracking, I-VT fixation vs. saccade velocity discrimination, gaze dispersion heatmaps, multi-sensor NASA-TLX Mental Overload Index fusion (0.0 to 1.0), and workload tiers.
 12. **Somatosensory Kinematics & Postural Ergonomics**: Real-time upper-body spinal alignment tracking (Forward Head Posture angle, Slump Index, lateral tilt, shoulder elevation asymmetry), hand-to-face micro-gesture self-touch adaptors (chin support, mouth cover, temple rub, eye rub, neck touch), kinetic restlessness / fidgeting spectral flux, and composite Psychomotor Agitation Index (PAI) multi-sensor fusion.
 13. **Forensic Veracity Assessment & Multimodal Credibility Sentinel**: Real-time affective micro-expression leakage detection (< 200 ms flashes of concealed negative affect breaking through voluntary social smiles), Duchenne authentic vs social smile incongruence scoring (AU12 vs AU06), FACS lateral sneer asymmetry, acoustic voice stress analysis (8–14 Hz laryngeal micro-tremor Lippold perturbation and Cepstral Peak Prominence CPP), cross-checking against autonomic rPPG pulse surges and oculomotor pupillary CPR dilation, and composite late-fusion Credibility & Deception Risk Index (CDRI, 0.0 to 1.0) with four calibrated veracity tiers.
+14. **Affective Horizon Forecasting & Predictive MDP Sentinel**: Real-time 6-state Markov chain modelling (Euphoric, Content, Neutral, Stressed, Dysphoric, Hostile), stationary transition matrix estimation with Laplace smoothing, Chapman-Kolmogorov multi-step forward horizon projections ($h = 1..5$ steps), entropy drift convergence tracking, escalation hazard index calculation ($H_{\text{hazard}}$), and counterfactual Markov Decision Process (MDP) Bellman value iteration evaluating real-time de-escalation policy actions (Empathetic Reframe, Pacing Pause, Grounding Question, Clarification Inquiry, Escalation Alert).
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
@@ -271,6 +272,10 @@ EmotionSense/
 | `POST` | `/api/credibility/vocal-stress` | Extract 8–14 Hz vocal fold micro-tremor and Cepstral Peak Prominence (CPP) | `VocalStressRequest` (`f0_trajectory`, `signal_chunk`, `sr`) | `{"status": "success", "vocal_stress": {...}}` |
 | `POST` | `/api/credibility/polygraph` | Cross-check oculomotor CPR, cardiac rPPG, and somatosensory adaptors | `PolygraphCrossCheckRequest` (`pulse_bpm`, `cpr_dilation`, `adaptor_active`) | `{"status": "success", "polygraph": {...}}` |
 | `GET` | `/api/credibility/config` | Retrieve forensic thresholds, CDRI weights, and sub-4.0ms SLA specs | None | `{"status": "success", "config": {...}}` |
+| `POST` | `/api/forecast/horizon` | Multi-step Markov probability projection & escalation hazard | `HorizonForecastRequest` (`current_state`, `steps_ahead`) | `{"status": "success", "forecast": {...}}` |
+| `POST` | `/api/forecast/simulate-policy` | Counterfactual MDP policy intervention simulation | `PolicySimulationRequest` (`current_state`, `action`, `steps_ahead`) | `{"status": "success", "simulation": {...}}` |
+| `GET` | `/api/forecast/states` | Active Markov affective states and descriptions | None | `{"status": "success", "states": [...]}` |
+| `GET` | `/api/forecast/config` | Horizon projection parameters & policy action catalog | None | `{"status": "success", "config": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -285,13 +290,16 @@ EmotionSense/
 
 ## 6. Verification & Quality Metrics
 
-All **229** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, cognitive workload, somatosensory kinematics, and forensic veracity tests pass cleanly across Python 3.10+:
+All **243** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, cognitive workload, somatosensory kinematics, forensic veracity, and affective horizon forecasting tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================ 229 passed in 28.86s =============================
+# ============================ 243 passed in 34.24s =============================
 ```
 
+- **Affective Horizon Forecasting Suite (`test_forecasting.py`)**: 6-state Markov chain transitions, Laplace smoothed transition matrices, Chapman-Kolmogorov multi-step matrix exponentiation ($h = 1..5$), Shannon entropy drift convergence, escalation hazard index calculation ($H_{\text{hazard}}$), and counterfactual Bellman MDP policy simulation (5 de-escalation actions).
+- **Forecasting UI Visualizations Suite (`test_ui_forecasting_charts.py`)**: Horizon probability fan chart with upper/lower bounds, transition matrix heatmap, escalation hazard semicircular gauge, and MDP policy intervention value bars.
+- **Edge Benchmark Forecasting SLA (`test_edge_runtime.py`)**: Real-time validation of the sub-2.5ms affective horizon projection and MDP policy evaluation execution SLA with P50/P95/P99 latency profiling.
 - **Forensic Veracity & Credibility Suite (`test_credibility.py`)**: Micro-momentary expression flash detection ($< 200\text{ms}$), Duchenne authentic smile incongruence index ($\mathcal{I}_{\text{duchenne}}$), FACS sneer lateral asymmetry ($\mathcal{A}_{\text{sneer}}$), 8–14 Hz vocal fold micro-tremor power integral ($E_{\text{tremor}}$), Cepstral Peak Prominence (CPP), polygraphic multimodal stress cross-checking (pupillometry CPR, rPPG cardiac surge, pacifying adaptors), and composite Credibility & Deception Risk Index (CDRI) late fusion.
 - **Credibility UI Visualizations Suite (`test_ui_credibility_charts.py`)**: Semicircular Credibility tachometer gauge, Micro-leakage flash timeline chart, 5-channel polygraph stress radar chart, and tactical forensic HUD HTML cards.
 - **Edge Benchmark Credibility SLA (`test_edge_runtime.py`)**: Real-time validation of the sub-4.0ms credibility analysis and polygraph cross-check SLA with P50/P95/P99 latency profiling.
