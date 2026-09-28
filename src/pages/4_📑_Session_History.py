@@ -76,6 +76,14 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_markov_transition_heatmap,
+    render_hazard_tachometer_gauge,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 st.set_page_config(page_title="Session Intelligence & History | EmotionSense", page_icon="📑", layout="wide")
 inject_modern_styles()
@@ -475,6 +483,67 @@ else:
             st.plotly_chart(render_micro_leakage_timeline(hist_leakages, height=210), use_container_width=True)
         with cr_col3:
             st.plotly_chart(render_polygraph_multimodal_stress_radar(hist_cred_snap.polygraph, height=210), use_container_width=True)
+
+        # Phase 14: Historical Frame Affective Horizon Forecasting & MDP Counterfactuals
+        st.markdown("<div class='es-section-title'>🔮 Affective Horizon Forecasting & Policy Counterfactuals</div>", unsafe_allow_html=True)
+        hist_forecaster = AffectiveHorizonForecaster()
+        hist_telemetry = {
+            "pulse_bpm": float(frame_pulse.bpm if 'frame_pulse' in locals() and hasattr(frame_pulse, 'bpm') else 72.0),
+            "cognitive_load": float(frame_workload.workload_index if 'frame_workload' in locals() and hasattr(frame_workload, 'workload_index') else 0.35),
+            "perclos": float(c_fatigue if 'c_fatigue' in locals() else 0.1),
+            "cdri": float(hist_cred_snap.deception_risk_index if 'hist_cred_snap' in locals() else 0.1),
+            "pai": float(frame_agitation.pai_score if 'frame_agitation' in locals() else 0.1),
+            "arousal": f_aro,
+            "timestamp": float(current_frame.get("timestamp", frame_idx * 0.5)),
+        }
+
+        hist_forecast_snap = hist_forecaster.generate_forecast_snapshot(
+            valence=f_val,
+            arousal=f_aro,
+            telemetry=hist_telemetry,
+            horizon_steps=5,
+            step_interval_sec=3.0,
+        )
+
+        st.markdown(render_forecasting_hud_html(hist_forecast_snap), unsafe_allow_html=True)
+
+        hfc_c1, hfc_c2 = st.columns([6, 6])
+        with hfc_c1:
+            st.plotly_chart(
+                render_horizon_trajectory_fan_chart(
+                    hist_forecast_snap.forecast_trajectory,
+                    current_valence=f_val,
+                    current_arousal=f_aro,
+                    height=230,
+                ),
+                use_container_width=True,
+            )
+        with hfc_c2:
+            st.plotly_chart(
+                render_policy_simulation_comparison_chart(
+                    hist_forecast_snap.policy_options,
+                    height=230,
+                ),
+                use_container_width=True,
+            )
+
+        with st.expander("🔍 Inspect Historical Frame Markov Transitions & Equilibrium", expanded=False):
+            hm_c1, hm_c2 = st.columns([7, 5])
+            with hm_c1:
+                st.plotly_chart(
+                    render_markov_transition_heatmap(hist_forecast_snap.transition_matrix, height=270),
+                    use_container_width=True,
+                )
+            with hm_c2:
+                st.plotly_chart(
+                    render_hazard_tachometer_gauge(
+                        hist_forecast_snap.escalation_velocity_index,
+                        hist_forecast_snap.burnout_crash_hazard,
+                        hist_forecast_snap.risk_tier,
+                        height=240,
+                    ),
+                    use_container_width=True,
+                )
 
     # Key Affective Moments
     key_moments = session_data.get("key_moments", [])
