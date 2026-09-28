@@ -57,6 +57,14 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_markov_transition_heatmap,
+    render_hazard_tachometer_gauge,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Text Emotion Studio | EmotionSense", page_icon="💬", layout="wide")
@@ -83,6 +91,8 @@ if "edge_engine" not in st.session_state:
     st.session_state.edge_engine = ONNXEdgeInferenceEngine()
 if "quant_optimizer" not in st.session_state:
     st.session_state.quant_optimizer = ModelQuantizationOptimizer()
+if "horizon_forecaster" not in st.session_state:
+    st.session_state.horizon_forecaster = AffectiveHorizonForecaster()
 
 clf = st.session_state.hybrid_classifier
 conv = st.session_state.conversation_analyzer
@@ -91,6 +101,7 @@ prosody_ext = st.session_state.prosody_extractor
 voice_clf = st.session_state.voice_classifier
 edge_eng = st.session_state.edge_engine
 quant_opt = st.session_state.quant_optimizer
+forecaster = st.session_state.horizon_forecaster
 
 
 # Controls Bar: Studio Mode & NLP Engine Selector
@@ -637,6 +648,74 @@ elif mode == "🗨️ Multi-turn Dialogue Transcript":
                         <b>Turn #{tp['turn_index']} [{tp['speaker']}]</b>: <code>{tp['from_emotion']}</code> ➔ <code style="color: #f59e0b;">{tp['to_emotion']}</code> (ΔValence: {tp['valence_delta']:+.2f})
                     </div>
                     """, unsafe_allow_html=True)
+
+        # Phase 14: Affective Horizon Forecasting & Markov State Transition Dynamics
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>🔮 Phase 14 Predictive Affective Horizon & MDP Intervention Sentinel</div>", unsafe_allow_html=True)
+
+        # Extract last turn dynamics and conversational trajectory
+        last_turn = summary.turns[-1] if summary.turns else None
+        last_valence = last_turn.valence if last_turn else 0.0
+        last_arousal = last_turn.arousal if last_turn else 0.5
+
+        # Estimate conversational escalation indicators
+        dialogue_esc_score = 0.85 if summary.escalation_risk == "High" else (0.50 if summary.escalation_risk == "Moderate" else 0.15)
+        dialogue_telemetry = {
+            "pulse_bpm": 72.0 + (dialogue_esc_score * 35.0),
+            "cognitive_load": 0.35 + (len(summary.turning_points) * 0.12),
+            "pai": dialogue_esc_score * 0.7,
+            "arousal": last_arousal,
+        }
+
+        forecast_snapshot = forecaster.generate_forecast_snapshot(
+            valence=last_valence,
+            arousal=last_arousal,
+            telemetry=dialogue_telemetry,
+            horizon_steps=5,
+            step_interval_sec=3.0,
+        )
+
+        st.markdown(render_forecasting_hud_html(forecast_snapshot), unsafe_allow_html=True)
+
+        fc_col1, fc_col2 = st.columns([6, 6])
+        with fc_col1:
+            st.markdown("<div class='es-section-title'>Forward Affective Trajectory Fan (+15s)</div>", unsafe_allow_html=True)
+            st.plotly_chart(
+                render_horizon_trajectory_fan_chart(
+                    forecast_snapshot.forecast_trajectory,
+                    current_valence=last_valence,
+                    current_arousal=last_arousal,
+                    height=240,
+                ),
+                use_container_width=True,
+            )
+        with fc_col2:
+            st.markdown("<div class='es-section-title'>MDP Counterfactual Policy Evaluations</div>", unsafe_allow_html=True)
+            st.plotly_chart(
+                render_policy_simulation_comparison_chart(
+                    forecast_snapshot.policy_options,
+                    height=240,
+                ),
+                use_container_width=True,
+            )
+
+        with st.expander("🔍 Inspect Markov Transition Matrix & State Dynamics", expanded=False):
+            mat_col1, mat_col2 = st.columns([7, 5])
+            with mat_col1:
+                st.plotly_chart(
+                    render_markov_transition_heatmap(forecast_snapshot.transition_matrix, height=270),
+                    use_container_width=True,
+                )
+            with mat_col2:
+                st.plotly_chart(
+                    render_hazard_tachometer_gauge(
+                        forecast_snapshot.escalation_velocity_index,
+                        forecast_snapshot.burnout_crash_hazard,
+                        forecast_snapshot.risk_tier,
+                        height=240,
+                    ),
+                    use_container_width=True,
+                )
 
 
 elif mode == "📊 Batch File / Multi-Line Stream":
