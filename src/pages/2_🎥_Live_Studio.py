@@ -72,6 +72,12 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(page_title="Live Multimodal Studio | EmotionSense", page_icon="🎥", layout="wide")
@@ -98,6 +104,8 @@ if "somatosensory_engine" not in st.session_state:
     st.session_state.somatosensory_engine = SomatosensoryEngine()
 if "credibility_engine" not in st.session_state:
     st.session_state.credibility_engine = CredibilityEngine()
+if "horizon_forecaster" not in st.session_state:
+    st.session_state.horizon_forecaster = AffectiveHorizonForecaster()
 
 # Studio Controls Bar
 ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 1, 1])
@@ -809,6 +817,49 @@ with right_col:
                 st.plotly_chart(render_credibility_tachometer_gauge(live_cred_snapshot, height=210), use_container_width=True)
             with cred_col2:
                 st.plotly_chart(render_polygraph_multimodal_stress_radar(live_cred_snapshot.polygraph, height=210), use_container_width=True)
+
+            # Phase 14: Real-Time Affective Horizon Forecasting & Predictive Burnout HUD
+            horizon_forecaster = st.session_state.horizon_forecaster
+            live_forecast_telemetry = {
+                "pulse_bpm": pulse_bpm_val,
+                "cognitive_load": float(oculo_snap.workload.nasa_tlx_index) if hasattr(oculo_snap, 'workload') else 0.3,
+                "perclos": float(oculo_snap.kinematics.perclos_p80) if hasattr(oculo_snap, 'kinematics') else 0.1,
+                "cdri": float(live_cred_snapshot.deception_risk_index) if 'live_cred_snapshot' in locals() else 0.1,
+                "pai": float(soma_snap.agitation.pai_score) if hasattr(soma_snap, 'agitation') else 0.1,
+                "arousal": float(current_state.affect.arousal),
+                "timestamp": t_now,
+            }
+
+            live_forecast_snapshot = horizon_forecaster.generate_forecast_snapshot(
+                valence=float(current_state.affect.valence),
+                arousal=float(current_state.affect.arousal),
+                telemetry=live_forecast_telemetry,
+                horizon_steps=5,
+                step_interval_sec=3.0,
+            )
+            st.session_state.latest_forecast = live_forecast_snapshot
+
+            st.markdown(render_forecasting_hud_html(live_forecast_snapshot), unsafe_allow_html=True)
+
+            fc_c1, fc_c2 = st.columns([6, 6])
+            with fc_c1:
+                st.plotly_chart(
+                    render_horizon_trajectory_fan_chart(
+                        live_forecast_snapshot.forecast_trajectory,
+                        current_valence=float(current_state.affect.valence),
+                        current_arousal=float(current_state.affect.arousal),
+                        height=210,
+                    ),
+                    use_container_width=True,
+                )
+            with fc_c2:
+                st.plotly_chart(
+                    render_policy_simulation_comparison_chart(
+                        live_forecast_snapshot.policy_options,
+                        height=210,
+                    ),
+                    use_container_width=True,
+                )
 
             # Acoustic Prosody Mini-Rack
             if latest_acoustics:
