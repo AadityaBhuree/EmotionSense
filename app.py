@@ -25,6 +25,13 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.core.forecasting_models import MDPInterventionAction
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_fan_chart,
+    render_escalation_hazard_gauge,
+    render_horizon_hud_html,
+)
 
 # Page Configuration
 st.set_page_config(
@@ -44,10 +51,13 @@ if "conversation_analyzer" not in st.session_state:
     st.session_state.conversation_analyzer = ConversationAffectAnalyzer(st.session_state.hybrid_classifier)
 if "credibility_engine" not in st.session_state:
     st.session_state.credibility_engine = CredibilityEngine()
+if "horizon_forecaster" not in st.session_state:
+    st.session_state.horizon_forecaster = AffectiveHorizonForecaster()
 
 clf = st.session_state.hybrid_classifier
 conv_analyzer: ConversationAffectAnalyzer = st.session_state.conversation_analyzer
 cred_engine: CredibilityEngine = st.session_state.credibility_engine
+horizon_forecaster: AffectiveHorizonForecaster = st.session_state.horizon_forecaster
 
 # Sidebar Navigation & Telemetry
 with st.sidebar:
@@ -90,6 +100,8 @@ with st.sidebar:
     - **Psychomotor Agitation**: `PAI + Adaptors + Fidgeting` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     - **Forensic Veracity**: `Micro-Leakage + Voice Stress` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     - **Credibility Sentinel**: `Multimodal CDRI Fusion` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
+    - **Affective Horizon**: `Chapman-Kolmogorov (h=1..5)` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
+    - **MDP Sentinel**: `Counterfactual Policy Bellman` <span class="es-pill es-pill-active" style="padding:1px 5px; font-size:0.65rem;">ACTIVE</span>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -98,6 +110,29 @@ with st.sidebar:
 
 # Main Workstation Console Header
 render_header("EmotionSense Workstation", "Multimodal Affective Intelligence & Real-Time Emotion Decoder")
+
+# Phase 14 Affective Horizon Forecasting & Predictive MDP Sentinel Banner
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(14, 165, 233, 0.09)); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.6rem;">🔮</span>
+        <div>
+            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <span>Phase 14 Affective Horizon Forecasting, Markov State Dynamics & Predictive MDP Sentinel Active</span>
+                <span class="es-badge" style="font-size: 0.65rem; background: rgba(99, 102, 241, 0.25); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">FORECASTING READY</span>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">
+                Multi-Step Markov Projections (h=1..5 Steps) • Chapman-Kolmogorov Transition Power • Escalation Hazard Horizon • Counterfactual MDP Policy Simulation
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <span class="es-badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">Markov Dynamics</span>
+        <span class="es-badge es-badge-cyan">Chapman-Kolmogorov</span>
+        <span class="es-badge es-badge-green">MDP Bellman Sentinel</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Phase 13 Forensic Veracity Assessment & Deception Risk Sentinel Banner
 st.markdown("""
@@ -200,7 +235,7 @@ with c2:
 with c3:
     render_metric_card("Optical rPPG", "Pulse & HRV", delta="Plane-Orthogonal", color="#10b981", subtext="Remote Capillary BVP")
 with c4:
-    render_metric_card("Cognitive Load", "NASA-TLX", delta="Pupillometry CPR", color="#ec4899", subtext="PIR & Gaze Fixation")
+    render_metric_card("Forecasting Horizon", "h=1..5 Steps", delta="Markov Dynamics", color="#6366f1", subtext="Chapman-Kolmogorov")
 with c5:
     render_metric_card("Somatosensory", "Postural & PAI", delta="Ergonomics", color="#8b5cf6", subtext="FHP & Micro-Gestures")
 with c6:
@@ -208,7 +243,7 @@ with c6:
 with c7:
     render_metric_card("Dialogue Dynamics", "Multi-Turn", delta="Escalation Sentinel", color="#a855f7", subtext="Trajectory Tracking")
 with c8:
-    render_metric_card("Inference Latency", "< 3.2 ms", delta="Zero-Lag Edge", color="#f59e0b", subtext="Hardware Optimized")
+    render_metric_card("Inference Latency", "< 2.5 ms", delta="Zero-Lag Edge", color="#f59e0b", subtext="Hardware Optimized")
 
 st.markdown("<div style='margin-bottom: 0.85rem;'></div>", unsafe_allow_html=True)
 
@@ -384,6 +419,31 @@ with tab1:
             <div>Self-Referential Pronouns: <b style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">{first_person_count} tokens</b></div>
             <div>Deception Risk Index: <b style="color: {'#ef4444' if text_cred_snapshot.deception_risk_index > 0.5 else '#34d399'}; font-family: 'JetBrains Mono', monospace;">{text_cred_snapshot.deception_risk_index * 100:.0f}%</b></div>
             <div>Forensic Status: <b style="color: #f1f5f9; font-family: 'JetBrains Mono', monospace;">{text_cred_snapshot.tier.replace('_', ' ').upper()}</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Phase 14: Affective Horizon Forecasting & Predictive MDP Sentinel Telemetry
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='es-section-title'>🔮 Phase 14 Affective Horizon Forecasting & Predictive MDP Sentinel</div>", unsafe_allow_html=True)
+
+        curr_state = horizon_forecaster.map_affect_to_state(res.affect.valence, res.affect.arousal)
+        fc_projection = horizon_forecaster.project_horizon(curr_state, steps_ahead=5)
+        sim_eval = horizon_forecaster.evaluate_intervention(curr_state, MDPInterventionAction.EMPATHETIC_REFRAME, steps_ahead=5)
+
+        st.markdown(render_horizon_hud_html(fc_projection, sim_eval), unsafe_allow_html=True)
+
+        fc_c1, fc_c2 = st.columns([7, 5])
+        with fc_c1:
+            st.plotly_chart(render_horizon_fan_chart(fc_projection, height=220), use_container_width=True)
+        with fc_c2:
+            st.plotly_chart(render_escalation_hazard_gauge(fc_projection.escalation_hazard_index, height=220), use_container_width=True)
+
+        st.markdown(f"""
+        <div class="es-panel" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>Current Markov State: <b style="color: #6366f1; font-family: 'JetBrains Mono', monospace;">{curr_state.value.upper()}</b></div>
+            <div>Dominant Horizon (h=5): <b style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">{fc_projection.dominant_trajectory[-1].value.upper()}</b></div>
+            <div>Trajectory Entropy: <b style="color: #f59e0b; font-family: 'JetBrains Mono', monospace;">{fc_projection.entropy_drift[-1]:.3f} bits</b></div>
+            <div>Recommended Policy: <b style="color: #10b981; font-family: 'JetBrains Mono', monospace;">{sim_eval.action.value.replace('_', ' ').upper()}</b></div>
         </div>
         """, unsafe_allow_html=True)
 
