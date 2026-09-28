@@ -114,5 +114,22 @@ def test_edge_benchmark_suite_credibility():
     assert res["mean_latency_ms"] > 0.0
 
 
+def test_edge_benchmark_suite_forecasting():
+    from src.edge.benchmark import EdgeBenchmarkSuite
+    suite = EdgeBenchmarkSuite()
+    res = suite.evaluate_forecasting_pipeline(iterations=10)
+
+    assert "mean_latency_ms" in res
+    assert "p50_latency_ms" in res
+    assert "stage_latencies_ms" in res
+    assert "state_classification" in res["stage_latencies_ms"]
+    assert "covariate_modulation" in res["stage_latencies_ms"]
+    assert "horizon_matrix_projection" in res["stage_latencies_ms"]
+    assert "mdp_policy_simulation" in res["stage_latencies_ms"]
+    assert res["zero_cloud_certified"] is True
+    assert res["sla_target_ms"] == 2.5
+    assert res["mean_latency_ms"] > 0.0
+
+
 
 
