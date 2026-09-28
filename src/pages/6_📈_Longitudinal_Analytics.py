@@ -70,6 +70,14 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_markov_transition_heatmap,
+    render_hazard_tachometer_gauge,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 st.set_page_config(
     page_title="Longitudinal Analytics | EmotionSense",
@@ -423,13 +431,45 @@ for i, p in enumerate(points):
         "snapshot": snap_cred,
     })
 
-tab_traj, tab_radar, tab_bio, tab_cog, tab_soma, tab_cred, tab_table = st.tabs([
+# Phase 14: Multi-Session Markov Horizon Forecasting & Stability Drift
+forecast_sessions = []
+forecaster_long = AffectiveHorizonForecaster()
+for i, p in enumerate(points):
+    f_telem = {
+        "pulse_bpm": float(bio_sessions[i]["rhr_bpm"]) if i < len(bio_sessions) else 72.0,
+        "cognitive_load": float(cog_sessions[i]["load_score"]) if i < len(cog_sessions) else 0.35,
+        "perclos": float(cog_sessions[i]["perclos_pct"]) / 100.0 if i < len(cog_sessions) else 0.1,
+        "cdri": float(cred_sessions[i]["deception_risk"]) if i < len(cred_sessions) else 0.1,
+        "pai": float(soma_sessions[i]["agitation_score"]) if i < len(soma_sessions) else 0.1,
+        "arousal": p.mean_arousal,
+    }
+    snap_fc = forecaster_long.generate_forecast_snapshot(
+        valence=p.mean_valence,
+        arousal=p.mean_arousal,
+        telemetry=f_telem,
+        horizon_steps=5,
+        step_interval_sec=3.0,
+    )
+    forecast_sessions.append({
+        "label": f"Ses {i+1} ({p.date_str[:10]})",
+        "date_str": p.date_str,
+        "evi": snap_fc.escalation_velocity_index,
+        "evi_pct": round(snap_fc.escalation_velocity_index * 100.0, 1),
+        "bch": snap_fc.burnout_crash_hazard,
+        "bch_pct": round(snap_fc.burnout_crash_hazard * 100.0, 1),
+        "risk_tier": snap_fc.risk_tier,
+        "optimal_action": snap_fc.optimal_action,
+        "snapshot": snap_fc,
+    })
+
+tab_traj, tab_radar, tab_bio, tab_cog, tab_soma, tab_cred, tab_fore, tab_table = st.tabs([
     "📈 Trajectory Trendline",
     "🎯 Cohort Volatility Radar",
     "🫀 Physiological & Allostatic Drift",
     "🧠 Cognitive Workload & Burnout Drift",
     "🧘 Postural Ergonomics & Agitation Drift",
     "⚖️ Forensic Veracity & Credibility Drift",
+    "🔮 Horizon & Transition Drift",
     "📑 Session Ledger & Micro-Inspection",
 ])
 
@@ -764,6 +804,88 @@ with tab_cred:
     else:
         st.info("No forensic veracity sessions recorded for this subject profile.")
 
+with tab_fore:
+    if forecast_sessions:
+        latest_fc = forecast_sessions[-1]
+        first_fc = forecast_sessions[0]
+        delta_evi = latest_fc["evi"] - first_fc["evi"]
+        delta_bch = latest_fc["bch"] - first_fc["bch"]
+
+        f_top1, f_top2, f_top3, f_top4 = st.columns(4)
+        with f_top1:
+            st.metric(
+                "Escalation Velocity (EVI)",
+                f"{latest_fc['evi_pct']}%",
+                delta=f"{delta_evi * 100.0:+.1f}%" if len(forecast_sessions) > 1 else None,
+                delta_color="inverse",
+                help="Discounted forward probability of acute conflict or hostile surge",
+            )
+        with f_top2:
+            st.metric(
+                "Burnout Crash Hazard",
+                f"{latest_fc['bch_pct']}%",
+                delta=f"{delta_bch * 100.0:+.1f}%" if len(forecast_sessions) > 1 else None,
+                delta_color="inverse",
+                help="Discounted forward hazard of depressive crash and severe exhaustion",
+            )
+        with f_top3:
+            st.metric(
+                "Predicted Risk Tier",
+                latest_fc["risk_tier"].replace("_", " ").upper(),
+                help="Overall stability vs hazard classification across the emotional horizon",
+            )
+        with f_top4:
+            st.metric(
+                "Recommended Policy",
+                latest_fc["optimal_action"].replace("_", " ").title(),
+                help="Mathematically optimal counterfactual MDP intervention",
+            )
+
+        st.markdown(render_forecasting_hud_html(latest_fc["snapshot"]), unsafe_allow_html=True)
+
+        fc_left, fc_right = st.columns([2.4, 1.2])
+        with fc_left:
+            fig_fc_drift = go.Figure()
+            fig_fc_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in forecast_sessions],
+                y=[s["evi_pct"] for s in forecast_sessions],
+                name="Escalation Velocity (EVI %)",
+                line=dict(color="#ef4444", width=3),
+                mode="lines+markers",
+            ))
+            fig_fc_drift.add_trace(go.Scatter(
+                x=[s["label"] for s in forecast_sessions],
+                y=[s["bch_pct"] for s in forecast_sessions],
+                name="Burnout Crash Hazard (BCH %)",
+                line=dict(color="#f59e0b", width=2.5, dash="dot"),
+                mode="lines+markers",
+            ))
+            fig_fc_drift.add_hline(y=50.0, line_dash="dash", line_color="#ef4444", annotation_text="High Hazard Threshold (50%)")
+            fig_fc_drift.update_layout(
+                title="Multi-Session Affective Hazard Drift (EVI vs BCH)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,23,42,0.6)",
+                font=dict(color="#e2e8f0"),
+                margin=dict(l=30, r=30, t=40, b=30),
+                height=320,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(range=[0.0, 100.0], gridcolor="rgba(255,255,255,0.08)"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            )
+            st.plotly_chart(fig_fc_drift, use_container_width=True)
+        with fc_right:
+            st.plotly_chart(render_hazard_tachometer_gauge(latest_fc["evi"], latest_fc["bch"], latest_fc["risk_tier"], height=190), use_container_width=True)
+            st.plotly_chart(render_policy_simulation_comparison_chart(latest_fc["snapshot"].policy_options, height=190), use_container_width=True)
+
+        st.markdown("<div class='es-section-title'>🔮 Subject Equilibrium Transition Matrix & Horizon Fan</div>", unsafe_allow_html=True)
+        hfan_c1, hfan_c2 = st.columns([6, 6])
+        with hfan_c1:
+            st.plotly_chart(render_horizon_trajectory_fan_chart(latest_fc["snapshot"].forecast_trajectory, current_valence=points[-1].mean_valence, current_arousal=points[-1].mean_arousal, height=250), use_container_width=True)
+        with hfan_c2:
+            st.plotly_chart(render_markov_transition_heatmap(latest_fc["snapshot"].transition_matrix, height=270), use_container_width=True)
+    else:
+        st.info("No forecast sessions available for this subject profile.")
+
 with tab_table:
     if points:
         table_rows = []
@@ -787,6 +909,8 @@ with tab_table:
                 "Psychomotor Agitation": f"{s_info.get('agitation_pct', '--')}%",
                 "Credibility Score": f"{cr_info.get('credibility_pct', '--')}%",
                 "Deception Risk": f"{cr_info.get('deception_risk_pct', '--')}%",
+                "EVI Hazard": f"{forecast_sessions[i].get('evi_pct', '--')}%" if i < len(forecast_sessions) else '--',
+                "Optimal Policy": f"{forecast_sessions[i].get('optimal_action', 'N/A').replace('_', ' ').title()}" if i < len(forecast_sessions) else 'N/A',
                 "Allostatic Stress": f"{b_info.get('stress_pct', '--')}%",
                 "Anomalies": p.anomaly_count,
             })
