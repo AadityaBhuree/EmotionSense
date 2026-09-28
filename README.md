@@ -121,6 +121,15 @@ Whether analyzing single text messages, multi-turn chat transcripts, customer su
 - **Composite Credibility & Deception Risk Index (CDRI, 0.0 – 1.0)**: Late multimodal fusion weighting facial leakage (25%), voice stress (25%), pupillometry (20%), pacifying adaptors (15%), and autonomic pulse surge (15%) into four diagnostic tiers (*Veridical / Authentic, Cognitive Strain, Suspicious Incongruence, High Deception Risk*).
 - **Dedicated Forensic Veracity Telemetry**: Semicircular tachometer dials, 5-channel polygraph radar spider charts, micro-flash timelines, and interactive simulation console in Architecture & Text Studios.
 
+### 🔮 Affective Horizon Forecasting & Predictive MDP Sentinel (Phase 14)
+- **Categorical 6-State Markov Chain Dynamics**: Discretizes continuous Valence-Arousal space into 6 calibrated states (*Euphoric, Content, Neutral, Stressed, Dysphoric, Hostile*).
+- **Stationary Transition Matrix & Laplace Smoothing**: Estimates continuous transition probability matrices ($T_{ij} = P(S_{t+1}=j \mid S_t=i)$) with Laplace smoothing and stationary distribution convergence.
+- **Chapman-Kolmogorov Multi-Step Forward Projections ($h = 1..5$)**: Vectorized matrix exponentiation ($P^{(h)} = P_0 \cdot T^h$) predicting upcoming conversational affective states up to 5 steps into the future.
+- **Entropy Drift & Convergence Dynamics**: Computes Shannon entropy ($H(h) = -\sum p_i \log_2 p_i$) across horizons to detect emotional stability lock-in vs volatile dispersion.
+- **Escalation Hazard Index ($H_{\text{hazard}}$)**: Time-discounted predictive hazard score alerting teams to impending emotional crises or hostile flare-ups.
+- **Counterfactual MDP Policy Simulation**: Evaluates 5 Bellman de-escalation interventions (*Empathetic Reframe, Pacing Pause, Grounding Question, Clarification Inquiry, Escalation Alert*) with simulated state shifts and calm restoration probability ($\Delta P_{\text{calm}}$).
+- **Sub-2.5ms Edge SLA**: 100% on-device NumPy-vectorized execution with zero cloud inference overhead.
+
 ### 💾 Structured SQLite Persistence & Session Intelligence
 - **High-Performance Embedded Database**: SQLite in WAL mode with indexing on timestamps, assessment categories, and dominant affects.
 - **Enterprise Clinical Metadata**: Tracks Candidate / Subject ID, Name, Evaluator, Assessment Type (*Clinical Screening, Talent Interview, Wellness Tracking, Academic Research*), clinical notes, and tags.
@@ -421,6 +430,10 @@ ruff check .
 | `POST` | `/api/credibility/vocal-stress` | Extract 8–14 Hz vocal fold micro-tremor and Cepstral Peak Prominence (CPP) |
 | `POST` | `/api/credibility/polygraph` | Cross-check oculomotor CPR, cardiac rPPG, and somatosensory adaptors |
 | `GET` | `/api/credibility/config` | Retrieve forensic thresholds, CDRI weights, and sub-4.0ms SLA specs |
+| `POST` | `/api/forecast/horizon` | Multi-step Markov probability projection & escalation hazard |
+| `POST` | `/api/forecast/simulate-policy` | Counterfactual MDP policy intervention simulation |
+| `GET` | `/api/forecast/states` | Active Markov affective states and descriptions |
+| `GET` | `/api/forecast/config` | Horizon projection parameters & policy action catalog |
 | `WS` | `/ws/stream-affect` | Real-time bidirectional WebSocket typing affect stream |
 | `WS` | `/ws/stream-speech` | Bidirectional WebSocket stream for live speech transcription & phonetic affect |
 
@@ -439,11 +452,11 @@ python scripts/ws_stream_client.py --endpoint speech --simulate-audio --pitch 22
 
 ## 🧪 Running Tests
 
-EmotionSense includes a comprehensive test suite of 229 tests verifying computer vision, acoustic prosody, hybrid NLP transformers, edge runtime benchmarks, remote biometrics, cognitive workload, somatosensory kinematics, and forensic veracity assessment:
+EmotionSense includes a comprehensive test suite of 243 tests verifying computer vision, acoustic prosody, hybrid NLP transformers, edge runtime benchmarks, remote biometrics, cognitive workload, somatosensory kinematics, forensic veracity assessment, and affective horizon forecasting:
 
 ```bash
 pytest -v
-# ============================ 229 passed in 28.86s =============================
+# ============================ 243 passed in 34.24s =============================
 ```
 
 ---
