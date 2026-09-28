@@ -1,6 +1,6 @@
 # EmotionSense — Codebase Intelligence & Architecture Memory
 
-> **Status:** Phase 12 Completed — Somatosensory Kinematics, Postural Ergonomics & Micro-Gesture Kinesics (212/212 Tests Passing)  
+> **Status:** Phase 13 Completed — Forensic Veracity Assessment, Affective Deception Leakage & Multimodal Credibility Sentinel (229/229 Tests Passing)  
 > **Brand & Project:** EmotionSense  
 > **Owner:** Aditya Bhure (AadityaBhuree)  
 > **Date:** September 2026  
@@ -25,6 +25,7 @@ Human communication consists of verbal, vocal (pitch, tone, pauses), and non-ver
 10. **Remote Biometric & Physiological Telemetry (rPPG)**: Contact-free optical photoplethysmography via Plane-Orthogonal-to-Skin (POS) and CHROM algorithms, extracting instantaneous pulse (BPM), Heart Rate Variability (SDNN, RMSSD, pNN50), Baevsky Stress Index, Respiration Rate (RPM via RSA), and unified Autonomic Stress Index without wearable hardware.
 11. **Cognitive Workload & Oculomotor Telemetry**: Contact-free pupillometry and Cognitive Pupillary Response (CPR) via MediaPipe iris landmarks, Eye Aspect Ratio (EAR), blink dynamics, PERCLOS drowsiness metric, 3D gaze tracking, I-VT fixation vs. saccade velocity discrimination, gaze dispersion heatmaps, multi-sensor NASA-TLX Mental Overload Index fusion (0.0 to 1.0), and workload tiers.
 12. **Somatosensory Kinematics & Postural Ergonomics**: Real-time upper-body spinal alignment tracking (Forward Head Posture angle, Slump Index, lateral tilt, shoulder elevation asymmetry), hand-to-face micro-gesture self-touch adaptors (chin support, mouth cover, temple rub, eye rub, neck touch), kinetic restlessness / fidgeting spectral flux, and composite Psychomotor Agitation Index (PAI) multi-sensor fusion.
+13. **Forensic Veracity Assessment & Multimodal Credibility Sentinel**: Real-time affective micro-expression leakage detection (< 200 ms flashes of concealed negative affect breaking through voluntary social smiles), Duchenne authentic vs social smile incongruence scoring (AU12 vs AU06), FACS lateral sneer asymmetry, acoustic voice stress analysis (8–14 Hz laryngeal micro-tremor Lippold perturbation and Cepstral Peak Prominence CPP), cross-checking against autonomic rPPG pulse surges and oculomotor pupillary CPR dilation, and composite late-fusion Credibility & Deception Risk Index (CDRI, 0.0 to 1.0) with four calibrated veracity tiers.
 
 ### 1.2 Target Users & Personas
 - **Interview & Talent Assessment Teams**: Evaluating candidate engagement, confidence, stress resilience, and authenticity.
@@ -265,6 +266,11 @@ EmotionSense/
 | `POST` | `/api/somatosensory/kinematics` | Process upper-body posture landmarks and micro-gesture adaptors | `SomatosensoryKinematicsRequest` (`face_anchor`, `torso_landmarks`, `hands`) | `{"status": "success", "snapshot": {...}}` |
 | `POST` | `/api/somatosensory/agitation` | Compute composite Psychomotor Agitation Index (PAI) late fusion | `SomatosensoryAgitationRequest` (`posture`, `adaptor`, `fidgeting`, `stress`) | `{"status": "success", "agitation": {...}}` |
 | `GET` | `/api/somatosensory/config` | Retrieve ergonomic angles, adaptor thresholds, and PAI SLA specs | None | `{"status": "success", "config": {...}}` |
+| `POST` | `/api/credibility/assess` | Compute composite Multimodal Credibility & Deception Risk Index (CDRI) | `CredibilityAssessRequest` (`facial_metrics`, `voice_stress`, `pupil_cpr`, etc.) | `{"status": "success", "snapshot": {...}}` |
+| `POST` | `/api/credibility/leakage` | Detect micro-momentary expression flashes (<200ms) and Duchenne incongruence | `MicroLeakageRequest` (`au_trajectory`, `timestamps`) | `{"status": "success", "leakage_events": [...], "facial_metrics": {...}}` |
+| `POST` | `/api/credibility/vocal-stress` | Extract 8–14 Hz vocal fold micro-tremor and Cepstral Peak Prominence (CPP) | `VocalStressRequest` (`f0_trajectory`, `signal_chunk`, `sr`) | `{"status": "success", "vocal_stress": {...}}` |
+| `POST` | `/api/credibility/polygraph` | Cross-check oculomotor CPR, cardiac rPPG, and somatosensory adaptors | `PolygraphCrossCheckRequest` (`pulse_bpm`, `cpr_dilation`, `adaptor_active`) | `{"status": "success", "polygraph": {...}}` |
+| `GET` | `/api/credibility/config` | Retrieve forensic thresholds, CDRI weights, and sub-4.0ms SLA specs | None | `{"status": "success", "config": {...}}` |
 
 ### 5.2 WebSocket Streaming Endpoints
 
@@ -279,13 +285,16 @@ EmotionSense/
 
 ## 6. Verification & Quality Metrics
 
-All **212** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, cognitive workload, and somatosensory kinematics tests pass cleanly across Python 3.10+:
+All **229** unit, integration, persistence, dyadic, deep SER, cross-modal attention, longitudinal, edge runtime, agentic copilot, biometric rPPG, cognitive workload, somatosensory kinematics, and forensic veracity tests pass cleanly across Python 3.10+:
 
 ```bash
 pytest -v
-# ============================ 212 passed in 16.83s =============================
+# ============================ 229 passed in 28.86s =============================
 ```
 
+- **Forensic Veracity & Credibility Suite (`test_credibility.py`)**: Micro-momentary expression flash detection ($< 200\text{ms}$), Duchenne authentic smile incongruence index ($\mathcal{I}_{\text{duchenne}}$), FACS sneer lateral asymmetry ($\mathcal{A}_{\text{sneer}}$), 8–14 Hz vocal fold micro-tremor power integral ($E_{\text{tremor}}$), Cepstral Peak Prominence (CPP), polygraphic multimodal stress cross-checking (pupillometry CPR, rPPG cardiac surge, pacifying adaptors), and composite Credibility & Deception Risk Index (CDRI) late fusion.
+- **Credibility UI Visualizations Suite (`test_ui_credibility_charts.py`)**: Semicircular Credibility tachometer gauge, Micro-leakage flash timeline chart, 5-channel polygraph stress radar chart, and tactical forensic HUD HTML cards.
+- **Edge Benchmark Credibility SLA (`test_edge_runtime.py`)**: Real-time validation of the sub-4.0ms credibility analysis and polygraph cross-check SLA with P50/P95/P99 latency profiling.
 - **Somatosensory Kinematics & Ergonomics Suite (`test_somatosensory.py`)**: Forward Head Posture angle ($\theta_{\text{FHP}}$), Slump Index ($S_{\text{slump}}$), coronal lateral tilt, shoulder elevation tension asymmetry, hand-to-face micro-gesture adaptors (Chin Support, Mouth Cover, Temple Rub, Eye Rub, Neck Touch, Cheek Touch), kinetic restlessness / fidgeting spectral flux, gesticulation expressivity, and composite Psychomotor Agitation Index (PAI) multi-sensor fusion.
 - **Somatosensory UI Visualizations Suite (`test_ui_somatosensory_charts.py`)**: Upper-body postural alignment schematic diagrams, hand-to-face adaptor occurrence timelines, kinetic fidgeting energy waveforms, semicircular PAI tachometer gauges, and tactical somatosensory HUD HTML.
 - **Edge Benchmark Somatosensory SLA (`test_edge_runtime.py`)**: Real-time validation of the sub-3.5ms somatosensory kinematics and PAI fusion execution SLA with P50/P95/P99 latency profiling.
