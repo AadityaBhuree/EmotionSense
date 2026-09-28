@@ -91,6 +91,14 @@ from src.ui.credibility_charts import (
     render_polygraph_multimodal_stress_radar,
     render_credibility_hud_html,
 )
+from src.analytics.forecasting import AffectiveHorizonForecaster
+from src.ui.forecasting_charts import (
+    render_horizon_trajectory_fan_chart,
+    render_markov_transition_heatmap,
+    render_hazard_tachometer_gauge,
+    render_policy_simulation_comparison_chart,
+    render_forecasting_hud_html,
+)
 
 st.set_page_config(page_title="File Analysis Studio | EmotionSense", page_icon="📁", layout="wide")
 inject_modern_styles()
@@ -729,6 +737,72 @@ if uploaded_file is not None:
                     st.plotly_chart(render_micro_leakage_timeline(file_leakages, height=210), use_container_width=True)
                 with fc_c3:
                     st.plotly_chart(render_polygraph_multimodal_stress_radar(file_cred_snap.polygraph, height=210), use_container_width=True)
+
+                # Phase 14: Offline Affective Horizon Forecasting & Markov State Transition Sentinel
+                st.markdown("<div class='es-section-title'>🔮 Affective Horizon Forecasting & Predictive Policy Simulation</div>", unsafe_allow_html=True)
+                file_forecaster = AffectiveHorizonForecaster()
+
+                # Scrub final segment trajectory
+                last_sample = samples[-1] if samples else None
+                final_val = float(getattr(last_sample, "valence", mean_val) if hasattr(last_sample, "valence") else last_sample.get("valence", mean_val) if last_sample else mean_val)
+                final_aro = float(getattr(last_sample, "arousal", mean_aro) if hasattr(last_sample, "arousal") else last_sample.get("arousal", mean_aro) if last_sample else mean_aro)
+
+                file_forecast_telemetry = {
+                    "pulse_bpm": b_pulse.bpm if 'b_pulse' in locals() and hasattr(b_pulse, 'bpm') else 72.0,
+                    "cognitive_load": f_workload.workload_index if 'f_workload' in locals() and hasattr(f_workload, 'workload_index') else 0.35,
+                    "perclos": perclos_est if 'perclos_est' in locals() else 0.1,
+                    "cdri": file_cred_snap.deception_risk_index if 'file_cred_snap' in locals() else 0.1,
+                    "pai": file_agitation.pai_score if 'file_agitation' in locals() else 0.1,
+                    "arousal": final_aro,
+                }
+
+                file_forecast_snap = file_forecaster.generate_forecast_snapshot(
+                    valence=final_val,
+                    arousal=final_aro,
+                    telemetry=file_forecast_telemetry,
+                    horizon_steps=5,
+                    step_interval_sec=3.0,
+                )
+
+                st.markdown(render_forecasting_hud_html(file_forecast_snap), unsafe_allow_html=True)
+
+                ff_c1, ff_c2 = st.columns([6, 6])
+                with ff_c1:
+                    st.plotly_chart(
+                        render_horizon_trajectory_fan_chart(
+                            file_forecast_snap.forecast_trajectory,
+                            current_valence=final_val,
+                            current_arousal=final_aro,
+                            height=230,
+                        ),
+                        use_container_width=True,
+                    )
+                with ff_c2:
+                    st.plotly_chart(
+                        render_policy_simulation_comparison_chart(
+                            file_forecast_snap.policy_options,
+                            height=230,
+                        ),
+                        use_container_width=True,
+                    )
+
+                with st.expander("🔍 Inspect Offline Markov Transition Matrix & Equilibrium Dynamics", expanded=False):
+                    off_m1, off_m2 = st.columns([7, 5])
+                    with off_m1:
+                        st.plotly_chart(
+                            render_markov_transition_heatmap(file_forecast_snap.transition_matrix, height=270),
+                            use_container_width=True,
+                        )
+                    with off_m2:
+                        st.plotly_chart(
+                            render_hazard_tachometer_gauge(
+                                file_forecast_snap.escalation_velocity_index,
+                                file_forecast_snap.burnout_crash_hazard,
+                                file_forecast_snap.risk_tier,
+                                height=240,
+                            ),
+                            use_container_width=True,
+                        )
 
                 # Phase 9: AI Multimodal Diagnostic Synthesis & Candidate Evaluation
                 st.markdown("<div class='es-section-title'>🤖 AI Diagnostic Synthesis & Candidate Evaluation</div>", unsafe_allow_html=True)
