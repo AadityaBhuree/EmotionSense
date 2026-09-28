@@ -655,6 +655,68 @@ def test_forensic_credibility_endpoints(client):
     assert snap["credibility_score"] > 0.70
 
 
+def test_api_forecasting_endpoints(client):
+    """Tests Phase 14 affective horizon forecasting and policy simulation REST endpoints."""
+    # 1. Configuration & States endpoints
+    cfg_res = client.get("/api/forecast/config")
+    assert cfg_res.status_code == 200
+    cfg_data = cfg_res.json()
+    assert cfg_data["status"] == "online"
+    assert cfg_data["num_states"] == 8
+    assert cfg_data["gamma_discount"] == 0.85
+
+    states_res = client.get("/api/forecast/states")
+    assert states_res.status_code == 200
+    s_data = states_res.json()
+    assert s_data["status"] == "online"
+    assert "Composure" in s_data["states"]
+    assert "Active_Empathy" in s_data["intervention_actions"]
+
+    # 2. Horizon forecast projection endpoint
+    fc_res = client.post(
+        "/api/forecast/horizon",
+        json={
+            "valence": -0.55,
+            "arousal": 0.75,
+            "horizon_steps": 5,
+            "step_interval_sec": 3.0,
+            "telemetry": {
+                "pulse_bpm": 95.0,
+                "cognitive_load": 0.50,
+                "pai": 0.60,
+            },
+        },
+    )
+    assert fc_res.status_code == 200
+    fc_data = fc_res.json()
+    assert fc_data["status"] == "success"
+    snap = fc_data["snapshot"]
+    assert len(snap["forecast_trajectory"]) == 5
+    assert "escalation_velocity_index" in snap
+    assert "burnout_crash_hazard" in snap
+    assert snap["optimal_action"] != ""
+
+    # 3. Policy counterfactual simulation endpoint
+    pol_res = client.post(
+        "/api/forecast/simulate-policy",
+        json={
+            "current_state": "Acute_Escalation",
+            "valence": -0.70,
+            "arousal": 0.85,
+            "horizon_steps": 4,
+            "telemetry": {"pulse_bpm": 105.0},
+        },
+    )
+    assert pol_res.status_code == 200
+    p_data = pol_res.json()
+    assert p_data["status"] == "success"
+    assert p_data["current_state"] == "Acute_Escalation"
+    policies = p_data["policies"]
+    assert len(policies) == 5
+    rec_count = sum(1 for p in policies if p["is_recommended"])
+    assert rec_count == 1
+
+
 
 
 
