@@ -89,13 +89,14 @@ with st.sidebar:
     - **Oculomotor & Pupillometry**: `< 4.0 ms`
     - **Somatosensory Kinematics & PAI**: `< 3.5 ms`
     - **Forensic Credibility & Deception Sentinel**: `< 3.0 ms`
+    - **Affective Horizon & MDP Sentinel**: `< 2.5 ms`
     - **Cognitive Workload Fusion**: `< 1.0 ms`
     - **Autonomic Stress Fusion**: `< 2.0 ms`
     - **Target FPS**: `≥ 30.0 FPS`
     """)
 
 # Main Studio Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "🚀 Latency Benchmark & Stress Test",
     "🗜️ Model Quantization & Compression",
     "📦 Edge Manifest & Export",
@@ -104,6 +105,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🧠 Edge Oculomotor & Cognitive SLA",
     "🧘 Edge Somatosensory & Ergonomics SLA",
     "⚖️ Edge Forensic Veracity & Credibility SLA",
+    "🔮 Edge Horizon Forecasting & MDP SLA",
 ])
 
 with tab1:
@@ -632,6 +634,92 @@ with tab8:
             • <b>Forensic Credibility Non-Repudiation:</b> All CDRI metrics, confidence intervals, and active deception anomaly flags are calculated deterministically with reproducible zero-cloud audit integrity.
         </div>
         """, unsafe_allow_html=True)
+
+
+with tab9:
+    st.markdown("#### 🔮 Zero-Cloud Affective Horizon Forecasting & Predictive MDP Sentinel SLA")
+    st.caption("Validates real-time Chapman-Kolmogorov multi-step Markov projection (h=1..5 steps), entropy drift convergence, and MDP policy intervention simulation against sub-2.5ms edge latency SLAs.")
+
+    col_bench_fc, _ = st.columns([1.5, 3])
+    with col_bench_fc:
+        run_fc_bench = st.button("⚡ Profile Edge Forecasting & MDP Pipeline SLA", use_container_width=True, type="primary")
+
+    if run_fc_bench or "fc_benchmark_res" not in st.session_state:
+        with st.spinner("Benchmarking Markov horizon forecasting & MDP policy simulation..."):
+            st.session_state.fc_benchmark_res = bench_suite.evaluate_forecasting_pipeline(iterations=benchmark_iterations)
+
+    fc_res = st.session_state.fc_benchmark_res
+    if fc_res:
+        fb1, fb2, fb3, fb4 = st.columns(4)
+        with fb1:
+            render_metric_card(
+                "Forecasting Latency",
+                f"{fc_res['mean_latency_ms']:.2f} ms",
+                delta=f"SLA < {fc_res['sla_target_ms']} ms ({'PASS ✅' if fc_res['sla_compliant'] else 'FAIL ❌'})",
+                color="#10b981" if fc_res['sla_compliant'] else "#ef4444",
+            )
+        with fb2:
+            render_metric_card(
+                "Projection Throughput",
+                f"{fc_res['fps_throughput']:.0f} FPS",
+                delta="Real-Time Streaming SLA",
+                color="#0ea5e9",
+            )
+        with fb3:
+            render_metric_card(
+                "RAM Footprint",
+                f"{fc_res['memory_mb']:.1f} MB",
+                delta="Compact Stationary Buffer",
+                color="#8b5cf6",
+            )
+        with fb4:
+            render_metric_card(
+                "Edge Autonomy",
+                "100% Offline",
+                delta="Zero Cloud Roundtrip",
+                color="#10b981",
+            )
+
+        st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+
+        st.markdown("##### ⏱️ Horizon Projection Computational Stage Latency Breakdown (P50)")
+        fc_stages = fc_res.get("stage_latencies_ms", {})
+        fc_stage_names = {
+            "state_vector_encoding": "1. 6-State Markov Categorical Encoding & Softmax Mapping",
+            "transition_matrix_update": "2. Online Transition Count Matrix Normalization & Smoothing",
+            "chapman_kolmogorov_projection": "3. Chapman-Kolmogorov Multi-Step Matrix Exponentiation (h=1..5)",
+            "mdp_policy_simulation": "4. Bellman Value Iteration & Counterfactual Policy Evaluation",
+        }
+
+        import plotly.graph_objects as go
+        fig_fc_bar = go.Figure()
+        fig_fc_bar.add_trace(go.Bar(
+            y=[fc_stage_names.get(k, k) for k in fc_stages.keys()],
+            x=list(fc_stages.values()),
+            orientation='h',
+            marker=dict(color=['#6366f1', '#0ea5e9', '#10b981', '#f59e0b']),
+            text=[f"{v:.2f} ms" for v in fc_stages.values()],
+            textposition='auto',
+        ))
+        fig_fc_bar.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(18, 22, 34, 0.6)',
+            margin=dict(l=20, r=20, t=10, b=20),
+            height=180,
+            xaxis=dict(title="Execution Time (ms)", gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#94a3b8')),
+            yaxis=dict(autorange="reversed", tickfont=dict(color='#f8fafc', size=11)),
+        )
+        st.plotly_chart(fig_fc_bar, use_container_width=True)
+
+        st.markdown("""
+        <div class="es-panel" style="border-left: 3px solid #6366f1; margin-top: 10px; font-size: 0.85rem; line-height: 1.5;">
+            <b style="color: #f8fafc;">🔮 Mathematical Edge Horizon Assurance & Policy Determinism</b><br>
+            • <b>Vectorized Matrix Power:</b> Chapman-Kolmogorov forward trajectories are computed with pre-allocated NumPy array operations, achieving sub-millisecond multi-horizon resolution.<br>
+            • <b>Predictive MDP Bellman Evaluation:</b> Simulated de-escalation actions (empathetic reframe, pacing pause, grounding) are evaluated on local device memory without requiring LLM inference.<br>
+            • <b>Strict Edge Privacy:</b> No dialogue history, Markov state trajectories, or transition probabilities leave local device memory.
+        </div>
+        """, unsafe_allow_html=True)
+
 
 
 
