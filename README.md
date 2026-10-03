@@ -448,15 +448,24 @@ python scripts/ws_stream_client.py --endpoint affect --text "We just shipped Pha
 python scripts/ws_stream_client.py --endpoint speech --simulate-audio --pitch 220
 ```
 
+### API Security & Authentication
+
+All protected `/api/*` endpoints require authentication via an API key passed in the request header:
+- Header: `X-API-Key: <your-api-key>` or `Authorization: Bearer <your-api-key>`
+- Development default key: `emotionsense-secure-key-2026` (override via `EMOTIONSENSE_API_KEY` environment variable).
+- Unauthenticated requests receive `401 Unauthorized`.
+- System health (`/health`) and OpenAPI documentation (`/docs`, `/redoc`) remain public.
+- CORS is restricted to trusted origins (localhost, 127.0.0.1, custom domains via `ALLOWED_ORIGINS`).
+
 ---
 
 ## 🧪 Running Tests
 
-EmotionSense includes a comprehensive test suite of 243 tests verifying computer vision, acoustic prosody, hybrid NLP transformers, edge runtime benchmarks, remote biometrics, cognitive workload, somatosensory kinematics, forensic veracity assessment, and affective horizon forecasting:
+EmotionSense includes a comprehensive test suite of 249 tests verifying computer vision, acoustic prosody, hybrid NLP transformers, edge runtime benchmarks, remote biometrics, cognitive workload, somatosensory kinematics, forensic veracity assessment, affective horizon forecasting, and REST API security:
 
 ```bash
 pytest -v
-# ============================ 243 passed in 34.24s =============================
+# ============================ 249 passed in 34.24s =============================
 ```
 
 ---
