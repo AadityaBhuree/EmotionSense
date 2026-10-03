@@ -4,15 +4,18 @@ Exposes high-performance REST and WebSocket endpoints for text emotion predictio
 multi-turn dialogue trajectory analysis, batch datasets, and real-time streaming telemetry.
 """
 
-from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field
+import os
 import time
 import json
 import base64
+from typing import List, Dict, Optional, Any
+from pydantic import BaseModel, Field
 
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Request
     from fastapi.middleware.cors import CORSMiddleware
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import JSONResponse
 except ImportError:
     FastAPI = None
 
@@ -80,12 +83,70 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Enable CORS for frontend clients
+# API Key Authentication Configuration
+API_KEY_HEADER = "X-API-Key"
+DEFAULT_DEV_API_KEY = "emotionsense-secure-key-2026"
+EXEMPT_ROUTES = {"/health", "/docs", "/redoc", "/openapi.json"}
+
+
+class APIKeyAuthMiddleware(BaseHTTPMiddleware):
+    """Enforces API key header validation for all protected REST endpoints."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Allow CORS preflight requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # Allow public documentation and health check endpoints
+        if request.url.path in EXEMPT_ROUTES:
+            return await call_next(request)
+
+        # Allow explicitly disabling auth for development if specified
+        if os.getenv("EMOTIONSENSE_DISABLE_AUTH", "false").lower() in ("true", "1"):
+            return await call_next(request)
+
+        # Extract API key from X-API-Key header or Bearer token
+        api_key = request.headers.get("X-API-Key") or request.headers.get("x-api-key")
+        if not api_key:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                api_key = auth_header[7:].strip()
+
+        expected_key = os.getenv("EMOTIONSENSE_API_KEY", DEFAULT_DEV_API_KEY)
+        if not api_key or api_key != expected_key:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "status": "error",
+                    "detail": "Unauthorized: Missing or invalid API Key. Please provide a valid 'X-API-Key' header.",
+                },
+            )
+
+        return await call_next(request)
+
+
+# 1. Register API Key Auth Middleware (inner layer)
+app.add_middleware(APIKeyAuthMiddleware)
+
+# 2. Register CORS Middleware (outer layer - executes first on incoming requests)
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:8501",
+    "http://127.0.0.1:8501",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+_env_origins = os.getenv("ALLOWED_ORIGINS")
+allowed_origins = [o.strip() for o in _env_origins.split(",") if o.strip()] if _env_origins else DEFAULT_ALLOWED_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

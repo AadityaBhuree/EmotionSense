@@ -5,9 +5,86 @@ from starlette.testclient import TestClient
 from server import app
 
 
+VALID_API_KEY = "emotionsense-secure-key-2026"
+
+
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return TestClient(app, headers={"X-API-Key": VALID_API_KEY})
+
+
+def test_auth_unauthenticated_request_rejected():
+    """Verify requests without an API key are strictly rejected with 401 Unauthorized."""
+    raw_client = TestClient(app)
+    response = raw_client.post("/api/v1/predict-text", json={"text": "Test message"})
+    assert response.status_code == 401
+    data = response.json()
+    assert data["status"] == "error"
+    assert "Unauthorized" in data["detail"]
+
+
+def test_auth_invalid_api_key_rejected():
+    """Verify requests with an incorrect API key are rejected with 401 Unauthorized."""
+    raw_client = TestClient(app)
+    response = raw_client.post(
+        "/api/v1/predict-text",
+        json={"text": "Test message"},
+        headers={"X-API-Key": "invalid_wrong_secret_123"},
+    )
+    assert response.status_code == 401
+    assert "Unauthorized" in response.json()["detail"]
+
+
+def test_auth_bearer_token_accepted():
+    """Verify Authorization: Bearer <token> format is accepted."""
+    raw_client = TestClient(app)
+    response = raw_client.post(
+        "/api/v1/predict-text",
+        json={"text": "I am so happy and thrilled! 🎉", "mode": "lexical"},
+        headers={"Authorization": f"Bearer {VALID_API_KEY}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+
+def test_health_check_exempt_from_auth():
+    """Verify /health is public and exempt from API key requirements."""
+    raw_client = TestClient(app)
+    response = raw_client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert data["version"] == "2.0.0"
+
+
+def test_cors_headers_allowed_origin():
+    """Verify CORS middleware permits trusted origins and echoes Access-Control-Allow-Origin."""
+    raw_client = TestClient(app)
+    response = raw_client.options(
+        "/api/v1/predict-text",
+        headers={
+            "Origin": "http://localhost:8501",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-API-Key,Content-Type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:8501"
+    assert response.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_cors_headers_disallowed_origin():
+    """Verify CORS middleware does not permit untrusted origins."""
+    raw_client = TestClient(app)
+    response = raw_client.options(
+        "/api/v1/predict-text",
+        headers={
+            "Origin": "http://malicious-site.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    # Untrusted origins should not receive access-control-allow-origin
+    assert response.headers.get("access-control-allow-origin") != "http://malicious-site.com"
 
 
 def test_health_check_endpoint(client):
